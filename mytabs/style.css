@@ -34,6 +34,9 @@ body[data-theme="dark"] #context {
 #menu {
   margin-bottom: 0.5em;
 }
+#counts {
+  margin-bottom: 0.5em;
+}
 #menu button {
   margin-right: 0.2em;
 }

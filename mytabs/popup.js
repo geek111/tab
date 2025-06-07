@@ -176,6 +176,9 @@ function findDuplicates(tabs) {
 
 async function update() {
   const allTabs = await browser.tabs.query({ currentWindow: true });
+  document.getElementById('total-count').textContent = allTabs.length;
+  const activeCount = allTabs.filter(t => !t.discarded).length;
+  document.getElementById('active-count').textContent = activeCount;
   let tabs = await getTabs();
   const dupIds = new Set(findDuplicates(allTabs).map(t => t.id));
   const current = await browser.tabs.query({ currentWindow: true, active: true });
