@@ -1,5 +1,5 @@
-chrome.commands.onCommand.addListener((command) => {
+browser.commands.onCommand.addListener((command) => {
   if (command === 'open-tabs-helper') {
-    chrome.browserAction.openPopup();
+    browser.browserAction.openPopup();
   }
 });
