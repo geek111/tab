@@ -46,12 +46,18 @@ function createTabRow(tab, isDuplicate, activeId) {
   div.className = 'tab';
   div.dataset.tab = tab.id;
   div.tabIndex = 0;
+  div.draggable = true;
   if (tab.id === activeId) {
     div.classList.add('active');
   }
   if (isDuplicate) {
-    div.style.backgroundColor = '#fdd';
+    div.classList.add('duplicate');
   }
+
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  check.className = 'sel';
+  div.appendChild(check);
 
   div.addEventListener('click', (e) => {
     if (e.target.tagName === 'BUTTON') return;
