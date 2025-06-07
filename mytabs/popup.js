@@ -234,17 +234,39 @@ document.addEventListener('keydown', (e) => {
   const tabs = Array.from(document.querySelectorAll('.tab'));
   if (!tabs.length) return;
   if (document.activeElement.tagName === 'INPUT') return;
-  let idx = tabs.indexOf(document.activeElement);
-  if (e.key === 'ArrowDown') {
+  const focused = document.activeElement;
+  const isTab = focused.classList.contains('tab');
+  let idx = tabs.indexOf(focused);
+
+  const moveFocus = (delta) => {
+    const newIdx = Math.min(Math.max(idx + delta, 0), tabs.length - 1);
+    tabs[newIdx].focus();
+    idx = newIdx;
+    return newIdx;
+  };
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();
-    idx = (idx + 1) % tabs.length;
-    tabs[idx].focus();
-  } else if (e.key === 'ArrowUp') {
+    const oldIdx = idx;
+    const newIdx = moveFocus(e.key === 'ArrowDown' ? 1 : -1);
+    if (e.shiftKey && isTab) {
+      if (lastSelectedIndex === -1) lastSelectedIndex = oldIdx;
+      const start = Math.min(lastSelectedIndex, newIdx);
+      const end = Math.max(lastSelectedIndex, newIdx);
+      tabs.forEach((t, i) => updateSelection(t, i >= start && i <= end));
+    } else if (!e.ctrlKey && !e.metaKey) {
+      tabs.forEach(t => updateSelection(t, false));
+      updateSelection(tabs[newIdx], true);
+      lastSelectedIndex = newIdx;
+    } else {
+      lastSelectedIndex = newIdx;
+    }
+  } else if (e.key === ' ' && isTab) {
     e.preventDefault();
-    idx = (idx - 1 + tabs.length) % tabs.length;
-    tabs[idx].focus();
-  } else if (e.key === 'Enter' && document.activeElement.classList.contains('tab')) {
-    document.activeElement.click();
+    updateSelection(focused, !focused.querySelector('.sel').checked);
+    lastSelectedIndex = tabs.indexOf(focused);
+  } else if (e.key === 'Enter' && isTab) {
+    focused.click();
   }
 });
 
