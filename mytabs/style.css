@@ -26,6 +26,9 @@ body[data-theme="dark"] .cell:hover {
 body[data-theme="dark"] .duplicate {
   background: #442222;
 }
+body[data-theme="dark"] .selected {
+  background: #334;
+}
 body[data-theme="dark"] #context {
   background: #444;
   border-color: #555;
@@ -73,6 +76,9 @@ body[data-theme="dark"] #context div:hover {
 .tab.active {
   background: #eef;
   font-weight: bold;
+}
+.tab.selected {
+  background: #ddeeff;
 }
 .tab:focus {
   outline: 1px solid #888;
