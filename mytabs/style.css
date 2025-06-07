@@ -63,6 +63,10 @@ body[data-theme="dark"] #context div:hover {
   padding: 0.2em;
   border-bottom: 1px solid #ddd;
 }
+.tab-icon {
+  width: 16px;
+  height: 16px;
+}
 .tab:hover {
   background: #f8f8f8;
 }
