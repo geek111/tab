@@ -2,6 +2,16 @@ let view = 'all';
 let restored = false;
 const MOVE_ENABLED = false;
 
+let lastSelectedIndex = -1;
+
+function updateSelection(row, selected) {
+  const check = row.querySelector('.sel');
+  if (check) {
+    check.checked = selected;
+  }
+  row.classList.toggle('selected', selected);
+}
+
 function saveScroll() {
   const container = document.getElementById('tabs');
   if (container) {
@@ -80,6 +90,11 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   check.type = 'checkbox';
   check.className = 'sel';
   div.appendChild(check);
+  check.addEventListener('change', () => {
+    div.classList.toggle('selected', check.checked);
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    lastSelectedIndex = tabs.indexOf(div);
+  });
 
   if (tab.favIconUrl) {
     const icon = document.createElement('img');
@@ -92,6 +107,23 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
   div.addEventListener('click', (e) => {
     if (e.target.tagName === 'BUTTON') return;
+    if (e.target.classList.contains('sel')) return;
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const idx = tabs.indexOf(div);
+    if (e.ctrlKey || e.metaKey || e.shiftKey) {
+      e.preventDefault();
+      if (e.shiftKey && lastSelectedIndex !== -1) {
+        const start = Math.min(lastSelectedIndex, idx);
+        const end = Math.max(lastSelectedIndex, idx);
+        for (let i = start; i <= end; i++) {
+          updateSelection(tabs[i], true);
+        }
+      } else {
+        updateSelection(div, !check.checked);
+      }
+      lastSelectedIndex = idx;
+      return;
+    }
     activateTab(tab.id);
   });
 
@@ -233,32 +265,45 @@ document.getElementById('tabs').addEventListener('contextmenu', (e) => {
   e.preventDefault();
   const tabEl = e.target.closest('.tab');
   context.innerHTML = '';
-  if (tabEl) {
+
+  const selected = getSelectedTabIds();
+  const addItem = (label, fn) => {
+    const item = document.createElement('div');
+    item.textContent = label;
+    item.addEventListener('click', async () => {
+      context.classList.add('hidden');
+      await fn();
+    });
+    context.appendChild(item);
+  };
+
+  if (selected.length) {
+    addItem('Close Selected', bulkClose);
+    addItem('Reload Selected', bulkReload);
+    addItem('Discard Selected', bulkDiscard);
+    if (MOVE_ENABLED) addItem('Move Selected', bulkMove);
+  }
+
+  if (tabEl && (!selected.length || !tabEl.querySelector('.sel').checked)) {
     const id = parseInt(tabEl.dataset.tab, 10);
-    const addItem = (label, fn) => {
-      const item = document.createElement('div');
-      item.textContent = label;
-      item.addEventListener('click', async () => {
-        context.classList.add('hidden');
-        await fn();
-      });
-      context.appendChild(item);
-    };
     addItem('Activate', () => activateTab(id));
     addItem('Unload', async () => { await browser.tabs.discard(id); update(); });
     addItem('Close', async () => { await browser.tabs.remove(id); update(); });
-if (MOVE_ENABLED) {
-    addItem('Move', async () => {
-      const t = await browser.tabs.get(id);
-      const wins = await browser.windows.getAll({populate: false});
-      const other = wins.find(w => w.id !== t.windowId);
-      if (other) await browser.tabs.move(id, {windowId: other.id, index: -1});
-      update();
-    });
-}
-  } else {
+    if (MOVE_ENABLED) {
+      addItem('Move', async () => {
+        const t = await browser.tabs.get(id);
+        const wins = await browser.windows.getAll({populate: false});
+        const other = wins.find(w => w.id !== t.windowId);
+        if (other) await browser.tabs.move(id, {windowId: other.id, index: -1});
+        update();
+      });
+    }
+  }
+
+  if (!tabEl && !selected.length) {
     context.textContent = `My Tabs Helper v${browser.runtime.getManifest().version}`;
   }
+
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
   context.classList.remove('hidden');
