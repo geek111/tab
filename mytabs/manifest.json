@@ -6,8 +6,7 @@
   "permissions": [
     "tabs",
     "tabHide",
-    "storage",
-    "commands"
+    "storage"
   ],
   "background": {
     "scripts": ["background.js"],
