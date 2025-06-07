@@ -126,8 +126,9 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
       if (e.shiftKey && lastSelectedIndex !== -1) {
         const start = Math.min(lastSelectedIndex, idx);
         const end = Math.max(lastSelectedIndex, idx);
+        const select = !check.checked;
         for (let i = start; i <= end; i++) {
-          updateSelection(tabs[i], true);
+          updateSelection(tabs[i], select);
         }
       } else {
         updateSelection(div, !check.checked);
