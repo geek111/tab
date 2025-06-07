@@ -16,6 +16,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - Options page lets you choose theme and grid columns.
 - A dark theme can be enabled from the options page.
 - Keyboard shortcuts open the popup, sidebar and full view.
+- Middle-clicking the toolbar icon opens the multi-column Full View window.
 
 To install for development, load the directory as a temporary add-on in Firefox.
 
