@@ -91,3 +91,7 @@ button {
 .cell:hover {
   background: #f8f8f8;
 }
+
+.visited {
+  background: #f0fff0;
+}

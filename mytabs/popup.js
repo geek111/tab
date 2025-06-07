@@ -41,7 +41,7 @@ async function activateTab(id) {
   }
 }
 
-function createTabRow(tab, isDuplicate, activeId) {
+function createTabRow(tab, isDuplicate, activeId, isVisited) {
   const div = document.createElement('div');
   div.className = 'tab';
   div.dataset.tab = tab.id;
@@ -52,6 +52,9 @@ function createTabRow(tab, isDuplicate, activeId) {
   }
   if (isDuplicate) {
     div.classList.add('duplicate');
+  }
+  if (isVisited) {
+    div.classList.add('visited');
   }
 
   const check = document.createElement('input');
@@ -132,12 +135,12 @@ function createTabRow(tab, isDuplicate, activeId) {
   return div;
 }
 
-function renderTabs(tabs, activeId, dupIds) {
+function renderTabs(tabs, activeId, dupIds, visitedIds) {
 
   const container = document.getElementById('tabs');
   container.innerHTML = '';
   for (const tab of tabs) {
-    const row = createTabRow(tab, dupIds.has(tab.id), activeId);
+    const row = createTabRow(tab, dupIds.has(tab.id), activeId, visitedIds.has(tab.id));
     container.appendChild(row);
   }
 }
@@ -167,12 +170,14 @@ async function update() {
   const dupIds = new Set(findDuplicates(allTabs).map(t => t.id));
   const current = await browser.tabs.query({ currentWindow: true, active: true });
   const activeId = current.length ? current[0].id : -1;
+  const { visited = [] } = await browser.runtime.sendMessage({ type: 'getVisited' });
+  const visitedIds = new Set(visited);
   const searchInput = document.getElementById('search');
   const query = searchInput.value.trim();
   if (query) {
     tabs = filterTabs(tabs, query);
   }
-  renderTabs(tabs, activeId, dupIds);
+  renderTabs(tabs, activeId, dupIds, visitedIds);
 }
 
 document.getElementById('search').addEventListener('input', update);
