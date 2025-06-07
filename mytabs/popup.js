@@ -1,20 +1,23 @@
 let view = 'all';
 
 async function getTabs() {
+  const currentWin = await browser.windows.getCurrent();
   if (view === 'recent') {
     const { recent = [] } = await browser.runtime.sendMessage({ type: 'getRecent' });
     const result = [];
     for (const id of recent) {
       try {
         const t = await browser.tabs.get(id);
-        result.push(t);
+        if (t.windowId === currentWin.id) {
+          result.push(t);
+        }
       } catch (e) {
         // tab may no longer exist
       }
     }
     return result;
   }
-  const tabs = await browser.tabs.query({});
+  const tabs = await browser.tabs.query({ currentWindow: true });
   if (view === 'dups') {
     return findDuplicates(tabs);
   }
@@ -153,7 +156,7 @@ function findDuplicates(tabs) {
 }
 
 async function update() {
-  const allTabs = await browser.tabs.query({});
+  const allTabs = await browser.tabs.query({ currentWindow: true });
   let tabs = await getTabs();
   const dupIds = new Set(findDuplicates(allTabs).map(t => t.id));
   const current = await browser.tabs.query({ currentWindow: true, active: true });
