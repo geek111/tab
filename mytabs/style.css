@@ -30,6 +30,9 @@ body[data-theme="dark"] #context {
   background: #444;
   border-color: #555;
 }
+body[data-theme="dark"] #context div:hover {
+  background: #555;
+}
 
 #menu {
   margin-bottom: 0.5em;
@@ -95,6 +98,15 @@ button {
   border: 1px solid #ccc;
   padding: 0.2em;
   z-index: 1000;
+}
+
+#context div {
+  padding: 0.2em 0.5em;
+  cursor: pointer;
+}
+
+#context div:hover {
+  background: #ddd;
 }
 
 #bulk-actions {
