@@ -1,5 +1,6 @@
 let view = 'all';
 let restored = false;
+const MOVE_ENABLED = false;
 
 function saveScroll() {
   const container = document.getElementById('tabs');
@@ -237,6 +238,7 @@ document.getElementById('tabs').addEventListener('contextmenu', (e) => {
     addItem('Activate', () => activateTab(id));
     addItem('Unload', async () => { await browser.tabs.discard(id); update(); });
     addItem('Close', async () => { await browser.tabs.remove(id); update(); });
+if (MOVE_ENABLED) {
     addItem('Move', async () => {
       const t = await browser.tabs.get(id);
       const wins = await browser.windows.getAll({populate: false});
@@ -244,6 +246,7 @@ document.getElementById('tabs').addEventListener('contextmenu', (e) => {
       if (other) await browser.tabs.move(id, {windowId: other.id, index: -1});
       update();
     });
+}
   } else {
     context.textContent = `My Tabs Helper v${browser.runtime.getManifest().version}`;
   }
@@ -296,4 +299,8 @@ async function bulkMove() {
 document.getElementById('bulk-close').addEventListener('click', bulkClose);
 document.getElementById('bulk-reload').addEventListener('click', bulkReload);
 document.getElementById('bulk-discard').addEventListener('click', bulkDiscard);
-document.getElementById('bulk-move').addEventListener('click', bulkMove);
+if (MOVE_ENABLED) {
+  document.getElementById('bulk-move').addEventListener('click', bulkMove);
+} else {
+  document.getElementById('bulk-move').style.display = 'none';
+}
