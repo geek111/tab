@@ -53,7 +53,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   if (isDuplicate) {
     div.classList.add('duplicate');
   }
-  if (isVisited) {
+  if (isVisited && !tab.discarded) {
     div.classList.add('visited');
   }
 
@@ -86,7 +86,10 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
   const btnUnload = document.createElement('button');
   btnUnload.textContent = 'Unload';
-  btnUnload.onclick = () => browser.tabs.discard(tab.id);
+  btnUnload.onclick = async () => {
+    await browser.tabs.discard(tab.id);
+    update();
+  };
   div.appendChild(btnUnload);
 
   const btnClose = document.createElement('button');
@@ -243,6 +246,7 @@ async function bulkDiscard() {
   for (const id of ids) {
     await browser.tabs.discard(id);
   }
+  update();
 }
 
 async function bulkMove() {
