@@ -269,7 +269,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     updateSelection(focused, !focused.querySelector('.sel').checked);
     lastSelectedIndex = tabs.indexOf(focused);
-  } else if (e.key === 'Enter' && isTab && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+  } else if (e.key === 'Enter' && isTab) {
     focused.click();
   }
 });
