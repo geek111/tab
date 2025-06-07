@@ -18,6 +18,14 @@
     "default_title": "Tabs Helper",
     "default_popup": "popup.html"
   },
+  "sidebar_action": {
+    "default_title": "Tabs Helper",
+    "default_panel": "sidebar.html"
+  },
+  "options_ui": {
+    "page": "full.html",
+    "open_in_tab": true
+  },
   "commands": {
     "open-tabs-helper": {
       "suggested_key": {
@@ -25,17 +33,9 @@
       },
       "description": "Open tab helper popup"
     },
-    "open-full-view": {
-      "suggested_key": {
-        "default": "Alt+Shift+F"
-      },
-      "description": "Open full view"
-    },
-    "open-sidebar": {
-      "suggested_key": {
-        "default": "Alt+Shift+S"
-      },
-      "description": "Open sidebar"
+    "open-tabs-helper-full": {
+      "suggested_key": {"default": "Alt+Shift+F"},
+      "description": "Open tab helper in full view"
     }
   },
   "options_ui": {
