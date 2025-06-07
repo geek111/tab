@@ -44,15 +44,12 @@ async function restoreScroll() {
 
 async function getTabs(allTabs) {
   if (view === 'recent') {
-    const currentWin = await browser.windows.getCurrent();
     const { recent = [] } = await browser.runtime.sendMessage({ type: 'getRecent' });
     const result = [];
     for (const id of recent) {
       try {
         const t = await browser.tabs.get(id);
-        if (t.windowId === currentWin.id) {
-          result.push(t);
-        }
+        result.push(t);
       } catch (_) {
         // tab may no longer exist
       }
@@ -224,7 +221,8 @@ function findDuplicates(tabs) {
 }
 
 async function update() {
-  const allTabs = await browser.tabs.query({ currentWindow: true });
+  // Query all tabs across every Firefox window
+  const allTabs = await browser.tabs.query({});
   document.getElementById('total-count').textContent = allTabs.length;
   const activeCount = allTabs.filter(t => !t.discarded).length;
   document.getElementById('active-count').textContent = activeCount;
