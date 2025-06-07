@@ -142,6 +142,13 @@ function renderTabs(tabs, activeId, dupIds, visitedIds) {
 
   const container = document.getElementById('tabs');
   container.innerHTML = '';
+  if (!tabs.length) {
+    const msg = document.createElement('div');
+    msg.id = 'empty';
+    msg.textContent = 'No tabs to display';
+    container.appendChild(msg);
+    return;
+  }
   for (const tab of tabs) {
     const row = createTabRow(tab, dupIds.has(tab.id), activeId, visitedIds.has(tab.id));
     container.appendChild(row);
