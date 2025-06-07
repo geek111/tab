@@ -79,34 +79,6 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   div.appendChild(title);
   title.onclick = () => browser.tabs.update(tab.id, {active: true});
 
-  const btnActivate = document.createElement('button');
-  btnActivate.textContent = 'Activate';
-  btnActivate.onclick = () => activateTab(tab.id);
-  div.appendChild(btnActivate);
-
-  const btnUnload = document.createElement('button');
-  btnUnload.textContent = 'Unload';
-  btnUnload.onclick = async () => {
-    await browser.tabs.discard(tab.id);
-    update();
-  };
-  div.appendChild(btnUnload);
-
-  const btnClose = document.createElement('button');
-  btnClose.textContent = 'Close';
-  btnClose.onclick = () => browser.tabs.remove(tab.id);
-  div.appendChild(btnClose);
-
-  const btnMove = document.createElement('button');
-  btnMove.textContent = 'Move';
-  btnMove.onclick = async () => {
-    const windows = await browser.windows.getAll({populate: false});
-    const other = windows.find(w => w.id !== tab.windowId);
-    if (other) {
-      await browser.tabs.move(tab.id, {windowId: other.id, index: -1});
-    }
-  };
-  div.appendChild(btnMove);
 
   div.addEventListener('dragstart', (e) => {
     e.dataTransfer.setData('text/plain', tab.id);
@@ -222,7 +194,32 @@ if (document.readyState !== 'loading') {
 const context = document.getElementById('context');
 document.getElementById('tabs').addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  context.textContent = `My Tabs Helper v${browser.runtime.getManifest().version}`;
+  const tabEl = e.target.closest('.tab');
+  context.innerHTML = '';
+  if (tabEl) {
+    const id = parseInt(tabEl.dataset.tab, 10);
+    const addItem = (label, fn) => {
+      const item = document.createElement('div');
+      item.textContent = label;
+      item.addEventListener('click', async () => {
+        context.classList.add('hidden');
+        await fn();
+      });
+      context.appendChild(item);
+    };
+    addItem('Activate', () => activateTab(id));
+    addItem('Unload', async () => { await browser.tabs.discard(id); update(); });
+    addItem('Close', async () => { await browser.tabs.remove(id); update(); });
+    addItem('Move', async () => {
+      const t = await browser.tabs.get(id);
+      const wins = await browser.windows.getAll({populate: false});
+      const other = wins.find(w => w.id !== t.windowId);
+      if (other) await browser.tabs.move(id, {windowId: other.id, index: -1});
+      update();
+    });
+  } else {
+    context.textContent = `My Tabs Helper v${browser.runtime.getManifest().version}`;
+  }
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
   context.classList.remove('hidden');
