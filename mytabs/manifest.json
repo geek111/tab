@@ -9,7 +9,9 @@
     "storage"
   ],
   "background": {
-    "scripts": ["background.js"],
+    "scripts": [
+      "background.js"
+    ],
     "persistent": false
   },
   "browser_action": {
@@ -26,12 +28,33 @@
   },
   "commands": {
     "open-tabs-helper": {
-      "suggested_key": {"default": "Alt+Shift+H"},
+      "suggested_key": {
+        "default": "Alt+Shift+H"
+      },
       "description": "Open tab helper popup"
     },
     "open-tabs-helper-full": {
       "suggested_key": {"default": "Alt+Shift+F"},
       "description": "Open tab helper in full view"
     }
-  }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "sidebar_action": {
+    "default_title": "Tabs",
+    "default_panel": "sidebar.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content-search.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
 }
