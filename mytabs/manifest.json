@@ -6,7 +6,8 @@
   "permissions": [
     "tabs",
     "tabHide",
-    "storage"
+    "storage",
+    "contextMenus"
   ],
   "background": {
     "scripts": [

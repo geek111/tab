@@ -43,3 +43,11 @@ browser.commands.onCommand.addListener((command) => {
     browser.tabs.create({ url: browser.runtime.getURL('full.html') });
   }
 });
+
+browser.runtime.onInstalled.addListener(() => {
+  browser.contextMenus.create({
+    id: 'show-version',
+    title: `My Tabs Helper v${browser.runtime.getManifest().version}`,
+    contexts: ['browser_action']
+  });
+});
