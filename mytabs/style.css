@@ -6,6 +6,31 @@ body {
   box-sizing: border-box;
 }
 
+body[data-theme="dark"] {
+  background: #222;
+  color: #eee;
+}
+body[data-theme="dark"] input,
+body[data-theme="dark"] button {
+  background: #333;
+  color: #eee;
+  border-color: #555;
+}
+body[data-theme="dark"] .tab {
+  border-bottom-color: #555;
+}
+body[data-theme="dark"] .tab:hover,
+body[data-theme="dark"] .cell:hover {
+  background: #444;
+}
+body[data-theme="dark"] .duplicate {
+  background: #442222;
+}
+body[data-theme="dark"] #context {
+  background: #444;
+  border-color: #555;
+}
+
 #menu {
   margin-bottom: 0.5em;
 }
@@ -94,4 +119,10 @@ button {
 
 .visited {
   background: #f0fff0;
+}
+
+#empty {
+  text-align: center;
+  color: #888;
+  margin-top: 1em;
 }
