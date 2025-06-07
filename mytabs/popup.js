@@ -129,7 +129,11 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
   div.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
-      activateTab(tab.id);
+      if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        activateTab(tab.id);
+      } else {
+        e.preventDefault();
+      }
     }
   });
 
