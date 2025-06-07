@@ -1,3 +1,4 @@
+// Shared script used by popup.html and sidebar.html
 let view = 'all';
 let restored = false;
 const MOVE_ENABLED = false;
@@ -391,11 +392,15 @@ async function bulkMove() {
   scheduleUpdate();
 }
 
-document.getElementById('bulk-close').addEventListener('click', bulkClose);
-document.getElementById('bulk-reload').addEventListener('click', bulkReload);
-document.getElementById('bulk-discard').addEventListener('click', bulkDiscard);
-if (MOVE_ENABLED) {
-  document.getElementById('bulk-move').addEventListener('click', bulkMove);
-} else {
-  document.getElementById('bulk-move').style.display = 'none';
-}
+const bulkCloseBtn = document.getElementById('bulk-close');
+if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
+
+const bulkReloadBtn = document.getElementById('bulk-reload');
+if (bulkReloadBtn) bulkReloadBtn.addEventListener('click', bulkReload);
+
+const bulkDiscardBtn = document.getElementById('bulk-discard');
+if (bulkDiscardBtn) bulkDiscardBtn.addEventListener('click', bulkDiscard);
+
+const moveBtn = document.getElementById('bulk-move');
+if (MOVE_ENABLED && moveBtn) moveBtn.addEventListener('click', bulkMove);
+else if (moveBtn) moveBtn.style.display = 'none';
