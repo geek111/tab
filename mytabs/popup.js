@@ -80,6 +80,15 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   check.className = 'sel';
   div.appendChild(check);
 
+  if (tab.favIconUrl) {
+    const icon = document.createElement('img');
+    icon.className = 'tab-icon';
+    icon.src = tab.favIconUrl;
+    icon.alt = '';
+    icon.onerror = () => icon.remove();
+    div.appendChild(icon);
+  }
+
   div.addEventListener('click', (e) => {
     if (e.target.tagName === 'BUTTON') return;
     activateTab(tab.id);
