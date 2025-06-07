@@ -21,7 +21,8 @@
   },
   "sidebar_action": {
     "default_title": "Tabs",
-    "default_panel": "sidebar.html"
+    "default_panel": "sidebar.html",
+    "open_at_install": false
   },
   "options_ui": {
     "page": "options.html",
