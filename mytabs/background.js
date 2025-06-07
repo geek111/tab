@@ -9,8 +9,17 @@ async function pushRecent(tabId) {
   await browser.storage.local.set({ recent });
 }
 
+async function markVisited(tabId) {
+  const { visited = [] } = await browser.storage.local.get('visited');
+  if (!visited.includes(tabId)) {
+    visited.push(tabId);
+    await browser.storage.local.set({ visited });
+  }
+}
+
 browser.tabs.onActivated.addListener(info => {
   pushRecent(info.tabId);
+  markVisited(info.tabId);
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
@@ -21,11 +30,20 @@ browser.tabs.onRemoved.addListener((tabId) => {
       browser.storage.local.set({ recent });
     }
   });
+  browser.storage.local.get('visited').then(({ visited = [] }) => {
+    const i = visited.indexOf(tabId);
+    if (i !== -1) {
+      visited.splice(i, 1);
+      browser.storage.local.set({ visited });
+    }
+  });
 });
 
 browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'getRecent') {
     return browser.storage.local.get('recent');
+  } else if (msg && msg.type === 'getVisited') {
+    return browser.storage.local.get('visited');
   }
 });
 
