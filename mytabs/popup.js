@@ -1,5 +1,23 @@
+let view = 'all';
+
 async function getTabs() {
+  if (view === 'recent') {
+    const { recent = [] } = await browser.runtime.sendMessage({ type: 'getRecent' });
+    const result = [];
+    for (const id of recent) {
+      try {
+        const t = await browser.tabs.get(id);
+        result.push(t);
+      } catch (e) {
+        // tab may no longer exist
+      }
+    }
+    return result;
+  }
   const tabs = await browser.tabs.query({});
+  if (view === 'dups') {
+    return findDuplicates(tabs);
+  }
   return tabs;
 }
 
@@ -105,9 +123,7 @@ function createTabRow(tab, isDuplicate, activeId) {
   return div;
 }
 
-function renderTabs(tabs, activeId) {
-  const duplicates = findDuplicates(tabs);
-  const dupIds = new Set(duplicates.map(t => t.id));
+function renderTabs(tabs, activeId, dupIds) {
 
   const container = document.getElementById('tabs');
   container.innerHTML = '';
@@ -137,18 +153,23 @@ function findDuplicates(tabs) {
 }
 
 async function update() {
+  const allTabs = await browser.tabs.query({});
   let tabs = await getTabs();
-  const current = await browser.tabs.query({currentWindow: true, active: true});
+  const dupIds = new Set(findDuplicates(allTabs).map(t => t.id));
+  const current = await browser.tabs.query({ currentWindow: true, active: true });
   const activeId = current.length ? current[0].id : -1;
   const searchInput = document.getElementById('search');
   const query = searchInput.value.trim();
   if (query) {
     tabs = filterTabs(tabs, query);
   }
-  renderTabs(tabs, activeId);
+  renderTabs(tabs, activeId, dupIds);
 }
 
 document.getElementById('search').addEventListener('input', update);
+document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; update(); });
+document.getElementById('btn-recent').addEventListener('click', () => { view = 'recent'; update(); });
+document.getElementById('btn-dups').addEventListener('click', () => { view = 'dups'; update(); });
 
 document.addEventListener('keydown', (e) => {
   const tabs = Array.from(document.querySelectorAll('.tab'));
