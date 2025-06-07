@@ -321,7 +321,7 @@ function showContextMenu(e) {
   if (selected.length) {
     addItem('Close Selected', bulkClose);
     addItem('Reload Selected', bulkReload);
-    addItem('Discard Selected', bulkDiscard);
+    addItem('Unload Selected', bulkDiscard);
     if (MOVE_ENABLED) addItem('Move Selected', bulkMove);
   }
 
