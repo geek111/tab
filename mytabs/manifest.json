@@ -16,10 +16,22 @@
     "default_title": "Tabs Helper",
     "default_popup": "popup.html"
   },
+  "sidebar_action": {
+    "default_title": "Tabs Helper",
+    "default_panel": "sidebar.html"
+  },
+  "options_ui": {
+    "page": "full.html",
+    "open_in_tab": true
+  },
   "commands": {
     "open-tabs-helper": {
       "suggested_key": {"default": "Alt+Shift+H"},
       "description": "Open tab helper popup"
+    },
+    "open-tabs-helper-full": {
+      "suggested_key": {"default": "Alt+Shift+F"},
+      "description": "Open tab helper in full view"
     }
   }
 }
