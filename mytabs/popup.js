@@ -1,4 +1,22 @@
 let view = 'all';
+let restored = false;
+
+function saveScroll() {
+  const container = document.getElementById('tabs');
+  if (container) {
+    browser.storage.local.set({ scrollTop: container.scrollTop });
+  }
+}
+
+async function restoreScroll() {
+  if (restored) return;
+  const { scrollTop = 0 } = await browser.storage.local.get('scrollTop');
+  const container = document.getElementById('tabs');
+  if (container) {
+    container.scrollTop = scrollTop;
+  }
+  restored = true;
+}
 
 async function getTabs() {
   const currentWin = await browser.windows.getCurrent();
@@ -188,9 +206,15 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-document.addEventListener('DOMContentLoaded', update);
+async function init() {
+  document.getElementById('tabs').addEventListener('scroll', saveScroll);
+  await update();
+  restoreScroll();
+}
+
+document.addEventListener('DOMContentLoaded', init);
 if (document.readyState !== 'loading') {
-  update();
+  init();
 }
 
 // custom context menu
