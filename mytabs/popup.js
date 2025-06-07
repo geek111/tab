@@ -86,7 +86,7 @@ function createTabRow(tab, isDuplicate, activeId) {
   div.addEventListener('drop', async (e) => {
     e.preventDefault();
     const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
-    const toId = parseInt(div.dataset.id, 10);
+    const toId = parseInt(div.dataset.tab, 10);
     if (fromId !== toId) {
       const toTab = await browser.tabs.get(toId);
       await browser.tabs.move(fromId, {index: toTab.index});
@@ -169,6 +169,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', update);
+if (document.readyState !== 'loading') {
+  update();
+}
 
 // custom context menu
 const context = document.getElementById('context');
@@ -184,7 +187,7 @@ document.addEventListener('click', () => context.classList.add('hidden'));
 
 function getSelectedTabIds() {
   const checks = Array.from(document.querySelectorAll('.sel:checked'));
-  return checks.map(c => parseInt(c.parentElement.dataset.id, 10));
+  return checks.map(c => parseInt(c.parentElement.dataset.tab, 10));
 }
 
 async function bulkClose() {
@@ -210,7 +213,8 @@ async function bulkDiscard() {
 async function bulkMove() {
   const ids = getSelectedTabIds();
   const windows = await browser.windows.getAll({populate: false});
-  const other = windows.find(w => ids.length && w.id !== (await browser.tabs.get(ids[0])).windowId);
+  const currentWinId = ids.length ? (await browser.tabs.get(ids[0])).windowId : null;
+  const other = windows.find(w => ids.length && w.id !== currentWinId);
   if (other) {
     for (const id of ids) {
       await browser.tabs.move(id, {windowId: other.id, index: -1});
