@@ -54,6 +54,13 @@ function openFullView() {
   });
 }
 
+// Open the multi-column tab manager when the icon is middle-clicked.
+browser.browserAction.onClicked.addListener((tab, info) => {
+  if (info && info.button === 1) {
+    openFullView();
+  }
+});
+
 browser.commands.onCommand.addListener((command) => {
   if (command === 'open-tabs-helper') {
     browser.browserAction.openPopup();
