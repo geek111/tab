@@ -3,12 +3,45 @@ async function getTabs() {
   return tabs;
 }
 
-function createTabRow(tab, isDuplicate) {
+function closeUI() {
+  if (browser.sidebarAction) {
+    try { browser.sidebarAction.close(); } catch (e) {}
+  }
+  window.close();
+}
+
+async function activateTab(id) {
+  try {
+    await browser.tabs.update(id, {active: true});
+    closeUI();
+  } catch (e) {
+    document.getElementById('error').textContent = 'Could not activate tab';
+    document.querySelector(`[data-tab="${id}"]`)?.remove();
+  }
+}
+
+function createTabRow(tab, isDuplicate, activeId) {
   const div = document.createElement('div');
   div.className = 'tab';
+  div.dataset.tab = tab.id;
+  div.tabIndex = 0;
+  if (tab.id === activeId) {
+    div.classList.add('active');
+  }
   if (isDuplicate) {
     div.style.backgroundColor = '#fdd';
   }
+
+  div.addEventListener('click', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    activateTab(tab.id);
+  });
+
+  div.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      activateTab(tab.id);
+    }
+  });
 
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
@@ -17,7 +50,7 @@ function createTabRow(tab, isDuplicate) {
 
   const btnActivate = document.createElement('button');
   btnActivate.textContent = 'Activate';
-  btnActivate.onclick = () => browser.tabs.update(tab.id, {active: true});
+  btnActivate.onclick = () => activateTab(tab.id);
   div.appendChild(btnActivate);
 
   const btnUnload = document.createElement('button');
@@ -44,14 +77,14 @@ function createTabRow(tab, isDuplicate) {
   return div;
 }
 
-function renderTabs(tabs) {
+function renderTabs(tabs, activeId) {
   const duplicates = findDuplicates(tabs);
   const dupIds = new Set(duplicates.map(t => t.id));
 
   const container = document.getElementById('tabs');
   container.innerHTML = '';
   for (const tab of tabs) {
-    const row = createTabRow(tab, dupIds.has(tab.id));
+    const row = createTabRow(tab, dupIds.has(tab.id), activeId);
     container.appendChild(row);
   }
 }
@@ -77,14 +110,34 @@ function findDuplicates(tabs) {
 
 async function update() {
   let tabs = await getTabs();
+  const current = await browser.tabs.query({currentWindow: true, active: true});
+  const activeId = current.length ? current[0].id : -1;
   const searchInput = document.getElementById('search');
   const query = searchInput.value.trim();
   if (query) {
     tabs = filterTabs(tabs, query);
   }
-  renderTabs(tabs);
+  renderTabs(tabs, activeId);
 }
 
 document.getElementById('search').addEventListener('input', update);
+
+document.addEventListener('keydown', (e) => {
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  if (!tabs.length) return;
+  if (document.activeElement.tagName === 'INPUT') return;
+  let idx = tabs.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    idx = (idx + 1) % tabs.length;
+    tabs[idx].focus();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    idx = (idx - 1 + tabs.length) % tabs.length;
+    tabs[idx].focus();
+  } else if (e.key === 'Enter' && document.activeElement.classList.contains('tab')) {
+    document.activeElement.click();
+  }
+});
 
 document.addEventListener('DOMContentLoaded', update);
