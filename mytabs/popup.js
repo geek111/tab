@@ -3,6 +3,20 @@ let restored = false;
 const MOVE_ENABLED = false;
 
 let lastSelectedIndex = -1;
+let container; // tabs container cached after DOM load
+
+function throttle(fn) {
+  let pending = false;
+  return (...args) => {
+    if (!pending) {
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        fn(...args);
+      });
+    }
+  };
+}
 
 function updateSelection(row, selected) {
   const check = row.querySelector('.sel');
@@ -13,7 +27,6 @@ function updateSelection(row, selected) {
 }
 
 function saveScroll() {
-  const container = document.getElementById('tabs');
   if (container) {
     browser.storage.local.set({ scrollTop: container.scrollTop });
   }
@@ -22,16 +35,15 @@ function saveScroll() {
 async function restoreScroll() {
   if (restored) return;
   const { scrollTop = 0 } = await browser.storage.local.get('scrollTop');
-  const container = document.getElementById('tabs');
   if (container) {
     container.scrollTop = scrollTop;
   }
   restored = true;
 }
 
-async function getTabs() {
-  const currentWin = await browser.windows.getCurrent();
+async function getTabs(allTabs) {
   if (view === 'recent') {
+    const currentWin = await browser.windows.getCurrent();
     const { recent = [] } = await browser.runtime.sendMessage({ type: 'getRecent' });
     const result = [];
     for (const id of recent) {
@@ -40,17 +52,16 @@ async function getTabs() {
         if (t.windowId === currentWin.id) {
           result.push(t);
         }
-      } catch (e) {
+      } catch (_) {
         // tab may no longer exist
       }
     }
     return result;
   }
-  const tabs = await browser.tabs.query({ currentWindow: true });
   if (view === 'dups') {
-    return findDuplicates(tabs);
+    return findDuplicates(allTabs);
   }
-  return tabs;
+  return allTabs;
 }
 
 function closeUI() {
@@ -141,7 +152,6 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
   div.appendChild(title);
-  title.onclick = () => browser.tabs.update(tab.id, {active: true});
 
 
   div.addEventListener('dragstart', (e) => {
@@ -159,7 +169,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     if (fromId !== toId) {
       const toTab = await browser.tabs.get(toId);
       await browser.tabs.move(fromId, {index: toTab.index});
-      update();
+      scheduleUpdate();
     }
   });
 
@@ -175,8 +185,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 }
 
 function renderTabs(tabs, activeId, dupIds, visitedIds) {
-
-  const container = document.getElementById('tabs');
+  if (!container) return;
   container.innerHTML = '';
   if (!tabs.length) {
     const msg = document.createElement('div');
@@ -185,10 +194,12 @@ function renderTabs(tabs, activeId, dupIds, visitedIds) {
     container.appendChild(msg);
     return;
   }
+  const frag = document.createDocumentFragment();
   for (const tab of tabs) {
     const row = createTabRow(tab, dupIds.has(tab.id), activeId, visitedIds.has(tab.id));
-    container.appendChild(row);
+    frag.appendChild(row);
   }
+  container.appendChild(frag);
 }
 
 function filterTabs(tabs, query) {
@@ -215,10 +226,9 @@ async function update() {
   document.getElementById('total-count').textContent = allTabs.length;
   const activeCount = allTabs.filter(t => !t.discarded).length;
   document.getElementById('active-count').textContent = activeCount;
-  let tabs = await getTabs();
+  let tabs = await getTabs(allTabs);
   const dupIds = new Set(findDuplicates(allTabs).map(t => t.id));
-  const current = await browser.tabs.query({ currentWindow: true, active: true });
-  const activeId = current.length ? current[0].id : -1;
+  const activeId = allTabs.find(t => t.active)?.id ?? -1;
   const { visited = [] } = await browser.runtime.sendMessage({ type: 'getVisited' });
   const visitedIds = new Set(visited);
   const searchInput = document.getElementById('search');
@@ -229,10 +239,12 @@ async function update() {
   renderTabs(tabs, activeId, dupIds, visitedIds);
 }
 
-document.getElementById('search').addEventListener('input', update);
-document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; update(); });
-document.getElementById('btn-recent').addEventListener('click', () => { view = 'recent'; update(); });
-document.getElementById('btn-dups').addEventListener('click', () => { view = 'dups'; update(); });
+const scheduleUpdate = throttle(update);
+
+document.getElementById('search').addEventListener('input', scheduleUpdate);
+document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
+document.getElementById('btn-recent').addEventListener('click', () => { view = 'recent'; scheduleUpdate(); });
+document.getElementById('btn-dups').addEventListener('click', () => { view = 'dups'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
   const tabs = Array.from(document.querySelectorAll('.tab'));
@@ -275,7 +287,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function init() {
-  document.getElementById('tabs').addEventListener('scroll', saveScroll);
+  container = document.getElementById('tabs');
+  container.addEventListener('scroll', saveScroll);
+  container.addEventListener('contextmenu', showContextMenu);
   await update();
   restoreScroll();
 }
@@ -287,7 +301,7 @@ if (document.readyState !== 'loading') {
 
 // custom context menu
 const context = document.getElementById('context');
-document.getElementById('tabs').addEventListener('contextmenu', (e) => {
+function showContextMenu(e) {
   e.preventDefault();
   const tabEl = e.target.closest('.tab');
   context.innerHTML = '';
@@ -313,15 +327,15 @@ document.getElementById('tabs').addEventListener('contextmenu', (e) => {
   if (tabEl && (!selected.length || !tabEl.querySelector('.sel').checked)) {
     const id = parseInt(tabEl.dataset.tab, 10);
     addItem('Activate', () => activateTab(id));
-    addItem('Unload', async () => { await browser.tabs.discard(id); update(); });
-    addItem('Close', async () => { await browser.tabs.remove(id); update(); });
+    addItem('Unload', async () => { await browser.tabs.discard(id); scheduleUpdate(); });
+    addItem('Close', async () => { await browser.tabs.remove(id); scheduleUpdate(); });
     if (MOVE_ENABLED) {
       addItem('Move', async () => {
         const t = await browser.tabs.get(id);
         const wins = await browser.windows.getAll({populate: false});
         const other = wins.find(w => w.id !== t.windowId);
         if (other) await browser.tabs.move(id, {windowId: other.id, index: -1});
-        update();
+        scheduleUpdate();
       });
     }
   }
@@ -333,7 +347,7 @@ document.getElementById('tabs').addEventListener('contextmenu', (e) => {
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
   context.classList.remove('hidden');
-});
+}
 
 document.addEventListener('click', () => context.classList.add('hidden'));
 
@@ -345,7 +359,7 @@ function getSelectedTabIds() {
 async function bulkClose() {
   const ids = getSelectedTabIds();
   if (ids.length) await browser.tabs.remove(ids);
-  update();
+  scheduleUpdate();
 }
 
 async function bulkReload() {
@@ -360,7 +374,7 @@ async function bulkDiscard() {
   for (const id of ids) {
     await browser.tabs.discard(id);
   }
-  update();
+  scheduleUpdate();
 }
 
 async function bulkMove() {
@@ -373,7 +387,7 @@ async function bulkMove() {
       await browser.tabs.move(id, {windowId: other.id, index: -1});
     }
   }
-  update();
+  scheduleUpdate();
 }
 
 document.getElementById('bulk-close').addEventListener('click', bulkClose);
