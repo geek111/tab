@@ -6,6 +6,26 @@ const MOVE_ENABLED = true;
 
 let lastSelectedIndex = -1;
 let container; // tabs container cached after DOM load
+let placeholder = null;
+
+function clearPlaceholder() {
+  if (placeholder && placeholder.parentNode) {
+    placeholder.parentNode.removeChild(placeholder);
+  }
+  placeholder = null;
+}
+
+function showPlaceholder(target, before) {
+  if (!placeholder) {
+    placeholder = document.createElement("div");
+    placeholder.className = "drop-placeholder";
+  }
+  if (before) {
+    target.parentNode.insertBefore(placeholder, target);
+  } else {
+    target.parentNode.insertBefore(placeholder, target.nextSibling);
+  }
+}
 
 function throttle(fn) {
   let pending = false;
@@ -172,27 +192,39 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
   div.addEventListener('dragstart', (e) => {
     e.dataTransfer.setData('text/plain', tab.id);
+    clearPlaceholder();
+    placeholder = document.createElement('div');
+    placeholder.className = 'drop-placeholder';
   });
 
   div.addEventListener('dragover', (e) => {
     e.preventDefault();
+    const rect = div.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    div.dataset.dropBefore = before ? '1' : '0';
+    showPlaceholder(div, before);
   });
 
   div.addEventListener('drop', async (e) => {
     e.preventDefault();
+    clearPlaceholder();
     const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
     const toId = parseInt(div.dataset.tab, 10);
     if (fromId !== toId) {
       const fromTab = await browser.tabs.get(fromId);
       const toTab = await browser.tabs.get(toId);
-      let index = toTab.index + 1;
+      const before = div.dataset.dropBefore === '1';
+      let index = before ? toTab.index : toTab.index + 1;
       if (fromTab.windowId === toTab.windowId && fromTab.index < toTab.index) {
-        index = toTab.index;
+        index = before ? toTab.index - 1 : toTab.index;
       }
+      if (index < 0) index = 0;
       await browser.tabs.move(fromId, { windowId: toTab.windowId, index });
       scheduleUpdate();
     }
   });
+
+  div.addEventListener('dragend', clearPlaceholder);
 
   div.addEventListener('dblclick', async () => {
     const query = prompt('Search text');
@@ -228,6 +260,7 @@ function renderTabs(tabs, activeId, dupIds, visitedIds, winMap) {
       header.addEventListener('dragover', e => e.preventDefault());
       header.addEventListener('drop', async (e) => {
         e.preventDefault();
+        clearPlaceholder();
         const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
         const fromTab = await browser.tabs.get(fromId);
         if (fromTab.windowId !== wId) {
@@ -334,6 +367,7 @@ async function init() {
   container = document.getElementById('tabs');
   container.addEventListener('scroll', saveScroll);
   container.addEventListener('contextmenu', showContextMenu);
+  container.addEventListener('dragend', clearPlaceholder);
   await update();
   restoreScroll();
 }
