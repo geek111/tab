@@ -83,6 +83,15 @@ body[data-theme="dark"] #context div:hover {
 .tab:focus {
   outline: 1px solid #888;
 }
+
+.drop-placeholder {
+  border-top: 2px solid #39f;
+  margin: 0 0.2em;
+}
+
+body[data-theme="dark"] .drop-placeholder {
+  border-color: #9af;
+}
 .tab-title {
   flex: 1;
   white-space: nowrap;
