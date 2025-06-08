@@ -40,6 +40,14 @@ function throttle(fn) {
   };
 }
 
+function debounce(fn, delay) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
 async function loadOptions() {
   const {
     showRecent = true,
@@ -89,11 +97,11 @@ function updateSelection(row, selected) {
   row.classList.toggle('selected', selected);
 }
 
-function saveScroll() {
+const saveScroll = debounce(() => {
   if (container) {
     browser.storage.local.set({ scrollTop: container.scrollTop });
   }
-}
+}, 200);
 
 async function restoreScroll() {
   if (restored) return;
@@ -528,24 +536,18 @@ async function bulkClose() {
 
 async function bulkReload() {
   const ids = getSelectedTabIds();
-  for (const id of ids) {
-    await browser.tabs.reload(id);
-  }
+  await Promise.all(ids.map(id => browser.tabs.reload(id)));
 }
 
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
-  for (const id of ids) {
-    await browser.tabs.discard(id);
-  }
+  await Promise.all(ids.map(id => browser.tabs.discard(id)));
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
-  for (const t of tabs) {
-    await browser.tabs.discard(t.id);
-  }
+  await Promise.all(tabs.map(t => browser.tabs.discard(t.id)));
   scheduleUpdate();
 }
 
@@ -555,9 +557,7 @@ async function bulkMove() {
   const currentWinId = ids.length ? (await browser.tabs.get(ids[0])).windowId : null;
   const other = windows.find(w => ids.length && w.id !== currentWinId);
   if (other) {
-    for (const id of ids) {
-      await browser.tabs.move(id, {windowId: other.id, index: -1});
-    }
+    await Promise.all(ids.map(id => browser.tabs.move(id, {windowId: other.id, index: -1})));
   }
   scheduleUpdate();
 }
