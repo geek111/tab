@@ -99,7 +99,9 @@ function closeUI() {
 async function activateTab(id) {
   try {
     await browser.tabs.update(id, {active: true});
-    closeUI();
+    if (!document.body.classList.contains('full')) {
+      closeUI();
+    }
   } catch (e) {
     document.getElementById('error').textContent = 'Could not activate tab';
     document.querySelector(`[data-tab="${id}"]`)?.remove();
@@ -200,7 +202,14 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   div.addEventListener('dragover', (e) => {
     e.preventDefault();
     const rect = div.getBoundingClientRect();
-    const before = e.clientY < rect.top + rect.height / 2;
+    let before;
+    if (document.body.classList.contains('full')) {
+      const dx = e.clientX - (rect.left + rect.width / 2);
+      const dy = e.clientY - (rect.top + rect.height / 2);
+      before = Math.abs(dx) > Math.abs(dy) ? dx < 0 : dy < 0;
+    } else {
+      before = e.clientY < rect.top + rect.height / 2;
+    }
     div.dataset.dropBefore = before ? '1' : '0';
     showPlaceholder(div, before);
   });
@@ -213,7 +222,15 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     if (fromId !== toId) {
       const fromTab = await browser.tabs.get(fromId);
       const toTab = await browser.tabs.get(toId);
-      const before = div.dataset.dropBefore === '1';
+      const rect = div.getBoundingClientRect();
+      let before;
+      if (document.body.classList.contains('full')) {
+        const dx = e.clientX - (rect.left + rect.width / 2);
+        const dy = e.clientY - (rect.top + rect.height / 2);
+        before = Math.abs(dx) > Math.abs(dy) ? dx < 0 : dy < 0;
+      } else {
+        before = e.clientY < rect.top + rect.height / 2;
+      }
       let index = before ? toTab.index : toTab.index + 1;
       if (fromTab.windowId === toTab.windowId && fromTab.index < toTab.index) {
         index = before ? toTab.index - 1 : toTab.index;
