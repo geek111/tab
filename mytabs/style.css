@@ -154,7 +154,10 @@ button {
 
 /* Layout tweaks for full view */
 body.full {
-  width: auto;
+  width: 100vw;
+  height: 100vh;
+  padding: 0.5em;
+  box-sizing: border-box;
 }
 body.full #tabs {
   display: grid;
@@ -169,6 +172,13 @@ body.full #menu {
   top: 0;
   background: inherit;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3em 0;
+}
+body.full #menu button {
+  flex: 1 1 auto;
 }
 body.full .tab {
   border: 1px solid #ddd;

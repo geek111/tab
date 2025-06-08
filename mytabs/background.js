@@ -51,6 +51,10 @@ function openFullView() {
   browser.windows.create({
     url: browser.runtime.getURL('full.html'),
     type: 'popup'
+  }).then(win => {
+    if (win && win.id) {
+      browser.windows.update(win.id, { state: 'maximized' });
+    }
   });
 }
 
