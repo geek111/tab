@@ -15,8 +15,9 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - Tabs can be reordered via drag and drop.
 - A **Full View** window shows tabs in a multi-column grid.
 - Custom context menu reveals extension version.
-- Options page lets you choose theme and grid columns.
-- A dark theme can be enabled from the options page.
+- Options page lets you choose theme, grid columns and toggle features such as
+  the Recent and Duplicates panels or the Move command.
+- A dark theme can also be enabled from the options page.
 - Keyboard shortcuts open the popup, sidebar and full view.
 - Middle-clicking the toolbar icon opens the multi-column Full View window.
 

@@ -1,8 +1,10 @@
 // Shared script used by popup.html and sidebar.html
 let view = 'all';
 let restored = false;
-// Allow moving tabs between windows
-const MOVE_ENABLED = true;
+// Feature toggles loaded from storage
+let SHOW_RECENT = true;
+let SHOW_DUPLICATES = true;
+let MOVE_ENABLED = true;
 
 let lastSelectedIndex = -1;
 let container; // tabs container cached after DOM load
@@ -38,6 +40,47 @@ function throttle(fn) {
       });
     }
   };
+}
+
+async function loadOptions() {
+  const {
+    showRecent = true,
+    showDuplicates = true,
+    enableMove = true
+  } = await browser.storage.local.get([
+    'showRecent',
+    'showDuplicates',
+    'enableMove'
+  ]);
+  SHOW_RECENT = showRecent !== false;
+  SHOW_DUPLICATES = showDuplicates !== false;
+  MOVE_ENABLED = enableMove !== false;
+  const btnRecent = document.getElementById('btn-recent');
+  const btnDups = document.getElementById('btn-dups');
+  if (btnRecent) {
+    if (SHOW_RECENT) {
+      btnRecent.style.display = '';
+      btnRecent.addEventListener('click', () => {
+        view = 'recent';
+        scheduleUpdate();
+      });
+    } else {
+      btnRecent.style.display = 'none';
+      if (view === 'recent') view = 'all';
+    }
+  }
+  if (btnDups) {
+    if (SHOW_DUPLICATES) {
+      btnDups.style.display = '';
+      btnDups.addEventListener('click', () => {
+        view = 'dups';
+        scheduleUpdate();
+      });
+    } else {
+      btnDups.style.display = 'none';
+      if (view === 'dups') view = 'all';
+    }
+  }
 }
 
 function updateSelection(row, selected) {
@@ -337,8 +380,6 @@ const scheduleUpdate = throttle(update);
 
 document.getElementById('search').addEventListener('input', scheduleUpdate);
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
-document.getElementById('btn-recent').addEventListener('click', () => { view = 'recent'; scheduleUpdate(); });
-document.getElementById('btn-dups').addEventListener('click', () => { view = 'dups'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
   const tabs = Array.from(document.querySelectorAll('.tab'));
@@ -385,6 +426,22 @@ async function init() {
   container.addEventListener('scroll', saveScroll);
   container.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
+  await loadOptions();
+  const bulkCloseBtn = document.getElementById('bulk-close');
+  if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
+
+  const bulkReloadBtn = document.getElementById('bulk-reload');
+  if (bulkReloadBtn) bulkReloadBtn.addEventListener('click', bulkReload);
+
+  const bulkDiscardBtn = document.getElementById('bulk-discard');
+  if (bulkDiscardBtn) bulkDiscardBtn.addEventListener('click', bulkDiscard);
+
+  const bulkUnloadAllBtn = document.getElementById('bulk-unload-all');
+  if (bulkUnloadAllBtn) bulkUnloadAllBtn.addEventListener('click', bulkUnloadAll);
+
+  const moveBtn = document.getElementById('bulk-move');
+  if (MOVE_ENABLED && moveBtn) moveBtn.addEventListener('click', bulkMove);
+  else if (moveBtn) moveBtn.style.display = 'none';
   await update();
   restoreScroll();
 }
@@ -497,18 +554,3 @@ async function bulkMove() {
   scheduleUpdate();
 }
 
-const bulkCloseBtn = document.getElementById('bulk-close');
-if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
-
-const bulkReloadBtn = document.getElementById('bulk-reload');
-if (bulkReloadBtn) bulkReloadBtn.addEventListener('click', bulkReload);
-
-const bulkDiscardBtn = document.getElementById('bulk-discard');
-if (bulkDiscardBtn) bulkDiscardBtn.addEventListener('click', bulkDiscard);
-
-const bulkUnloadAllBtn = document.getElementById('bulk-unload-all');
-if (bulkUnloadAllBtn) bulkUnloadAllBtn.addEventListener('click', bulkUnloadAll);
-
-const moveBtn = document.getElementById('bulk-move');
-if (MOVE_ENABLED && moveBtn) moveBtn.addEventListener('click', bulkMove);
-else if (moveBtn) moveBtn.style.display = 'none';
