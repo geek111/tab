@@ -47,15 +47,23 @@ browser.runtime.onMessage.addListener((msg) => {
   }
 });
 
-function openFullView() {
-  browser.windows.create({
+async function openFullView() {
+  const { fullSize } = await browser.storage.local.get('fullSize');
+  const createData = {
     url: browser.runtime.getURL('full.html'),
     type: 'popup'
-  }).then(win => {
-    if (win && win.id) {
-      browser.windows.update(win.id, { state: 'maximized' });
+  };
+  if (fullSize) {
+    if (typeof fullSize.width === 'number' && typeof fullSize.height === 'number') {
+      createData.width = fullSize.width;
+      createData.height = fullSize.height;
     }
-  });
+    if (typeof fullSize.left === 'number' && typeof fullSize.top === 'number') {
+      createData.left = fullSize.left;
+      createData.top = fullSize.top;
+    }
+  }
+  await browser.windows.create(createData);
 }
 
 async function unloadAllTabs() {

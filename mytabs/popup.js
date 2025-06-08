@@ -183,8 +183,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
     const toId = parseInt(div.dataset.tab, 10);
     if (fromId !== toId) {
+      const fromTab = await browser.tabs.get(fromId);
       const toTab = await browser.tabs.get(toId);
-      await browser.tabs.move(fromId, {windowId: toTab.windowId, index: toTab.index});
+      let index = toTab.index + 1;
+      if (fromTab.windowId === toTab.windowId && fromTab.index < toTab.index) {
+        index = toTab.index;
+      }
+      await browser.tabs.move(fromId, { windowId: toTab.windowId, index });
       scheduleUpdate();
     }
   });
