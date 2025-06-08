@@ -1,7 +1,8 @@
 // Shared script used by popup.html and sidebar.html
 let view = 'all';
 let restored = false;
-const MOVE_ENABLED = false;
+// Allow moving tabs between windows
+const MOVE_ENABLED = true;
 
 let lastSelectedIndex = -1;
 let container; // tabs container cached after DOM load
@@ -183,7 +184,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     const toId = parseInt(div.dataset.tab, 10);
     if (fromId !== toId) {
       const toTab = await browser.tabs.get(toId);
-      await browser.tabs.move(fromId, {index: toTab.index});
+      await browser.tabs.move(fromId, {windowId: toTab.windowId, index: toTab.index});
       scheduleUpdate();
     }
   });
@@ -218,6 +219,17 @@ function renderTabs(tabs, activeId, dupIds, visitedIds, winMap) {
       const header = document.createElement('div');
       header.className = 'window-header';
       header.textContent = `Window ${winMap?.get(wId) ?? wId}`;
+      header.dataset.win = wId;
+      header.addEventListener('dragover', e => e.preventDefault());
+      header.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        const fromTab = await browser.tabs.get(fromId);
+        if (fromTab.windowId !== wId) {
+          await browser.tabs.move(fromId, { windowId: wId, index: -1 });
+          scheduleUpdate();
+        }
+      });
       frag.appendChild(header);
     }
     const row = createTabRow(tab, dupIds.has(tab.id), activeId, visitedIds.has(tab.id));
