@@ -151,3 +151,25 @@ button {
   color: #888;
   margin-top: 1em;
 }
+
+/* Layout tweaks for full view */
+body.full {
+  width: auto;
+}
+body.full #tabs {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), 1fr);
+  gap: 0.5em;
+  max-height: 80vh;
+  overflow: auto;
+}
+body.full #counts,
+body.full #menu {
+  position: sticky;
+  top: 0;
+  background: inherit;
+  z-index: 1;
+}
+body.full .tab {
+  border: 1px solid #ddd;
+}
