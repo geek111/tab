@@ -58,6 +58,15 @@ function openFullView() {
   });
 }
 
+async function unloadAllTabs() {
+  const tabs = await browser.tabs.query({});
+  for (const t of tabs) {
+    if (!t.discarded) {
+      try { await browser.tabs.discard(t.id); } catch (_) {}
+    }
+  }
+}
+
 // Open the multi-column tab manager when the icon is middle-clicked.
 browser.browserAction.onClicked.addListener((tab, info) => {
   if (info && info.button === 1) {
@@ -70,6 +79,8 @@ browser.commands.onCommand.addListener((command) => {
     browser.browserAction.openPopup();
   } else if (command === 'open-tabs-helper-full') {
     browser.tabs.create({ url: browser.runtime.getURL('full.html') });
+  } else if (command === 'unload-all-tabs') {
+    unloadAllTabs();
   }
 });
 
