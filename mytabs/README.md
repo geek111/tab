@@ -13,7 +13,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   command to unload all tabs at once.
 - Each tab row includes a button to quickly close that tab.
 - Tabs can be reordered via drag and drop.
-- A **Full View** window lists all tabs in a single column.
+- A **Full View** window shows tabs in multiple columns filled top-to-bottom.
   - Custom context menu reveals extension version and links to the Options page.
 - Options page lets you choose theme and toggle features such as
   the Recent and Duplicates panels or the Move command.

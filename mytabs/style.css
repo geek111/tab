@@ -176,9 +176,8 @@ body.full {
   flex-direction: column;
 }
 body.full #tabs {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5em;
+  column-width: 250px;
+  column-gap: 0.5em;
   flex: 1 1 auto;
   max-height: none;
   overflow-y: auto;
