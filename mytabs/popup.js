@@ -9,12 +9,32 @@ let MOVE_ENABLED = true;
 let lastSelectedIndex = -1;
 let container; // tabs container cached after DOM load
 let dropTarget = null;
-
-function clearPlaceholder() {
+let dragPlaceholder = null;
+function clearDropIndicator() {
   if (dropTarget) {
     dropTarget.classList.remove('drop-before', 'drop-after');
     dropTarget = null;
   }
+}
+
+function clearDragPlaceholder() {
+  if (dragPlaceholder && dragPlaceholder.parentNode) {
+    dragPlaceholder.remove();
+  }
+  dragPlaceholder = null;
+}
+
+function createDragPlaceholder(el) {
+  clearDragPlaceholder();
+  dragPlaceholder = document.createElement('div');
+  dragPlaceholder.className = 'drag-placeholder';
+  dragPlaceholder.style.height = el.offsetHeight + 'px';
+  el.parentNode.insertBefore(dragPlaceholder, el.nextSibling);
+}
+
+function clearPlaceholder() {
+  clearDropIndicator();
+  clearDragPlaceholder();
 }
 
 function showPlaceholder(target, before) {
@@ -22,7 +42,7 @@ function showPlaceholder(target, before) {
       target.classList.contains(before ? 'drop-before' : 'drop-after')) {
     return;
   }
-  clearPlaceholder();
+  clearDropIndicator();
   dropTarget = target;
   dropTarget.classList.add(before ? 'drop-before' : 'drop-after');
 }
@@ -235,7 +255,8 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
   div.addEventListener('dragstart', (e) => {
     e.dataTransfer.setData('text/plain', tab.id);
-    clearPlaceholder();
+    clearDropIndicator();
+    createDragPlaceholder(div);
   });
 
   div.addEventListener('dragover', (e) => {
@@ -254,7 +275,8 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
   div.addEventListener('drop', async (e) => {
     e.preventDefault();
-    clearPlaceholder();
+    clearDropIndicator();
+    clearDragPlaceholder();
     const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
     const toId = parseInt(div.dataset.tab, 10);
     if (fromId !== toId) {
@@ -279,7 +301,10 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     }
   });
 
-  div.addEventListener('dragend', clearPlaceholder);
+  div.addEventListener('dragend', () => {
+    clearDropIndicator();
+    clearDragPlaceholder();
+  });
 
   div.addEventListener('dblclick', async () => {
     const query = prompt('Search text');
@@ -315,7 +340,8 @@ function renderTabs(tabs, activeId, dupIds, visitedIds, winMap) {
       header.addEventListener('dragover', e => e.preventDefault());
       header.addEventListener('drop', async (e) => {
         e.preventDefault();
-        clearPlaceholder();
+        clearDropIndicator();
+        clearDragPlaceholder();
         const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
         const fromTab = await browser.tabs.get(fromId);
         if (fromTab.windowId !== wId) {
@@ -420,7 +446,10 @@ async function init() {
   container = document.getElementById('tabs');
   container.addEventListener('scroll', saveScroll);
   container.addEventListener('contextmenu', showContextMenu);
-  container.addEventListener('dragend', clearPlaceholder);
+  container.addEventListener('dragend', () => {
+    clearDropIndicator();
+    clearDragPlaceholder();
+  });
   await loadOptions();
   const bulkCloseBtn = document.getElementById('bulk-close');
   if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
