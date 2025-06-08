@@ -152,6 +152,16 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   title.className = 'tab-title';
   div.appendChild(title);
 
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  closeBtn.title = 'Close tab';
+  closeBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await browser.tabs.remove(tab.id);
+    scheduleUpdate();
+  });
+  div.appendChild(closeBtn);
+
 
   div.addEventListener('dragstart', (e) => {
     e.dataTransfer.setData('text/plain', tab.id);
