@@ -14,7 +14,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - Each tab row includes a button to quickly close that tab.
 - Tabs can be reordered via drag and drop.
 - A **Full View** window shows tabs in a multi-column grid.
-- Custom context menu reveals extension version.
+ - Custom context menu reveals extension version and links to the Options page.
 - Options page lets you choose theme, grid columns and toggle features such as
   the Recent and Duplicates panels or the Move command.
 - A dark theme can also be enabled from the options page.
