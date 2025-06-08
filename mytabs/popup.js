@@ -8,23 +8,25 @@ let MOVE_ENABLED = true;
 
 let lastSelectedIndex = -1;
 let container; // tabs container cached after DOM load
-let dropTarget = null;
+let placeholder = null;
 
 function clearPlaceholder() {
-  if (dropTarget) {
-    dropTarget.classList.remove('drop-before', 'drop-after');
-    dropTarget = null;
+  if (placeholder && placeholder.parentNode) {
+    placeholder.parentNode.removeChild(placeholder);
   }
+  placeholder = null;
 }
 
 function showPlaceholder(target, before) {
-  if (dropTarget === target &&
-      target.classList.contains(before ? 'drop-before' : 'drop-after')) {
-    return;
+  if (!placeholder) {
+    placeholder = document.createElement("div");
+    placeholder.className = "drop-placeholder";
   }
-  clearPlaceholder();
-  dropTarget = target;
-  dropTarget.classList.add(before ? 'drop-before' : 'drop-after');
+  if (before) {
+    target.parentNode.insertBefore(placeholder, target);
+  } else {
+    target.parentNode.insertBefore(placeholder, target.nextSibling);
+  }
 }
 
 function throttle(fn) {
@@ -236,6 +238,8 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   div.addEventListener('dragstart', (e) => {
     e.dataTransfer.setData('text/plain', tab.id);
     clearPlaceholder();
+    placeholder = document.createElement('div');
+    placeholder.className = 'drop-placeholder';
   });
 
   div.addEventListener('dragover', (e) => {
@@ -249,6 +253,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     } else {
       before = e.clientY < rect.top + rect.height / 2;
     }
+    div.dataset.dropBefore = before ? '1' : '0';
     showPlaceholder(div, before);
   });
 
