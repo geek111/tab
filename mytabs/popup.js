@@ -234,7 +234,12 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
 
   div.addEventListener('dragstart', (e) => {
-    e.dataTransfer.setData('text/plain', tab.id);
+    const selected = getSelectedTabIds();
+    if (selected.length > 1 && div.classList.contains('selected')) {
+      e.dataTransfer.setData('text/plain', selected.join(','));
+    } else {
+      e.dataTransfer.setData('text/plain', String(tab.id));
+    }
     clearPlaceholder();
   });
 
@@ -248,21 +253,29 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   div.addEventListener('drop', async (e) => {
     e.preventDefault();
     clearPlaceholder();
-    const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    const data = e.dataTransfer.getData('text/plain');
+    const ids = data.split(',').map(id => parseInt(id, 10)).filter(n => !isNaN(n));
     const toId = parseInt(div.dataset.tab, 10);
-    if (fromId !== toId) {
-      const fromTab = await browser.tabs.get(fromId);
-      const toTab = await browser.tabs.get(toId);
-      const rect = div.getBoundingClientRect();
-      const before = e.clientY < rect.top + rect.height / 2;
-      let index = before ? toTab.index : toTab.index + 1;
-      if (fromTab.windowId === toTab.windowId && fromTab.index < toTab.index) {
-        index = before ? toTab.index - 1 : toTab.index;
+    if (!ids.length) return;
+    const toTab = await browser.tabs.get(toId);
+    const rect = div.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    let index = before ? toTab.index : toTab.index + 1;
+
+    for (const id of ids) {
+      if (id === toId) continue;
+      const fromTab = await browser.tabs.get(id);
+      let idx = index;
+      if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
+        idx--;
       }
-      if (index < 0) index = 0;
-      await browser.tabs.move(fromId, { windowId: toTab.windowId, index });
-      scheduleUpdate();
+      if (idx < 0) idx = 0;
+      await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
+      if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
+        index++;
+      }
     }
+    scheduleUpdate();
   });
 
   div.addEventListener('dragend', clearPlaceholder);
@@ -302,12 +315,15 @@ function renderTabs(tabs, activeId, dupIds, visitedIds, winMap) {
       header.addEventListener('drop', async (e) => {
         e.preventDefault();
         clearPlaceholder();
-        const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
-        const fromTab = await browser.tabs.get(fromId);
-        if (fromTab.windowId !== wId) {
-          await browser.tabs.move(fromId, { windowId: wId, index: -1 });
-          scheduleUpdate();
+        const data = e.dataTransfer.getData('text/plain');
+        const ids = data.split(',').map(id => parseInt(id, 10)).filter(n => !isNaN(n));
+        for (const id of ids) {
+          const fromTab = await browser.tabs.get(id);
+          if (fromTab.windowId !== wId) {
+            await browser.tabs.move(id, { windowId: wId, index: -1 });
+          }
         }
+        if (ids.length) scheduleUpdate();
       });
       frag.appendChild(header);
     }
