@@ -158,9 +158,9 @@ body.full {
 }
 body.full #tabs {
   display: grid;
-  grid-template-columns: repeat(var(--cols, 3), 1fr);
+  grid-template-columns: repeat(var(--cols, 1), 1fr);
   gap: 0.5em;
-  max-height: 80vh;
+  height: calc(100vh - 6em);
   overflow: auto;
 }
 body.full #counts,
@@ -172,4 +172,10 @@ body.full #menu {
 }
 body.full .tab {
   border: 1px solid #ddd;
+}
+
+.window-header {
+  grid-column: 1 / -1;
+  font-weight: bold;
+  margin-top: 0.5em;
 }

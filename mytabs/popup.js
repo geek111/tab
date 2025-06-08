@@ -193,7 +193,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   return div;
 }
 
-function renderTabs(tabs, activeId, dupIds, visitedIds) {
+function renderTabs(tabs, activeId, dupIds, visitedIds, winMap) {
   if (!container) return;
   container.innerHTML = '';
   if (!tabs.length) {
@@ -204,7 +204,16 @@ function renderTabs(tabs, activeId, dupIds, visitedIds) {
     return;
   }
   const frag = document.createDocumentFragment();
+  let lastWin = -1;
   for (const tab of tabs) {
+    const wId = tab.windowId;
+    if (document.body.classList.contains('full') && wId !== lastWin) {
+      lastWin = wId;
+      const header = document.createElement('div');
+      header.className = 'window-header';
+      header.textContent = `Window ${winMap?.get(wId) ?? wId}`;
+      frag.appendChild(header);
+    }
     const row = createTabRow(tab, dupIds.has(tab.id), activeId, visitedIds.has(tab.id));
     frag.appendChild(row);
   }
@@ -237,6 +246,8 @@ async function update() {
   const activeCount = allTabs.filter(t => !t.discarded).length;
   document.getElementById('active-count').textContent = activeCount;
   let tabs = await getTabs(allTabs);
+  const wins = await browser.windows.getAll({populate: false});
+  const winMap = new Map(wins.map((w, i) => [w.id, i + 1]));
   const dupIds = new Set(findDuplicates(allTabs).map(t => t.id));
   const activeId = allTabs.find(t => t.active)?.id ?? -1;
   const { visited = [] } = await browser.runtime.sendMessage({ type: 'getVisited' });
@@ -246,7 +257,7 @@ async function update() {
   if (query) {
     tabs = filterTabs(tabs, query);
   }
-  renderTabs(tabs, activeId, dupIds, visitedIds);
+  renderTabs(tabs, activeId, dupIds, visitedIds, winMap);
 }
 
 const scheduleUpdate = throttle(update);
