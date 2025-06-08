@@ -5,6 +5,7 @@ body {
   width: 450px;
   box-sizing: border-box;
   --tile-width: 250px;
+  --cols: 3;
 }
 
 body[data-theme="dark"] {
@@ -179,6 +180,7 @@ body.full {
 body.full #tabs {
   column-width: var(--tile-width);
   column-gap: 0.5em;
+  column-count: var(--cols);
   flex: 1 1 auto;
   max-height: none;
   overflow-y: auto;
