@@ -1,5 +1,9 @@
-async function load() {
+async function setColumns() {
   const { cols = 3 } = await browser.storage.local.get('cols');
-  document.documentElement.style.setProperty('--cols', cols);
+  const minWidth = 250;
+  const computed = Math.max(1, Math.min(cols, Math.floor(window.innerWidth / minWidth)));
+  document.documentElement.style.setProperty('--cols', computed);
 }
-load();
+
+setColumns();
+window.addEventListener('resize', setColumns);
