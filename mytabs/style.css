@@ -65,6 +65,7 @@ body[data-theme="dark"] #context div:hover {
   gap: 0.4em;
   padding: 0.2em;
   border-bottom: 1px solid #ddd;
+  break-inside: avoid;
 }
 .tab-icon {
   width: 16px;
@@ -175,12 +176,11 @@ body.full {
   flex-direction: column;
 }
 body.full #tabs {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 0.5em;
+  column-width: 250px;
+  column-gap: 0.5em;
   flex: 1 1 auto;
   max-height: none;
-  overflow: auto;
+  overflow-y: auto;
 }
 body.full #counts,
 body.full #menu {
@@ -201,7 +201,8 @@ body.full .tab {
 }
 
 .window-header {
-  grid-column: 1 / -1;
   font-weight: bold;
   margin-top: 0.5em;
+  break-inside: avoid;
+  break-before: column;
 }
