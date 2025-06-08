@@ -1,7 +1,8 @@
 async function setColumns() {
-  const { cols = 3 } = await browser.storage.local.get('cols');
+  // Determine columns purely from window width so the grid
+  // automatically expands to fill the available space.
   const minWidth = 250;
-  const computed = Math.max(1, Math.min(cols, Math.floor(window.innerWidth / minWidth)));
+  const computed = Math.max(1, Math.floor(window.innerWidth / minWidth));
   document.documentElement.style.setProperty('--cols', computed);
 }
 
