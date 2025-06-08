@@ -4,6 +4,7 @@ body {
   padding: 0.5em;
   width: 450px;
   box-sizing: border-box;
+  --tile-width: 250px;
 }
 
 body[data-theme="dark"] {
@@ -144,7 +145,7 @@ button {
 /* Full view grid */
 #grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), 1fr));
   gap: 0.5em;
 }
 .cell {
@@ -176,7 +177,7 @@ body.full {
   flex-direction: column;
 }
 body.full #tabs {
-  column-width: 250px;
+  column-width: var(--tile-width);
   column-gap: 0.5em;
   flex: 1 1 auto;
   max-height: none;
