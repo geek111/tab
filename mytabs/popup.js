@@ -354,6 +354,17 @@ async function update() {
   const allWins = document.body.classList.contains('full');
   const queryOpts = allWins ? {} : { currentWindow: true };
   const allTabs = await browser.tabs.query(queryOpts);
+  if (allWins) {
+    const wins = await browser.windows.getAll({populate: false});
+    const order = new Map(wins.map((w, i) => [w.id, i]));
+    allTabs.sort((a, b) => {
+      const wa = order.get(a.windowId) ?? 0;
+      const wb = order.get(b.windowId) ?? 0;
+      return wa === wb ? a.index - b.index : wa - wb;
+    });
+  } else {
+    allTabs.sort((a, b) => a.index - b.index);
+  }
   document.getElementById('total-count').textContent = allTabs.length;
   const activeCount = allTabs.filter(t => !t.discarded).length;
   document.getElementById('active-count').textContent = activeCount;
