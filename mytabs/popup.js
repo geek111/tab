@@ -368,8 +368,12 @@ function showContextMenu(e) {
   }
 
   if (!tabEl && !selected.length) {
-    context.textContent = `My Tabs Helper v${browser.runtime.getManifest().version}`;
+    const info = document.createElement('div');
+    info.textContent = `My Tabs Helper v${browser.runtime.getManifest().version}`;
+    context.appendChild(info);
   }
+
+  addItem('Unload All Tabs', bulkUnloadAll);
 
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
@@ -404,6 +408,14 @@ async function bulkDiscard() {
   scheduleUpdate();
 }
 
+async function bulkUnloadAll() {
+  const tabs = await browser.tabs.query({});
+  for (const t of tabs) {
+    await browser.tabs.discard(t.id);
+  }
+  scheduleUpdate();
+}
+
 async function bulkMove() {
   const ids = getSelectedTabIds();
   const windows = await browser.windows.getAll({populate: false});
@@ -425,6 +437,9 @@ if (bulkReloadBtn) bulkReloadBtn.addEventListener('click', bulkReload);
 
 const bulkDiscardBtn = document.getElementById('bulk-discard');
 if (bulkDiscardBtn) bulkDiscardBtn.addEventListener('click', bulkDiscard);
+
+const bulkUnloadAllBtn = document.getElementById('bulk-unload-all');
+if (bulkUnloadAllBtn) bulkUnloadAllBtn.addEventListener('click', bulkUnloadAll);
 
 const moveBtn = document.getElementById('bulk-move');
 if (MOVE_ENABLED && moveBtn) moveBtn.addEventListener('click', bulkMove);

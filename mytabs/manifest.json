@@ -36,6 +36,10 @@
     "open-tabs-helper-full": {
       "suggested_key": {"default": "Alt+Shift+F"},
       "description": "Open tab helper in full view"
+    },
+    "unload-all-tabs": {
+      "suggested_key": {"default": "Alt+Shift+U"},
+      "description": "Unload all tabs"
     }
   },
   "content_scripts": [
