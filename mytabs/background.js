@@ -98,4 +98,15 @@ browser.runtime.onInstalled.addListener(() => {
     title: `My Tabs Helper v${browser.runtime.getManifest().version}`,
     contexts: ['browser_action']
   });
+  browser.contextMenus.create({
+    id: 'open-options',
+    title: 'Options',
+    contexts: ['browser_action']
+  });
+});
+
+browser.contextMenus.onClicked.addListener((info) => {
+  if (info.menuItemId === 'open-options') {
+    browser.runtime.openOptionsPage();
+  }
 });
