@@ -440,7 +440,7 @@ document.addEventListener('keydown', (e) => {
 async function init() {
   container = document.getElementById('tabs');
   container.addEventListener('scroll', saveScroll);
-  container.addEventListener('contextmenu', showContextMenu);
+  document.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
   await loadOptions();
   const bulkCloseBtn = document.getElementById('bulk-close');
@@ -515,6 +515,7 @@ function showContextMenu(e) {
   }
 
   addItem('Unload All Tabs', bulkUnloadAll);
+  addItem('Options', () => browser.runtime.openOptionsPage());
 
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
