@@ -46,10 +46,16 @@ async function getTabs(allTabs) {
   if (view === 'recent') {
     const { recent = [] } = await browser.runtime.sendMessage({ type: 'getRecent' });
     const result = [];
+    let currentWin = null;
+    if (!document.body.classList.contains('full')) {
+      currentWin = await browser.windows.getCurrent();
+    }
     for (const id of recent) {
       try {
         const t = await browser.tabs.get(id);
-        result.push(t);
+        if (!currentWin || t.windowId === currentWin.id) {
+          result.push(t);
+        }
       } catch (_) {
         // tab may no longer exist
       }
@@ -240,14 +246,14 @@ function findDuplicates(tabs) {
 }
 
 async function update() {
-  // Query all tabs across every Firefox window
-  const allTabs = await browser.tabs.query({});
+  const allWins = document.body.classList.contains('full');
+  const queryOpts = allWins ? {} : { currentWindow: true };
+  const allTabs = await browser.tabs.query(queryOpts);
   document.getElementById('total-count').textContent = allTabs.length;
   const activeCount = allTabs.filter(t => !t.discarded).length;
   document.getElementById('active-count').textContent = activeCount;
   let tabs = await getTabs(allTabs);
-  const wins = await browser.windows.getAll({populate: false});
-  const winMap = new Map(wins.map((w, i) => [w.id, i + 1]));
+  const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
   const dupIds = new Set(findDuplicates(allTabs).map(t => t.id));
   const activeId = allTabs.find(t => t.active)?.id ?? -1;
   const { visited = [] } = await browser.runtime.sendMessage({ type: 'getVisited' });
