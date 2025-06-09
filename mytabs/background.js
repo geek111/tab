@@ -1,19 +1,53 @@
 const MAX_RECENT = 30;
 
-async function pushRecent(tabId) {
-  const { recent = [] } = await browser.storage.local.get('recent');
+let recent = [];
+let visited = [];
+let recentTimer = null;
+let visitedTimer = null;
+
+browser.storage.local.get(['recent', 'visited']).then(data => {
+  recent = data.recent || [];
+  visited = data.visited || [];
+});
+
+function unmarkVisited(tabId) {
+  const idx = visited.indexOf(tabId);
+  if (idx !== -1) {
+    visited.splice(idx, 1);
+    scheduleVisitedSave();
+  }
+}
+
+function scheduleRecentSave() {
+  if (!recentTimer) {
+    recentTimer = setTimeout(() => {
+      recentTimer = null;
+      browser.storage.local.set({ recent });
+    }, 500);
+  }
+}
+
+function pushRecent(tabId) {
   const idx = recent.indexOf(tabId);
   if (idx !== -1) recent.splice(idx, 1);
   recent.unshift(tabId);
   if (recent.length > MAX_RECENT) recent.pop();
-  await browser.storage.local.set({ recent });
+  scheduleRecentSave();
 }
 
-async function markVisited(tabId) {
-  const { visited = [] } = await browser.storage.local.get('visited');
+function scheduleVisitedSave() {
+  if (!visitedTimer) {
+    visitedTimer = setTimeout(() => {
+      visitedTimer = null;
+      browser.storage.local.set({ visited });
+    }, 500);
+  }
+}
+
+function markVisited(tabId) {
   if (!visited.includes(tabId)) {
     visited.push(tabId);
-    await browser.storage.local.set({ visited });
+    scheduleVisitedSave();
   }
 }
 
@@ -23,27 +57,31 @@ browser.tabs.onActivated.addListener(info => {
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
-  browser.storage.local.get('recent').then(({ recent = [] }) => {
-    const idx = recent.indexOf(tabId);
-    if (idx !== -1) {
-      recent.splice(idx, 1);
-      browser.storage.local.set({ recent });
-    }
-  });
-  browser.storage.local.get('visited').then(({ visited = [] }) => {
-    const i = visited.indexOf(tabId);
-    if (i !== -1) {
-      visited.splice(i, 1);
-      browser.storage.local.set({ visited });
-    }
-  });
+  const ridx = recent.indexOf(tabId);
+  if (ridx !== -1) {
+    recent.splice(ridx, 1);
+    scheduleRecentSave();
+  }
+  const vidx = visited.indexOf(tabId);
+  if (vidx !== -1) {
+    visited.splice(vidx, 1);
+    scheduleVisitedSave();
+  }
+});
+
+browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.discarded === true) {
+    unmarkVisited(tabId);
+  }
 });
 
 browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'getRecent') {
-    return browser.storage.local.get('recent');
+    return Promise.resolve({ recent });
   } else if (msg && msg.type === 'getVisited') {
-    return browser.storage.local.get('visited');
+    return Promise.resolve({ visited });
+  } else if (msg && msg.type === 'unmarkVisited') {
+    unmarkVisited(msg.tabId);
   }
 });
 
@@ -68,15 +106,17 @@ async function openFullView() {
 
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
-  for (const t of tabs) {
-    if (!t.discarded) {
-      try { await browser.tabs.discard(t.id); } catch (_) {}
-    }
-  }
+  await Promise.all(tabs.filter(t => !t.discarded)
+    .map(async t => {
+      try {
+        await browser.tabs.discard(t.id);
+        unmarkVisited(t.id);
+      } catch (_) {}
+    }));
 }
 
 // Open the multi-column tab manager when the icon is middle-clicked.
-browser.browserAction.onClicked.addListener((tab, info) => {
+browser.action.onClicked.addListener((tab, info) => {
   if (info && info.button === 1) {
     openFullView();
   }
@@ -84,7 +124,7 @@ browser.browserAction.onClicked.addListener((tab, info) => {
 
 browser.commands.onCommand.addListener((command) => {
   if (command === 'open-tabs-helper') {
-    browser.browserAction.openPopup();
+    browser.action.openPopup();
   } else if (command === 'open-tabs-helper-full') {
     browser.tabs.create({ url: browser.runtime.getURL('full.html') });
   } else if (command === 'unload-all-tabs') {
@@ -92,16 +132,16 @@ browser.commands.onCommand.addListener((command) => {
   }
 });
 
-browser.runtime.onInstalled.addListener(() => {
-  browser.contextMenus.create({
+browser.runtime.onInstalled.addListener(async () => {
+  await browser.contextMenus.create({
     id: 'show-version',
-    title: `My Tabs Helper v${browser.runtime.getManifest().version}`,
-    contexts: ['browser_action']
+    title: `KepiTAB v${browser.runtime.getManifest().version}`,
+    contexts: ['action']
   });
-  browser.contextMenus.create({
+  await browser.contextMenus.create({
     id: 'open-options',
     title: 'Options',
-    contexts: ['browser_action']
+    contexts: ['action']
   });
 });
 

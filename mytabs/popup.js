@@ -5,6 +5,7 @@ let restored = false;
 let SHOW_RECENT = true;
 let SHOW_DUPLICATES = true;
 let MOVE_ENABLED = true;
+let SCROLL_SPEED = 1;
 
 let lastSelectedIndex = -1;
 let container; // tabs container cached after DOM load
@@ -40,19 +41,30 @@ function throttle(fn) {
   };
 }
 
+function debounce(fn, delay) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
 async function loadOptions() {
   const {
     showRecent = true,
     showDuplicates = true,
-    enableMove = true
+    enableMove = true,
+    scrollSpeed = 1
   } = await browser.storage.local.get([
     'showRecent',
     'showDuplicates',
-    'enableMove'
+    'enableMove',
+    'scrollSpeed'
   ]);
   SHOW_RECENT = showRecent !== false;
   SHOW_DUPLICATES = showDuplicates !== false;
   MOVE_ENABLED = enableMove !== false;
+  SCROLL_SPEED = parseFloat(scrollSpeed) || 1;
   const btnRecent = document.getElementById('btn-recent');
   const btnDups = document.getElementById('btn-dups');
   if (btnRecent) {
@@ -89,11 +101,11 @@ function updateSelection(row, selected) {
   row.classList.toggle('selected', selected);
 }
 
-function saveScroll() {
+const saveScroll = debounce(() => {
   if (container) {
     browser.storage.local.set({ scrollTop: container.scrollTop });
   }
-}
+}, 200);
 
 async function restoreScroll() {
   if (restored) return;
@@ -110,7 +122,7 @@ async function getTabs(allTabs) {
     const result = [];
     let currentWin = null;
     if (!document.body.classList.contains('full')) {
-      currentWin = await browser.windows.getCurrent();
+      currentWin = await browser.windows.getLastFocused({windowTypes: ['normal']});
     }
     for (const id of recent) {
       try {
@@ -161,8 +173,10 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   if (isDuplicate) {
     div.classList.add('duplicate');
   }
-  if (isVisited && !tab.discarded) {
+  if (isVisited) {
     div.classList.add('visited');
+  } else if (!isVisited && !tab.discarded) {
+    div.classList.add('unvisited');
   }
 
   const check = document.createElement('input');
@@ -234,7 +248,12 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
 
   div.addEventListener('dragstart', (e) => {
-    e.dataTransfer.setData('text/plain', tab.id);
+    const selected = getSelectedTabIds();
+    if (selected.length > 1 && div.classList.contains('selected')) {
+      e.dataTransfer.setData('text/plain', selected.join(','));
+    } else {
+      e.dataTransfer.setData('text/plain', String(tab.id));
+    }
     clearPlaceholder();
   });
 
@@ -255,28 +274,29 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   div.addEventListener('drop', async (e) => {
     e.preventDefault();
     clearPlaceholder();
-    const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    const data = e.dataTransfer.getData('text/plain');
+    const ids = data.split(',').map(id => parseInt(id, 10)).filter(n => !isNaN(n));
     const toId = parseInt(div.dataset.tab, 10);
-    if (fromId !== toId) {
-      const fromTab = await browser.tabs.get(fromId);
-      const toTab = await browser.tabs.get(toId);
-      const rect = div.getBoundingClientRect();
-      let before;
-      if (document.body.classList.contains('full')) {
-        const dx = e.clientX - (rect.left + rect.width / 2);
-        const dy = e.clientY - (rect.top + rect.height / 2);
-        before = Math.abs(dx) > Math.abs(dy) ? dx < 0 : dy < 0;
-      } else {
-        before = e.clientY < rect.top + rect.height / 2;
+    if (!ids.length) return;
+    const toTab = await browser.tabs.get(toId);
+    const rect = div.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    let index = before ? toTab.index : toTab.index + 1;
+
+    for (const id of ids) {
+      if (id === toId) continue;
+      const fromTab = await browser.tabs.get(id);
+      let idx = index;
+      if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
+        idx--;
       }
-      let index = before ? toTab.index : toTab.index + 1;
-      if (fromTab.windowId === toTab.windowId && fromTab.index < toTab.index) {
-        index = before ? toTab.index - 1 : toTab.index;
+      if (idx < 0) idx = 0;
+      await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
+      if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
+        index++;
       }
-      if (index < 0) index = 0;
-      await browser.tabs.move(fromId, { windowId: toTab.windowId, index });
-      scheduleUpdate();
     }
+    scheduleUpdate();
   });
 
   div.addEventListener('dragend', clearPlaceholder);
@@ -316,12 +336,15 @@ function renderTabs(tabs, activeId, dupIds, visitedIds, winMap) {
       header.addEventListener('drop', async (e) => {
         e.preventDefault();
         clearPlaceholder();
-        const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
-        const fromTab = await browser.tabs.get(fromId);
-        if (fromTab.windowId !== wId) {
-          await browser.tabs.move(fromId, { windowId: wId, index: -1 });
-          scheduleUpdate();
+        const data = e.dataTransfer.getData('text/plain');
+        const ids = data.split(',').map(id => parseInt(id, 10)).filter(n => !isNaN(n));
+        for (const id of ids) {
+          const fromTab = await browser.tabs.get(id);
+          if (fromTab.windowId !== wId) {
+            await browser.tabs.move(id, { windowId: wId, index: -1 });
+          }
         }
+        if (ids.length) scheduleUpdate();
       });
       frag.appendChild(header);
     }
@@ -430,9 +453,23 @@ document.addEventListener('keydown', (e) => {
 async function init() {
   container = document.getElementById('tabs');
   container.addEventListener('scroll', saveScroll);
-  container.addEventListener('contextmenu', showContextMenu);
+  if (document.body.classList.contains('full')) {
+    container.addEventListener('wheel', (e) => {
+      if (container.scrollWidth > container.clientWidth) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY * SCROLL_SPEED;
+      }
+    }, { passive: false });
+    document.addEventListener('wheel', (e) => {
+      if (!container || e.target.closest('#tabs')) return;
+      e.preventDefault();
+      container.scrollTop += e.deltaY * SCROLL_SPEED;
+    }, { passive: false });
+  }
+  document.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
   await loadOptions();
+  registerTabEvents();
   const bulkCloseBtn = document.getElementById('bulk-close');
   if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
 
@@ -452,10 +489,31 @@ async function init() {
   restoreScroll();
 }
 
+// keep the tab list current while the popup is open
+const updateListener = () => scheduleUpdate();
+function registerTabEvents() {
+  browser.tabs.onCreated.addListener(updateListener);
+  browser.tabs.onRemoved.addListener(updateListener);
+  browser.tabs.onUpdated.addListener(updateListener);
+  browser.tabs.onActivated.addListener(updateListener);
+  browser.tabs.onDetached.addListener(updateListener);
+  browser.tabs.onAttached.addListener(updateListener);
+}
+
+function unregisterTabEvents() {
+  browser.tabs.onCreated.removeListener(updateListener);
+  browser.tabs.onRemoved.removeListener(updateListener);
+  browser.tabs.onUpdated.removeListener(updateListener);
+  browser.tabs.onActivated.removeListener(updateListener);
+  browser.tabs.onDetached.removeListener(updateListener);
+  browser.tabs.onAttached.removeListener(updateListener);
+}
+
 document.addEventListener('DOMContentLoaded', init);
 if (document.readyState !== 'loading') {
   init();
 }
+window.addEventListener('unload', unregisterTabEvents);
 
 // custom context menu
 const context = document.getElementById('context');
@@ -485,7 +543,11 @@ function showContextMenu(e) {
   if (tabEl && (!selected.length || !tabEl.querySelector('.sel').checked)) {
     const id = parseInt(tabEl.dataset.tab, 10);
     addItem('Activate', () => activateTab(id));
-    addItem('Unload', async () => { await browser.tabs.discard(id); scheduleUpdate(); });
+    addItem('Unload', async () => {
+      await browser.tabs.discard(id);
+      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      scheduleUpdate();
+    });
     addItem('Close', async () => { await browser.tabs.remove(id); scheduleUpdate(); });
     if (MOVE_ENABLED) {
       addItem('Move', async () => {
@@ -500,11 +562,12 @@ function showContextMenu(e) {
 
   if (!tabEl && !selected.length) {
     const info = document.createElement('div');
-    info.textContent = `My Tabs Helper v${browser.runtime.getManifest().version}`;
+    info.textContent = `KepiTAB v${browser.runtime.getManifest().version}`;
     context.appendChild(info);
   }
 
   addItem('Unload All Tabs', bulkUnloadAll);
+  addItem('Options', () => browser.runtime.openOptionsPage());
 
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
@@ -526,24 +589,24 @@ async function bulkClose() {
 
 async function bulkReload() {
   const ids = getSelectedTabIds();
-  for (const id of ids) {
-    await browser.tabs.reload(id);
-  }
+  await Promise.all(ids.map(id => browser.tabs.reload(id)));
 }
 
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
-  for (const id of ids) {
+  await Promise.all(ids.map(async id => {
     await browser.tabs.discard(id);
-  }
+    await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+  }));
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
-  for (const t of tabs) {
+  await Promise.all(tabs.map(async t => {
     await browser.tabs.discard(t.id);
-  }
+    await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: t.id });
+  }));
   scheduleUpdate();
 }
 
@@ -553,9 +616,7 @@ async function bulkMove() {
   const currentWinId = ids.length ? (await browser.tabs.get(ids[0])).windowId : null;
   const other = windows.find(w => ids.length && w.id !== currentWinId);
   if (other) {
-    for (const id of ids) {
-      await browser.tabs.move(id, {windowId: other.id, index: -1});
-    }
+    await Promise.all(ids.map(id => browser.tabs.move(id, {windowId: other.id, index: -1})));
   }
   scheduleUpdate();
 }
