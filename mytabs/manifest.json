@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "KepiTAB",
   "version": "0.2",
   "description": "A simple tab management tool inspired by All Tabs Helper",
@@ -10,12 +10,9 @@
     "contextMenus"
   ],
   "background": {
-    "scripts": [
-      "background.js"
-    ],
-    "persistent": false
+    "service_worker": "background.js"
   },
-  "browser_action": {
+  "action": {
     "default_title": "KepiTAB",
     "default_popup": "popup.html"
   },
