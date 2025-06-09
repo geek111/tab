@@ -440,6 +440,12 @@ document.addEventListener('keydown', (e) => {
 async function init() {
   container = document.getElementById('tabs');
   container.addEventListener('scroll', saveScroll);
+  if (document.body.classList.contains('full')) {
+    document.addEventListener('wheel', (e) => {
+      if (!container || e.target.closest('#tabs')) return;
+      container.scrollTop += e.deltaY;
+    }, { passive: false });
+  }
   document.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
   await loadOptions();
