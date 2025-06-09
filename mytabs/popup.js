@@ -443,6 +443,7 @@ async function init() {
   if (document.body.classList.contains('full')) {
     document.addEventListener('wheel', (e) => {
       if (!container || e.target.closest('#tabs')) return;
+      e.preventDefault();
       container.scrollTop += e.deltaY;
     }, { passive: false });
   }
