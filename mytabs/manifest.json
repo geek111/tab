@@ -7,10 +7,7 @@
     "tabs",
     "tabHide",
     "storage",
-    "contextMenus",
-    "downloads",
-    "clipboardWrite",
-    "contextualIdentities"
+    "contextMenus"
   ],
   "background": {
     "scripts": [
