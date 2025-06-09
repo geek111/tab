@@ -173,7 +173,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   if (isDuplicate) {
     div.classList.add('duplicate');
   }
-  if (isVisited && !tab.discarded) {
+  if (isVisited) {
     div.classList.add('visited');
   } else if (!isVisited && !tab.discarded) {
     div.classList.add('unvisited');
