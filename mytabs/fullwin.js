@@ -28,6 +28,11 @@
     document.documentElement.style.setProperty('--cols', cols);
   }
 
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && (changes.tileWidth || changes.tileScale)) {
+      updateCols();
+    }
+  });
 
   window.addEventListener('resize', updateCols);
   updateCols();
