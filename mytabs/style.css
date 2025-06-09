@@ -6,6 +6,7 @@
   --color-active: #eef5ff;
   --color-selected: #dceaff;
   --color-muted: #888;
+  --color-visited: #f0fff0;
   --tile-width: 200px;
   --tile-scale: 0.9;
 }
@@ -30,6 +31,7 @@ body[data-theme="dark"] {
   --color-active: #335577;
   --color-selected: #224466;
   --color-muted: #aaa;
+  --color-visited: #304030;
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -193,7 +195,7 @@ button:hover {
 }
 
 .visited {
-  background: #f0fff0;
+  background: var(--color-visited);
   font-weight: bold;
 }
 
