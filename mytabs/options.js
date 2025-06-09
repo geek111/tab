@@ -1,5 +1,5 @@
 async function load(){
-  const {theme='light', tileWidth=250, tileScale=1, scrollSpeed=1, showRecent=true, showDuplicates=true, enableMove=true} =
+  const {theme='light', tileWidth=200, tileScale=0.9, scrollSpeed=1, showRecent=true, showDuplicates=true, enableMove=true} =
     await browser.storage.local.get(['theme','tileWidth','tileScale','scrollSpeed','showRecent','showDuplicates','enableMove']);
   document.getElementById('theme').value = theme;
   document.getElementById('tileWidth').value = tileWidth;

@@ -6,8 +6,8 @@
   --color-active: #eef5ff;
   --color-selected: #dceaff;
   --color-muted: #888;
-  --tile-width: 250px;
-  --tile-scale: 1;
+  --tile-width: 200px;
+  --tile-scale: 0.9;
 }
 
 body {

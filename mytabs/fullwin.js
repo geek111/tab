@@ -1,5 +1,5 @@
 (async function(){
-  const { fullSize, tileWidth = 250, tileScale = 1 } =
+  const { fullSize, tileWidth = 200, tileScale = 0.9 } =
     await browser.storage.local.get(['fullSize', 'tileWidth', 'tileScale']);
   if (fullSize && typeof fullSize.width === 'number' && typeof fullSize.height === 'number') {
     try {
@@ -22,7 +22,7 @@
 
   function updateCols() {
     const style = getComputedStyle(document.documentElement);
-    const tile = parseInt(style.getPropertyValue('--tile-width'), 10) || 250;
+    const tile = parseInt(style.getPropertyValue('--tile-width'), 10) || 200;
     const width = document.body.clientWidth;
     const cols = Math.max(1, Math.floor(width / tile));
     document.documentElement.style.setProperty('--cols', cols);

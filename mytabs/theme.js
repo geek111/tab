@@ -1,5 +1,5 @@
 (async function(){
-  let { theme = 'light', tileWidth = 250, tileScale = 1 } = await browser.storage.local.get(['theme','tileWidth','tileScale']);
+  let { theme = 'light', tileWidth = 200, tileScale = 0.9 } = await browser.storage.local.get(['theme','tileWidth','tileScale']);
 
   function apply(){
     document.body.dataset.theme = theme;
