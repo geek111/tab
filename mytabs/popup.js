@@ -441,6 +441,12 @@ async function init() {
   container = document.getElementById('tabs');
   container.addEventListener('scroll', saveScroll);
   if (document.body.classList.contains('full')) {
+    container.addEventListener('wheel', (e) => {
+      if (container.scrollWidth > container.clientWidth) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
     document.addEventListener('wheel', (e) => {
       if (!container || e.target.closest('#tabs')) return;
       e.preventDefault();
