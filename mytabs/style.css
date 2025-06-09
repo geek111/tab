@@ -195,6 +195,12 @@ button:hover {
 
 .visited {
   background: #f0fff0;
+  font-weight: bold;
+}
+
+.unvisited {
+  opacity: 0.6;
+  filter: grayscale(50%);
 }
 
 #empty {

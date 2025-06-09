@@ -7,7 +7,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - The popup shows tabs from the current window, while the Full View lists tabs from all windows with instant filtering by title or URL.
 - Shows a **Recent** panel using an LRU buffer.
 - Highlights duplicate tabs and provides a dedicated **Duplicates** view.
-- Visited tabs are highlighted so you can quickly spot new pages.
+- Visited tabs appear in **bold** while unvisited tabs are dimmed, making new pages easy to spot.
 - Double click a tab to search its page content and highlight results.
 - Perform bulk operations (close, reload, unload, move) on selected tabs, and a
   command to unload all tabs at once.
