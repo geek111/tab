@@ -462,6 +462,7 @@ async function init() {
   document.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
   await loadOptions();
+  registerTabEvents();
   const bulkCloseBtn = document.getElementById('bulk-close');
   if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
 
@@ -481,10 +482,31 @@ async function init() {
   restoreScroll();
 }
 
+// keep the tab list current while the popup is open
+const updateListener = () => scheduleUpdate();
+function registerTabEvents() {
+  browser.tabs.onCreated.addListener(updateListener);
+  browser.tabs.onRemoved.addListener(updateListener);
+  browser.tabs.onUpdated.addListener(updateListener);
+  browser.tabs.onActivated.addListener(updateListener);
+  browser.tabs.onDetached.addListener(updateListener);
+  browser.tabs.onAttached.addListener(updateListener);
+}
+
+function unregisterTabEvents() {
+  browser.tabs.onCreated.removeListener(updateListener);
+  browser.tabs.onRemoved.removeListener(updateListener);
+  browser.tabs.onUpdated.removeListener(updateListener);
+  browser.tabs.onActivated.removeListener(updateListener);
+  browser.tabs.onDetached.removeListener(updateListener);
+  browser.tabs.onAttached.removeListener(updateListener);
+}
+
 document.addEventListener('DOMContentLoaded', init);
 if (document.readyState !== 'loading') {
   init();
 }
+window.addEventListener('unload', unregisterTabEvents);
 
 // custom context menu
 const context = document.getElementById('context');
