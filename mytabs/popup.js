@@ -122,7 +122,7 @@ async function getTabs(allTabs) {
     const result = [];
     let currentWin = null;
     if (!document.body.classList.contains('full')) {
-      currentWin = await browser.windows.getCurrent();
+      currentWin = await browser.windows.getLastFocused({windowTypes: ['normal']});
     }
     for (const id of recent) {
       try {
