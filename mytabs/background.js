@@ -10,6 +10,14 @@ browser.storage.local.get(['recent', 'visited']).then(data => {
   visited = data.visited || [];
 });
 
+function unmarkVisited(tabId) {
+  const idx = visited.indexOf(tabId);
+  if (idx !== -1) {
+    visited.splice(idx, 1);
+    scheduleVisitedSave();
+  }
+}
+
 function scheduleRecentSave() {
   if (!recentTimer) {
     recentTimer = setTimeout(() => {
@@ -61,11 +69,19 @@ browser.tabs.onRemoved.addListener((tabId) => {
   }
 });
 
+browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.discarded === true) {
+    unmarkVisited(tabId);
+  }
+});
+
 browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'getRecent') {
     return Promise.resolve({ recent });
   } else if (msg && msg.type === 'getVisited') {
     return Promise.resolve({ visited });
+  } else if (msg && msg.type === 'unmarkVisited') {
+    unmarkVisited(msg.tabId);
   }
 });
 
@@ -91,7 +107,12 @@ async function openFullView() {
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.filter(t => !t.discarded)
-    .map(t => browser.tabs.discard(t.id).catch(() => {})));
+    .map(async t => {
+      try {
+        await browser.tabs.discard(t.id);
+        unmarkVisited(t.id);
+      } catch (_) {}
+    }));
 }
 
 // Open the multi-column tab manager when the icon is middle-clicked.
