@@ -116,7 +116,7 @@ async function unloadAllTabs() {
 }
 
 // Open the multi-column tab manager when the icon is middle-clicked.
-browser.browserAction.onClicked.addListener((tab, info) => {
+browser.action.onClicked.addListener((tab, info) => {
   if (info && info.button === 1) {
     openFullView();
   }
@@ -124,7 +124,7 @@ browser.browserAction.onClicked.addListener((tab, info) => {
 
 browser.commands.onCommand.addListener((command) => {
   if (command === 'open-tabs-helper') {
-    browser.browserAction.openPopup();
+    browser.action.openPopup();
   } else if (command === 'open-tabs-helper-full') {
     browser.tabs.create({ url: browser.runtime.getURL('full.html') });
   } else if (command === 'unload-all-tabs') {
@@ -132,16 +132,16 @@ browser.commands.onCommand.addListener((command) => {
   }
 });
 
-browser.runtime.onInstalled.addListener(() => {
-  browser.contextMenus.create({
+browser.runtime.onInstalled.addListener(async () => {
+  await browser.contextMenus.create({
     id: 'show-version',
     title: `KepiTAB v${browser.runtime.getManifest().version}`,
-    contexts: ['browser_action']
+    contexts: ['action']
   });
-  browser.contextMenus.create({
+  await browser.contextMenus.create({
     id: 'open-options',
     title: 'Options',
-    contexts: ['browser_action']
+    contexts: ['action']
   });
 });
 
