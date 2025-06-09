@@ -16,6 +16,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - A **Full View** window shows tabs in multiple columns filled top-to-bottom.
   - Custom context menu reveals extension version and links to the Options page.
   - The mouse wheel scrolls the tab list even when the pointer is over the menu or search field.
+  - Scroll speed can be adjusted from the Options page to make scrolling more aggressive.
 - Options page lets you choose theme, column count and tile width and toggle features such as
   the Recent and Duplicates panels or the Move command.
 - A dark theme can also be enabled from the options page.
