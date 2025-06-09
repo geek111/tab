@@ -1,25 +1,45 @@
+:root {
+  --color-bg: #fff;
+  --color-text: #333;
+  --color-border: #ccc;
+  --color-hover: #f5f5f5;
+  --color-active: #eef5ff;
+  --color-selected: #dceaff;
+  --color-muted: #888;
+}
+
 body {
-  font-family: Arial, sans-serif;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 0.5em;
-  width: 450px;
+  width: 100%;
+  max-width: 450px;
   box-sizing: border-box;
+  background: var(--color-bg);
+  color: var(--color-text);
   --tile-width: 250px;
   --cols: 3;
 }
 
 body[data-theme="dark"] {
-  background: #222;
-  color: #eee;
+  --color-bg: #222;
+  --color-text: #eee;
+  --color-border: #555;
+  --color-hover: #333;
+  --color-active: #334;
+  --color-selected: #223344;
+  --color-muted: #aaa;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 body[data-theme="dark"] input,
 body[data-theme="dark"] button {
-  background: #333;
-  color: #eee;
-  border-color: #555;
+  background: var(--color-hover);
+  color: var(--color-text);
+  border-color: var(--color-border);
 }
 body[data-theme="dark"] .tab {
-  border-bottom-color: #555;
+  border-bottom-color: var(--color-border);
 }
 body[data-theme="dark"] .tab:hover,
 body[data-theme="dark"] .cell:hover {
@@ -29,11 +49,11 @@ body[data-theme="dark"] .duplicate {
   background: #442222;
 }
 body[data-theme="dark"] .selected {
-  background: #334;
+  background: var(--color-active);
 }
 body[data-theme="dark"] #context {
   background: #444;
-  border-color: #555;
+  border-color: var(--color-border);
 }
 body[data-theme="dark"] #context div:hover {
   background: #555;
@@ -66,7 +86,7 @@ body[data-theme="dark"] #context div:hover {
   align-items: center;
   gap: 0.4em;
   padding: 0.2em;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--color-border);
   break-inside: avoid;
 }
 .tab-icon {
@@ -74,14 +94,14 @@ body[data-theme="dark"] #context div:hover {
   height: 16px;
 }
 .tab:hover {
-  background: #f8f8f8;
+  background: var(--color-hover);
 }
 .tab.active {
-  background: #eef;
+  background: var(--color-active);
   font-weight: bold;
 }
 .tab.selected {
-  background: #ddeeff;
+  background: var(--color-selected);
 }
 .tab:focus {
   outline: 1px solid #888;
@@ -113,16 +133,27 @@ body[data-theme="dark"] .tab.drop-after {
   background: #fff4f4;
 }
 button {
+  padding: 0.3em 0.6em;
   margin-left: 0.2em;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button:hover {
+  background: var(--color-hover);
 }
 .hidden {
   display: none;
 }
 #context {
   position: absolute;
-  background: #eee;
-  border: 1px solid #ccc;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   padding: 0.2em;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   z-index: 1000;
 }
 
@@ -132,7 +163,7 @@ button {
 }
 
 #context div:hover {
-  background: #ddd;
+  background: var(--color-hover);
 }
 
 #bulk-actions {
@@ -150,12 +181,14 @@ button {
   gap: 0.5em;
 }
 .cell {
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   padding: 0.5em;
   cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s;
 }
 .cell:hover {
-  background: #f8f8f8;
+  background: var(--color-hover);
 }
 
 .visited {
@@ -164,7 +197,7 @@ button {
 
 #empty {
   text-align: center;
-  color: #888;
+  color: var(--color-muted);
   margin-top: 1em;
 }
 
@@ -200,7 +233,8 @@ body.full #menu button {
   flex: 1 1 auto;
 }
 body.full .tab {
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
 }
 
 .window-header {
