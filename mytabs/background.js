@@ -4,10 +4,26 @@ let recent = [];
 let visited = [];
 let recentTimer = null;
 let visitedTimer = null;
+let lastActive = {};
+let autoSuspendEnabled = false;
+let autoSuspendMin = 10;
+let autoTimer = null;
 
-browser.storage.local.get(['recent', 'visited']).then(data => {
+browser.storage.local.get(['recent', 'visited', 'autoSuspend', 'autoSuspendMin']).then(data => {
   recent = data.recent || [];
   visited = data.visited || [];
+  autoSuspendEnabled = data.autoSuspend || false;
+  autoSuspendMin = data.autoSuspendMin || 10;
+  if (autoSuspendEnabled) startAutoTimer();
+});
+
+browser.storage.onChanged.addListener(changes => {
+  if ('autoSuspend' in changes || 'autoSuspendMin' in changes) {
+    autoSuspendEnabled = changes.autoSuspend ? changes.autoSuspend.newValue : autoSuspendEnabled;
+    autoSuspendMin = changes.autoSuspendMin ? changes.autoSuspendMin.newValue : autoSuspendMin;
+    if (autoSuspendEnabled) startAutoTimer();
+    else if (autoTimer) { clearInterval(autoTimer); autoTimer=null; }
+  }
 });
 
 function scheduleRecentSave() {
@@ -43,9 +59,37 @@ function markVisited(tabId) {
   }
 }
 
+function startAutoTimer() {
+  if (autoTimer) clearInterval(autoTimer);
+  autoTimer = setInterval(checkAutoSuspend, 60000);
+}
+
+async function checkAutoSuspend() {
+  if (!autoSuspendEnabled) return;
+  const tabs = await browser.tabs.query({});
+  const now = Date.now();
+  for (const tab of tabs) {
+    const ts = lastActive[tab.id] || now;
+    if (!tab.active && !tab.discarded && now - ts > autoSuspendMin * 60000) {
+      browser.tabs.discard(tab.id).catch(()=>{});
+    }
+  }
+}
+
 browser.tabs.onActivated.addListener(info => {
   pushRecent(info.tabId);
   markVisited(info.tabId);
+  lastActive[info.tabId] = Date.now();
+});
+
+browser.tabs.onCreated.addListener(tab => {
+  lastActive[tab.id] = Date.now();
+});
+
+browser.tabs.onUpdated.addListener((id, changeInfo, tab) => {
+  if (changeInfo.active) {
+    lastActive[id] = Date.now();
+  }
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
@@ -59,6 +103,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
     visited.splice(vidx, 1);
     scheduleVisitedSave();
   }
+  delete lastActive[tabId];
 });
 
 browser.runtime.onMessage.addListener((msg) => {

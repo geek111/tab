@@ -5,6 +5,14 @@ let restored = false;
 let SHOW_RECENT = true;
 let SHOW_DUPLICATES = true;
 let MOVE_ENABLED = true;
+let PREVIEW_ENABLED = false;
+let SESSION_ENABLED = false;
+let EXPORT_ENABLED = false;
+let CONTAINER_LABELS = false;
+let PIN_ENABLED = false;
+let RESOURCE_ENABLED = false;
+let groups = {};
+let currentGroup = '';
 
 let lastSelectedIndex = -1;
 let container; // tabs container cached after DOM load
@@ -52,15 +60,34 @@ async function loadOptions() {
   const {
     showRecent = true,
     showDuplicates = true,
-    enableMove = true
+    enableMove = true,
+    enablePreviews = false,
+    enableSession = false,
+    enableExport = false,
+    enableContainers = false,
+    enablePin = false,
+    enableResource = false
   } = await browser.storage.local.get([
     'showRecent',
     'showDuplicates',
-    'enableMove'
+    'enableMove',
+    'enablePreviews',
+    'enableSession',
+    'enableExport',
+    'enableContainers',
+    'enablePin',
+    'enableResource'
   ]);
   SHOW_RECENT = showRecent !== false;
   SHOW_DUPLICATES = showDuplicates !== false;
   MOVE_ENABLED = enableMove !== false;
+  PREVIEW_ENABLED = enablePreviews === true;
+  SESSION_ENABLED = enableSession === true;
+  EXPORT_ENABLED = enableExport === true;
+  CONTAINER_LABELS = enableContainers === true;
+  PIN_ENABLED = enablePin === true;
+  RESOURCE_ENABLED = enableResource === true;
+  await loadGroups();
   const btnRecent = document.getElementById('btn-recent');
   const btnDups = document.getElementById('btn-dups');
   if (btnRecent) {
@@ -95,6 +122,23 @@ function updateSelection(row, selected) {
     check.checked = selected;
   }
   row.classList.toggle('selected', selected);
+}
+
+async function loadGroups() {
+  const { groups: stored = {} } = await browser.storage.local.get('groups');
+  groups = stored;
+  const sel = document.getElementById('group-select');
+  if (sel) {
+    sel.innerHTML = '<option value="">Groups</option>';
+    Object.keys(groups).forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g;
+      opt.textContent = g;
+      sel.appendChild(opt);
+    });
+    sel.value = currentGroup;
+    sel.onchange = () => { currentGroup = sel.value; scheduleUpdate(); };
+  }
 }
 
 const saveScroll = debounce(() => {
@@ -134,6 +178,10 @@ async function getTabs(allTabs) {
   }
   if (view === 'dups') {
     return findDuplicates(allTabs);
+  }
+  if (currentGroup) {
+    const ids = groups[currentGroup] || [];
+    return allTabs.filter(t => ids.includes(t.id));
   }
   return allTabs;
 }
@@ -192,6 +240,30 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     div.appendChild(icon);
   }
 
+  if (CONTAINER_LABELS && tab.cookieStoreId) {
+    browser.contextualIdentities.get(tab.cookieStoreId).then(ci => {
+      const lab = document.createElement('span');
+      lab.className = 'container-label';
+      lab.textContent = ci.name;
+      lab.style.backgroundColor = ci.colorCode;
+      div.appendChild(lab);
+    }).catch(()=>{});
+  }
+
+  if (PREVIEW_ENABLED) {
+    const preview = document.createElement('img');
+    preview.className = 'tab-preview hidden';
+    div.appendChild(preview);
+    div.addEventListener('mouseenter', async () => {
+      try {
+        const data = await browser.tabs.captureTab(tab.id, {format: 'jpeg', quality: 30});
+        preview.src = data;
+        preview.classList.remove('hidden');
+      } catch(_) {}
+    });
+    div.addEventListener('mouseleave', () => preview.classList.add('hidden'));
+  }
+
   div.addEventListener('click', (e) => {
     if (e.target.tagName === 'BUTTON') return;
     if (e.target.classList.contains('sel')) return;
@@ -229,6 +301,29 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
   div.appendChild(title);
+
+  if (PIN_ENABLED) {
+    const pinBtn = document.createElement('button');
+    pinBtn.textContent = tab.pinned ? 'Unpin' : 'Pin';
+    pinBtn.title = 'Toggle Pin';
+    pinBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await browser.tabs.update(tab.id, { pinned: !tab.pinned });
+      scheduleUpdate();
+    });
+    div.appendChild(pinBtn);
+  }
+
+  if (RESOURCE_ENABLED) {
+    const res = document.createElement('span');
+    res.className = 'resource-info';
+    browser.tabs.sendMessage(tab.id, { type: 'getPerf' }).then(r => {
+      if (r && r.mem) {
+        res.textContent = Math.round(r.mem/1024/1024) + ' MB';
+      }
+    }).catch(()=>{});
+    div.appendChild(res);
+  }
 
   const closeBtn = document.createElement('button');
   closeBtn.textContent = '×';
@@ -490,6 +585,7 @@ function showContextMenu(e) {
     addItem('Reload Selected', bulkReload);
     addItem('Unload Selected', bulkDiscard);
     if (MOVE_ENABLED) addItem('Move Selected', bulkMove);
+    addItem('Add to Group', () => addToGroup(selected));
   }
 
   if (tabEl && (!selected.length || !tabEl.querySelector('.sel').checked)) {
@@ -512,6 +608,18 @@ function showContextMenu(e) {
     const info = document.createElement('div');
     info.textContent = `KepiTAB v${browser.runtime.getManifest().version}`;
     context.appendChild(info);
+  }
+
+  if (currentGroup) {
+    addItem('Close Group', () => closeGroup(currentGroup));
+  }
+
+  if (EXPORT_ENABLED) {
+    addItem('Export URLs', exportList);
+  }
+  if (SESSION_ENABLED) {
+    addItem('Save Session', exportSession);
+    addItem('Restore Session', importSession);
   }
 
   addItem('Unload All Tabs', bulkUnloadAll);
@@ -561,5 +669,44 @@ async function bulkMove() {
     await Promise.all(ids.map(id => browser.tabs.move(id, {windowId: other.id, index: -1})));
   }
   scheduleUpdate();
+}
+
+async function exportList() {
+  const tabs = await browser.tabs.query({});
+  const urls = tabs.map(t => t.url).join('\n');
+  await navigator.clipboard.writeText(urls);
+}
+
+async function exportSession() {
+  const tabs = await browser.tabs.query({});
+  const data = JSON.stringify(tabs.map(t => t.url));
+  const url = URL.createObjectURL(new Blob([data], {type: 'application/json'}));
+  await browser.downloads.download({url, filename: 'session.json', saveAs: true});
+}
+
+async function importSession() {
+  const [handle] = await window.showOpenFilePicker({types:[{accept:{'application/json':['.json']}}]});
+  const file = await handle.getFile();
+  const text = await file.text();
+  const urls = JSON.parse(text);
+  for (const u of urls) {
+    await browser.tabs.create({url: u});
+  }
+}
+
+async function addToGroup(ids) {
+  const name = prompt('Group name');
+  if (!name) return;
+  const { groups: stored = {} } = await browser.storage.local.get('groups');
+  const set = new Set(stored[name] || []);
+  ids.forEach(id => set.add(id));
+  stored[name] = Array.from(set);
+  await browser.storage.local.set({ groups: stored });
+  await loadGroups();
+}
+
+async function closeGroup(name) {
+  const ids = groups[name] || [];
+  if (ids.length) await browser.tabs.remove(ids);
 }
 
