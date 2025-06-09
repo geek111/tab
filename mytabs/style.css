@@ -68,9 +68,6 @@ body[data-theme="dark"] #context div:hover {
 #menu button {
   margin-right: 0.2em;
 }
-#group-select {
-  margin-left: 0.2em;
-}
 
 #search {
   width: 100%;
@@ -91,7 +88,6 @@ body[data-theme="dark"] #context div:hover {
   padding: 0.2em;
   border-bottom: 1px solid var(--color-border);
   break-inside: avoid;
-  position: relative;
 }
 .tab-icon {
   width: 16px;
@@ -241,36 +237,10 @@ body.full .tab {
   border: 1px solid var(--color-border);
   border-radius: 4px;
 }
-body.full #group-select {
-  flex: 1 1 auto;
-}
 
 .window-header {
   font-weight: bold;
   margin-top: 0.5em;
   break-inside: avoid;
   break-before: column;
-}
-
-.container-label {
-  padding: 0 0.3em;
-  border-radius: 3px;
-  font-size: 0.8em;
-  color: #fff;
-}
-
-.tab-preview {
-  position: absolute;
-  left: 200px;
-  top: 0;
-  width: 200px;
-  border: 1px solid var(--color-border);
-  display: block;
-  z-index: 1000;
-}
-.tab-preview.hidden { display:none; }
-
-.resource-info {
-  font-size: 0.8em;
-  color: var(--color-muted);
 }

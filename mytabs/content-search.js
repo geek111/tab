@@ -15,10 +15,6 @@
           break;
         }
       }
-      return Promise.resolve();
-    } else if (msg && msg.type === 'getPerf') {
-      const perf = window.performance?.memory;
-      return Promise.resolve({ mem: perf?.usedJSHeapSize || 0 });
     }
   });
 })();
