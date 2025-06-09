@@ -17,7 +17,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   - Custom context menu reveals extension version and links to the Options page.
   - The mouse wheel scrolls the tab list even when the pointer is over the menu or search field.
   - Scroll speed can be adjusted from the Options page to make scrolling more aggressive.
-- Options page lets you choose theme, tile width and tile scale and toggle features such as
+- Options page lets you choose theme, tile width, tile scale and font scale and toggle features such as
   the Recent and Duplicates panels or the Move command.
 - A dark theme can also be enabled from the options page.
 - Keyboard shortcuts open the popup, sidebar and full view.
