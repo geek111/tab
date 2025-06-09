@@ -72,6 +72,8 @@ browser.tabs.onRemoved.addListener((tabId) => {
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.discarded === true) {
     unmarkVisited(tabId);
+  } else if (changeInfo.discarded === false) {
+    markVisited(tabId);
   }
 });
 
