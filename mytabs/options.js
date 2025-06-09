@@ -52,9 +52,21 @@ function updateScroll(){
   browser.storage.local.set({scrollSpeed});
 }
 
-document.getElementById('tileWidth').addEventListener('input', updateWidth);
-document.getElementById('tileScale').addEventListener('input', updateScale);
-document.getElementById('fontScale').addEventListener('input', updateFont);
-document.getElementById('scrollSpeed').addEventListener('input', updateScroll);
+const elTileWidth = document.getElementById('tileWidth');
+const elTileScale = document.getElementById('tileScale');
+const elFontScale = document.getElementById('fontScale');
+const elScrollSpeed = document.getElementById('scrollSpeed');
+
+elTileWidth.addEventListener('input', updateWidth);
+elTileWidth.addEventListener('change', updateWidth);
+
+elTileScale.addEventListener('input', updateScale);
+elTileScale.addEventListener('change', updateScale);
+
+elFontScale.addEventListener('input', updateFont);
+elFontScale.addEventListener('change', updateFont);
+
+elScrollSpeed.addEventListener('input', updateScroll);
+elScrollSpeed.addEventListener('change', updateScroll);
 document.getElementById('save').addEventListener('click', save);
 load();
