@@ -9,11 +9,12 @@
   --color-visited: #f0fff0;
   --tile-width: 200px;
   --tile-scale: 0.9;
+  --font-scale: 0.9;
 }
 
 body {
   font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: calc(16px * var(--tile-scale));
+  font-size: calc(16px * var(--font-scale));
   margin: 0;
   padding: 0.5em;
   width: 100%;
@@ -93,8 +94,8 @@ body[data-theme="dark"] #context div:hover {
   break-inside: avoid;
 }
 .tab-icon {
-  width: calc(16px * var(--tile-scale));
-  height: calc(16px * var(--tile-scale));
+  width: calc(16px * var(--font-scale));
+  height: calc(16px * var(--font-scale));
 }
 .tab:hover {
   background: var(--color-hover);
