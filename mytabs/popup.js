@@ -510,7 +510,7 @@ function showContextMenu(e) {
 
   if (!tabEl && !selected.length) {
     const info = document.createElement('div');
-    info.textContent = `My Tabs Helper v${browser.runtime.getManifest().version}`;
+    info.textContent = `KepiTAB v${browser.runtime.getManifest().version}`;
     context.appendChild(info);
   }
 
