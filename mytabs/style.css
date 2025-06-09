@@ -219,7 +219,8 @@ body.full #tabs {
   max-height: none;
   overflow-y: auto;
 }
-body.full #top-bar {
+body.full #counts,
+body.full #menu {
   position: sticky;
   top: 0;
   background: inherit;
@@ -228,19 +229,9 @@ body.full #top-bar {
   align-items: center;
   justify-content: space-between;
   padding: 0.3em 0;
-  gap: 1em;
-}
-body.full #counts {
-  margin: 0;
-  font-weight: bold;
-}
-body.full #menu {
-  display: flex;
-  gap: 0.5em;
-  padding: 0;
 }
 body.full #menu button {
-  flex: none;
+  flex: 1 1 auto;
 }
 body.full .tab {
   border: 1px solid var(--color-border);
