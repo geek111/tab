@@ -28,8 +28,8 @@ body[data-theme="dark"] {
   --color-text: #eee;
   --color-border: #555;
   --color-hover: #333;
-  --color-active: #334;
-  --color-selected: #223344;
+  --color-active: #335577;
+  --color-selected: #224466;
   --color-muted: #aaa;
   background: var(--color-bg);
   color: var(--color-text);
@@ -48,7 +48,7 @@ body[data-theme="dark"] .cell:hover {
   background: #444;
 }
 body[data-theme="dark"] .duplicate {
-  background: #442222;
+  background: #663333;
 }
 body[data-theme="dark"] .selected {
   background: var(--color-active);
@@ -246,4 +246,13 @@ body.full .tab {
   margin-top: 0.5em;
   break-inside: avoid;
   break-before: column;
+  padding: 0.2em 0.4em;
+  background: var(--color-hover);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+body[data-theme="dark"] .window-header {
+  background: #555;
+  color: var(--color-text);
 }
