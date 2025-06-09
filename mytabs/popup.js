@@ -175,6 +175,8 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   }
   if (isVisited && !tab.discarded) {
     div.classList.add('visited');
+  } else if (!isVisited && !tab.discarded) {
+    div.classList.add('unvisited');
   }
 
   const check = document.createElement('input');
