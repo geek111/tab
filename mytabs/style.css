@@ -226,7 +226,7 @@ body.full #top-bar {
   z-index: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 0.3em 0;
   gap: 1em;
 }
