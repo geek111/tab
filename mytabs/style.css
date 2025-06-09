@@ -6,6 +6,8 @@
   --color-active: #eef5ff;
   --color-selected: #dceaff;
   --color-muted: #888;
+  --tile-width: 250px;
+  --cols: 3;
 }
 
 body {
@@ -17,8 +19,6 @@ body {
   box-sizing: border-box;
   background: var(--color-bg);
   color: var(--color-text);
-  --tile-width: 250px;
-  --cols: 3;
 }
 
 body[data-theme="dark"] {
@@ -209,6 +209,7 @@ body.full {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  max-width: none;
 }
 body.full #tabs {
   column-width: var(--tile-width);
