@@ -1,5 +1,6 @@
 (async function(){
-  const { fullSize } = await browser.storage.local.get('fullSize');
+  const { fullSize, tileWidth = 250, tileScale = 1 } =
+    await browser.storage.local.get(['fullSize', 'tileWidth', 'tileScale']);
   if (fullSize && typeof fullSize.width === 'number' && typeof fullSize.height === 'number') {
     try {
       window.resizeTo(fullSize.width, fullSize.height);
@@ -25,6 +26,22 @@
     const width = document.body.clientWidth;
     const cols = Math.max(1, Math.floor(width / tile));
     document.documentElement.style.setProperty('--cols', cols);
+  }
+
+  const scaleInput = document.getElementById('fullScale');
+  if (scaleInput) {
+    scaleInput.value = tileScale;
+    scaleInput.addEventListener('input', () => {
+      const scale = parseFloat(scaleInput.value) || 1;
+      const style = getComputedStyle(document.documentElement);
+      const baseWidth = (parseInt(style.getPropertyValue('--tile-width'), 10) || 250) /
+                       (parseFloat(style.getPropertyValue('--tile-scale')) || 1);
+      browser.storage.local.set({ tileScale: scale });
+      document.documentElement.style.setProperty('--tile-width',
+        (baseWidth * scale) + 'px');
+      document.documentElement.style.setProperty('--tile-scale', scale);
+      updateCols();
+    });
   }
 
   window.addEventListener('resize', updateCols);
