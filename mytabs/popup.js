@@ -5,6 +5,7 @@ let restored = false;
 let SHOW_RECENT = true;
 let SHOW_DUPLICATES = true;
 let MOVE_ENABLED = true;
+let SCROLL_SPEED = 1;
 
 let lastSelectedIndex = -1;
 let container; // tabs container cached after DOM load
@@ -52,15 +53,18 @@ async function loadOptions() {
   const {
     showRecent = true,
     showDuplicates = true,
-    enableMove = true
+    enableMove = true,
+    scrollSpeed = 1
   } = await browser.storage.local.get([
     'showRecent',
     'showDuplicates',
-    'enableMove'
+    'enableMove',
+    'scrollSpeed'
   ]);
   SHOW_RECENT = showRecent !== false;
   SHOW_DUPLICATES = showDuplicates !== false;
   MOVE_ENABLED = enableMove !== false;
+  SCROLL_SPEED = parseFloat(scrollSpeed) || 1;
   const btnRecent = document.getElementById('btn-recent');
   const btnDups = document.getElementById('btn-dups');
   if (btnRecent) {
@@ -444,13 +448,13 @@ async function init() {
     container.addEventListener('wheel', (e) => {
       if (container.scrollWidth > container.clientWidth) {
         e.preventDefault();
-        container.scrollLeft += e.deltaY;
+        container.scrollLeft += e.deltaY * SCROLL_SPEED;
       }
     }, { passive: false });
     document.addEventListener('wheel', (e) => {
       if (!container || e.target.closest('#tabs')) return;
       e.preventDefault();
-      container.scrollTop += e.deltaY;
+      container.scrollTop += e.deltaY * SCROLL_SPEED;
     }, { passive: false });
   }
   document.addEventListener('contextmenu', showContextMenu);
