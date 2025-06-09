@@ -114,7 +114,7 @@ browser.commands.onCommand.addListener((command) => {
 browser.runtime.onInstalled.addListener(() => {
   browser.contextMenus.create({
     id: 'show-version',
-    title: `My Tabs Helper v${browser.runtime.getManifest().version}`,
+    title: `KepiTAB v${browser.runtime.getManifest().version}`,
     contexts: ['browser_action']
   });
   browser.contextMenus.create({
