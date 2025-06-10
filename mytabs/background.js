@@ -1,4 +1,5 @@
 const MAX_RECENT = 30;
+const action = browser.browserAction || browser.action;
 
 let recent = [];
 let visited = [];
@@ -25,8 +26,8 @@ browser.storage.local.get(['recent', 'visited']).then(data => {
       try { await browser.commands.update({ name: 'open-tabs-helper-full', shortcut: keyOpenFull }); } catch (_) {}
       try { await browser.commands.update({ name: 'unload-all-tabs', shortcut: keyUnloadAll }); } catch (_) {}
     }
-    if (browser.browserAction && browser.browserAction.setTitle) {
-      browser.browserAction.setTitle({ title: `KepiTAB (${keyOpenPopup})` });
+    if (action && action.setTitle) {
+      action.setTitle({ title: `KepiTAB (${keyOpenPopup})` });
     }
   } catch (e) {
     console.error('Failed to apply shortcuts', e);
@@ -141,15 +142,19 @@ async function unloadAllTabs() {
 }
 
 // Open the multi-column tab manager when the icon is middle-clicked.
-browser.browserAction.onClicked.addListener((tab, info) => {
-  if (info && info.button === 1) {
-    openFullView();
-  }
-});
+if (action && action.onClicked && action.onClicked.addListener) {
+  action.onClicked.addListener((tab, info) => {
+    if (info && info.button === 1) {
+      openFullView();
+    }
+  });
+}
 
 browser.commands.onCommand.addListener((command) => {
   if (command === 'open-tabs-helper') {
-    browser.browserAction.openPopup();
+    if (action && action.openPopup) {
+      action.openPopup();
+    }
   } else if (command === 'open-tabs-helper-full') {
     browser.tabs.create({ url: browser.runtime.getURL('full.html') });
   } else if (command === 'unload-all-tabs') {
