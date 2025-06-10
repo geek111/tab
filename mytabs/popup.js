@@ -194,6 +194,9 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
+    if (document.body.classList.contains('full')) {
+      icon.title = `${tab.title || tab.url}\n${tab.url}`;
+    }
     icon.onerror = () => icon.remove();
     div.appendChild(icon);
   }
