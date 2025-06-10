@@ -259,12 +259,13 @@ body.full .tab {
   break-inside: avoid;
   break-before: column;
   padding: 0.2em 0.4em;
-  background: var(--color-hover);
+  font-size: 1.1em;
+  background: var(--color-active);
+  color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: 4px;
 }
 
 body[data-theme="dark"] .window-header {
-  background: #555;
-  color: var(--color-text);
+  background: var(--color-active);
 }
