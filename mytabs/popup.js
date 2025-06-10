@@ -473,7 +473,7 @@ async function update() {
   renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
 }
 
-const scheduleUpdate = throttle(update);
+const scheduleUpdate = debounce(update, 200);
 
 document.getElementById('search').addEventListener('input', scheduleUpdate);
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
