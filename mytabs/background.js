@@ -6,9 +6,59 @@ let visited = [];
 let recentTimer = null;
 let visitedTimer = null;
 
+// Track duplicate tabs by URL
+const dupMap = new Map(); // url -> array of tab ids
+const dupIds = new Set();
+const tabUrl = new Map();
+
+function refreshDuplicates(url) {
+  const arr = dupMap.get(url) || [];
+  for (const id of arr) dupIds.delete(id);
+  if (arr.length > 1) {
+    for (let i = 1; i < arr.length; i++) dupIds.add(arr[i]);
+  }
+}
+
+function addDuplicate(tabId, url) {
+  if (!url) return;
+  tabUrl.set(tabId, url);
+  let arr = dupMap.get(url);
+  if (!arr) {
+    arr = [tabId];
+    dupMap.set(url, arr);
+  } else {
+    arr.push(tabId);
+    dupMap.set(url, arr);
+  }
+  refreshDuplicates(url);
+}
+
+function removeDuplicate(tabId) {
+  const url = tabUrl.get(tabId);
+  if (!url) return;
+  tabUrl.delete(tabId);
+  const arr = dupMap.get(url);
+  if (!arr) return;
+  const idx = arr.indexOf(tabId);
+  if (idx !== -1) arr.splice(idx, 1);
+  if (!arr.length) {
+    dupMap.delete(url);
+  } else {
+    dupMap.set(url, arr);
+  }
+  refreshDuplicates(url);
+}
+
 browser.storage.local.get(['recent', 'visited']).then(data => {
   recent = data.recent || [];
   visited = data.visited || [];
+});
+
+// Initialize duplicate tracking
+browser.tabs.query({}).then(tabs => {
+  for (const t of tabs) {
+    addDuplicate(t.id, t.url);
+  }
 });
 
 // Apply user-defined keyboard shortcuts if supported
@@ -80,6 +130,10 @@ browser.tabs.onActivated.addListener(info => {
   markVisited(info.tabId);
 });
 
+browser.tabs.onCreated.addListener(tab => {
+  addDuplicate(tab.id, tab.url);
+});
+
 browser.tabs.onRemoved.addListener((tabId) => {
   const ridx = recent.indexOf(tabId);
   if (ridx !== -1) {
@@ -91,6 +145,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
     visited.splice(vidx, 1);
     scheduleVisitedSave();
   }
+  removeDuplicate(tabId);
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
@@ -106,6 +161,8 @@ browser.runtime.onMessage.addListener((msg) => {
     return Promise.resolve({ recent });
   } else if (msg && msg.type === 'getVisited') {
     return Promise.resolve({ visited });
+  } else if (msg && msg.type === 'getDuplicates') {
+    return Promise.resolve({ duplicates: Array.from(dupIds) });
   } else if (msg && msg.type === 'unmarkVisited') {
     unmarkVisited(msg.tabId);
   }

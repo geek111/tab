@@ -150,7 +150,9 @@ async function getTabs(allTabs) {
     return result;
   }
   if (view === 'dups') {
-    return findDuplicates(allTabs);
+    const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
+    const dupSet = new Set(duplicates);
+    return allTabs.filter(t => dupSet.has(t.id));
   }
   return allTabs;
 }
@@ -458,7 +460,8 @@ async function update() {
   document.getElementById('active-count').textContent = activeCount;
   let tabs = await getTabs(allTabs);
   const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
-  const dupIds = new Set(findDuplicates(allTabs).map(t => t.id));
+  const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
+  const dupIds = new Set(duplicates);
   const activeId = allTabs.find(t => t.active)?.id ?? -1;
   const { visited = [] } = await browser.runtime.sendMessage({ type: 'getVisited' });
   const visitedIds = new Set(visited);
