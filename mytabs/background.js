@@ -16,6 +16,13 @@ browser.storage.local.get(['recent', 'visited']).then(data => {
   visited = data.visited || [];
 });
 
+// Initialize duplicate tracking
+browser.tabs.query({}).then(tabs => {
+  for (const t of tabs) {
+    addDuplicate(t.id, t.url);
+  }
+});
+
 // Apply user-defined keyboard shortcuts if supported
 (async () => {
   try {
@@ -87,6 +94,10 @@ browser.tabs.onActivated.addListener(info => {
   markVisited(info.tabId);
 });
 
+browser.tabs.onCreated.addListener(tab => {
+  addDuplicate(tab.id, tab.url);
+});
+
 browser.tabs.onRemoved.addListener((tabId) => {
   const ridx = recent.indexOf(tabId);
   if (ridx !== -1) {
@@ -99,6 +110,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
     scheduleVisitedSave();
     sendVisitedUpdate();
   }
+  removeDuplicate(tabId);
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
@@ -114,6 +126,8 @@ browser.runtime.onMessage.addListener((msg) => {
     return Promise.resolve({ recent });
   } else if (msg && msg.type === 'getVisited') {
     return Promise.resolve({ visited });
+  } else if (msg && msg.type === 'getDuplicates') {
+    return Promise.resolve({ duplicates: Array.from(dupIds) });
   } else if (msg && msg.type === 'unmarkVisited') {
     unmarkVisited(msg.tabId);
   }
