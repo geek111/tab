@@ -14,6 +14,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   be configured on the Options page.
 - Each tab row includes a button to quickly close that tab.
 - Tabs can be reordered via drag and drop, including moving multiple selected tabs at once.
+- Bulk assign selected tabs to any Firefox container or move them back to the default container.
 - A **Full View** window shows tabs in multiple columns filled top-to-bottom.
   - Custom context menu reveals extension version and links to the Options page.
   - The mouse wheel scrolls the tab list even when the pointer is over the menu or search field.
