@@ -576,28 +576,58 @@ async function init() {
   registerTabEvents();
   const select = document.getElementById('container-filter');
   if (select) {
-    const identities = await browser.contextualIdentities.query({});
-    identities.forEach(ci => {
-      containerMap.set(ci.cookieStoreId, ci);
-      const opt = document.createElement('option');
-      opt.value = ci.cookieStoreId;
-      opt.textContent = ci.name;
-      select.appendChild(opt);
-    });
-    select.addEventListener('change', () => {
-      filterContainerId = select.value;
-      scheduleUpdate();
-    });
+    if (browser.contextualIdentities) {
+      try {
+        const identities = await browser.contextualIdentities.query({});
+        identities.forEach(ci => {
+          containerMap.set(ci.cookieStoreId, ci);
+          const opt = document.createElement('option');
+          opt.value = ci.cookieStoreId;
+          opt.textContent = ci.name;
+          select.appendChild(opt);
+        });
+        select.addEventListener('change', () => {
+          filterContainerId = select.value;
+          scheduleUpdate();
+        });
+      } catch (e) {
+        console.error('Contextual identities unavailable', e);
+        select.disabled = true;
+        document.getElementById('container-target')?.setAttribute('disabled', 'true');
+        document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
+        document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
+      }
+    } else {
+      select.disabled = true;
+      document.getElementById('container-target')?.setAttribute('disabled', 'true');
+      document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
+      document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
+    }
   }
   targetSelect = document.getElementById('container-target');
   if (targetSelect) {
-    const identities = await browser.contextualIdentities.query({});
-    identities.forEach(ci => {
-      const opt = document.createElement('option');
-      opt.value = ci.cookieStoreId;
-      opt.textContent = ci.name;
-      targetSelect.appendChild(opt);
-    });
+    if (browser.contextualIdentities) {
+      try {
+        const identities = await browser.contextualIdentities.query({});
+        identities.forEach(ci => {
+          const opt = document.createElement('option');
+          opt.value = ci.cookieStoreId;
+          opt.textContent = ci.name;
+          targetSelect.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('Contextual identities unavailable', e);
+        targetSelect.disabled = true;
+        document.getElementById('container-filter')?.setAttribute('disabled', 'true');
+        document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
+        document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
+      }
+    } else {
+      targetSelect.disabled = true;
+      document.getElementById('container-filter')?.setAttribute('disabled', 'true');
+      document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
+      document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
+    }
   }
   const bulkCloseBtn = document.getElementById('bulk-close');
   if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
