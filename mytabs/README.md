@@ -17,6 +17,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   - Custom context menu reveals extension version and links to the Options page.
   - The mouse wheel scrolls the tab list even when the pointer is over the menu or search field.
   - Scroll speed can be adjusted from the Options page to make scrolling more aggressive.
+  - Hovering a tab's icon in Full View shows a tooltip with the tab title and URL.
 - Options page lets you choose theme, tile width, tile scale, font scale and close button scale and toggle features such as
   the Recent and Duplicates panels or the Move command.
 - The Close Button Scale adjusts the “×” size independent of the font scale.
