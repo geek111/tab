@@ -1,5 +1,5 @@
 (async function(){
-  const { fullSize, tileWidth = 200, tileScale = 0.9 } =
+  const { fullSize, tileWidth = 100, tileScale = 0.9 } =
     await browser.storage.local.get(['fullSize', 'tileWidth', 'tileScale']);
   if (fullSize && typeof fullSize.width === 'number' && typeof fullSize.height === 'number') {
     try {

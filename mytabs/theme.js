@@ -1,8 +1,8 @@
 (async function(){
-  let { theme = 'light', tileWidth = 200, tileScale = 0.9, fontScale = 0.9, closeScale = 1 } =
+  let { theme = 'light', tileWidth = 100, tileScale = 0.9, fontScale = 0.45, closeScale = 0.5 } =
     await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale']);
   if (closeScale === undefined) {
-    closeScale = 1;
+    closeScale = 0.5;
     browser.storage.local.set({ closeScale });
   }
 

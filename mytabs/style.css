@@ -7,10 +7,10 @@
   --color-selected: #dceaff;
   --color-muted: #888;
   --color-visited: #f0fff0;
-  --tile-width: 200px;
+  --tile-width: 100px;
   --tile-scale: 0.9;
-  --font-scale: 0.9;
-  --close-scale: 1;
+  --font-scale: 0.45;
+  --close-scale: 0.5;
 }
 
 body {
