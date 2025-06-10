@@ -12,6 +12,7 @@ let container; // tabs container cached after DOM load
 let dropTarget = null;
 let containerMap = new Map();
 let filterContainerId = '';
+let containerCache = null;
 let targetSelect;
 let visitedIds = new Set();
 
@@ -200,7 +201,7 @@ async function getContainerIdentities() {
   return containerCache;
 }
 
-function createTabRow(tab, isDuplicate, activeId, isVisited) {
+function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const div = document.createElement('div');
   div.className = 'tab';
   div.dataset.tab = tab.id;
