@@ -165,9 +165,6 @@ function closeUI() {
 async function activateTab(id) {
   try {
     await browser.tabs.update(id, {active: true});
-    if (!document.body.classList.contains('full')) {
-      closeUI();
-    }
   } catch (e) {
     document.getElementById('error').textContent = 'Could not activate tab';
     document.querySelector(`[data-tab="${id}"]`)?.remove();
@@ -326,14 +323,6 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   });
 
   div.addEventListener('dragend', clearPlaceholder);
-
-  div.addEventListener('dblclick', async () => {
-    const query = prompt('Search text');
-    if (query) {
-      await browser.tabs.sendMessage(tab.id, { type: 'highlight', query });
-      browser.tabs.update(tab.id, { active: true });
-    }
-  });
 
   return div;
 }
@@ -586,33 +575,57 @@ async function init() {
     }
   }
   if (select) {
-    if (containersAvailable) {
-      containerIdents.forEach(ci => {
-        containerMap.set(ci.cookieStoreId, ci);
-        const opt = document.createElement('option');
-        opt.value = ci.cookieStoreId;
-        opt.textContent = ci.name;
-        select.appendChild(opt);
-      });
-      select.addEventListener('change', () => {
-        filterContainerId = select.value;
-        scheduleUpdate();
-      });
+    if (browser.contextualIdentities) {
+      try {
+        const identities = await browser.contextualIdentities.query({});
+        identities.forEach(ci => {
+          containerMap.set(ci.cookieStoreId, ci);
+          const opt = document.createElement('option');
+          opt.value = ci.cookieStoreId;
+          opt.textContent = ci.name;
+          select.appendChild(opt);
+        });
+        select.addEventListener('change', () => {
+          filterContainerId = select.value;
+          scheduleUpdate();
+        });
+      } catch (e) {
+        console.error('Contextual identities unavailable', e);
+        select.disabled = true;
+        document.getElementById('container-target')?.setAttribute('disabled', 'true');
+        document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
+        document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
+      }
     } else {
-      select.style.display = 'none';
+      select.disabled = true;
+      document.getElementById('container-target')?.setAttribute('disabled', 'true');
+      document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
+      document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
     }
   }
   targetSelect = document.getElementById('container-target');
   if (targetSelect) {
-    if (containersAvailable) {
-      containerIdents.forEach(ci => {
-        const opt = document.createElement('option');
-        opt.value = ci.cookieStoreId;
-        opt.textContent = ci.name;
-        targetSelect.appendChild(opt);
-      });
+    if (browser.contextualIdentities) {
+      try {
+        const identities = await browser.contextualIdentities.query({});
+        identities.forEach(ci => {
+          const opt = document.createElement('option');
+          opt.value = ci.cookieStoreId;
+          opt.textContent = ci.name;
+          targetSelect.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('Contextual identities unavailable', e);
+        targetSelect.disabled = true;
+        document.getElementById('container-filter')?.setAttribute('disabled', 'true');
+        document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
+        document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
+      }
     } else {
-      targetSelect.style.display = 'none';
+      targetSelect.disabled = true;
+      document.getElementById('container-filter')?.setAttribute('disabled', 'true');
+      document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
+      document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
     }
   }
   const bulkCloseBtn = document.getElementById('bulk-close');
@@ -787,7 +800,11 @@ async function bulkMove() {
   const currentWinId = ids.length ? (await browser.tabs.get(ids[0])).windowId : null;
   const other = windows.find(w => ids.length && w.id !== currentWinId);
   if (other) {
-    await Promise.all(ids.map(id => browser.tabs.move(id, {windowId: other.id, index: -1}))); 
+    const tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
+    tabs.sort((a, b) => a.index - b.index);
+    for (const tab of tabs) {
+      await browser.tabs.move(tab.id, { windowId: other.id, index: -1 });
+    }
   }
   scheduleUpdate();
 }
@@ -796,14 +813,20 @@ async function bulkAssignToContainer(containerId) {
   const ids = getSelectedTabIds();
   if (!ids.length) return;
   if (ids.length > 10 && !confirm(`Move ${ids.length} tabs to the selected container?`)) return;
-  const tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
+  let tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
+  tabs.sort((a, b) => a.windowId === b.windowId ? a.index - b.index : a.windowId - b.windowId);
+  const offsets = new Map();
   for (const tab of tabs) {
+    const off = offsets.get(tab.windowId) || 0;
     await browser.tabs.create({
       url: tab.url,
       cookieStoreId: containerId,
-      index: tab.index,
-      windowId: tab.windowId
+      index: tab.index + off,
+      windowId: tab.windowId,
+      pinned: tab.pinned,
+      active: tab.active
     });
+    offsets.set(tab.windowId, off + 1);
   }
   await browser.tabs.remove(ids);
   scheduleUpdate();
