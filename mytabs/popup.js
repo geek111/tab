@@ -174,6 +174,29 @@ async function activateTab(id) {
   }
 }
 
+async function getContainerIdentities() {
+  if (containerCache) {
+    return containerCache;
+  }
+  const stored = await browser.storage.local.get('containerIdentities');
+  if (stored.containerIdentities) {
+    containerCache = stored.containerIdentities;
+    return containerCache;
+  }
+  if (!browser.contextualIdentities) {
+    containerCache = [];
+    return containerCache;
+  }
+  try {
+    containerCache = await browser.contextualIdentities.query({});
+    await browser.storage.local.set({ containerIdentities: containerCache });
+  } catch (e) {
+    console.error('Contextual identities unavailable', e);
+    containerCache = [];
+  }
+  return containerCache;
+}
+
 function createTabRow(tab, isDuplicate, activeId, isVisited) {
   const div = document.createElement('div');
   div.className = 'tab';
@@ -501,7 +524,7 @@ async function init() {
   let containersAvailable = !!browser.contextualIdentities;
   if (browser.contextualIdentities) {
     try {
-      containerIdents = await browser.contextualIdentities.query({});
+      containerIdents = await getContainerIdentities();
     } catch (e) {
       containersAvailable = false;
       console.error('Contextual identities unavailable', e);
@@ -515,7 +538,7 @@ async function init() {
   if (select) {
     if (browser.contextualIdentities) {
       try {
-        const identities = await browser.contextualIdentities.query({});
+        const identities = await getContainerIdentities();
         identities.forEach(ci => {
           containerMap.set(ci.cookieStoreId, ci);
           const opt = document.createElement('option');
@@ -548,7 +571,7 @@ async function init() {
   if (targetSelect) {
     if (browser.contextualIdentities) {
       try {
-        const identities = await browser.contextualIdentities.query({});
+        const identities = await getContainerIdentities();
         identities.forEach(ci => {
           const opt = document.createElement('option');
           opt.value = ci.cookieStoreId;
