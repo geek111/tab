@@ -10,6 +10,8 @@ let SCROLL_SPEED = 1;
 let lastSelectedIndex = -1;
 let container; // tabs container cached after DOM load
 let dropTarget = null;
+let containerMap = new Map();
+let filterContainerId = '';
 
 function clearPlaceholder() {
   if (dropTarget) {
@@ -217,6 +219,15 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     };
     icon.addEventListener('mouseenter', showTooltip);
     icon.addEventListener('mouseleave', hideTooltip);
+  }
+
+  const ctx = containerMap.get(tab.cookieStoreId);
+  if (ctx) {
+    const indicator = document.createElement('span');
+    indicator.className = 'container-indicator';
+    indicator.style.backgroundColor = ctx.colorCode;
+    indicator.title = ctx.name;
+    div.appendChild(indicator);
   }
 
   div.addEventListener('click', (e) => {
@@ -437,7 +448,10 @@ function findDuplicates(tabs) {
 async function update() {
   const allWins = document.body.classList.contains('full');
   const queryOpts = allWins ? {} : { currentWindow: true };
-  const allTabs = await browser.tabs.query(queryOpts);
+  let allTabs = await browser.tabs.query(queryOpts);
+  if (filterContainerId) {
+    allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
+  }
   if (allWins) {
     const wins = await browser.windows.getAll({populate: false});
     const order = new Map(wins.map((w, i) => [w.id, i]));
@@ -559,6 +573,21 @@ async function init() {
   container.addEventListener('dragend', clearPlaceholder);
   await loadOptions();
   registerTabEvents();
+  const select = document.getElementById('container-filter');
+  if (select) {
+    const identities = await browser.contextualIdentities.query({});
+    identities.forEach(ci => {
+      containerMap.set(ci.cookieStoreId, ci);
+      const opt = document.createElement('option');
+      opt.value = ci.cookieStoreId;
+      opt.textContent = ci.name;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => {
+      filterContainerId = select.value;
+      scheduleUpdate();
+    });
+  }
   const bulkCloseBtn = document.getElementById('bulk-close');
   if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
 
