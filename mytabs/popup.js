@@ -13,15 +13,7 @@ let dropTarget = null;
 let containerMap = new Map();
 let filterContainerId = '';
 let targetSelect;
-let virtualList = null;
-let tabItems = [];
-let idIndexMap = new Map();
-let rowHeight = 32;
-let currentDupIds = new Set();
-let currentActiveId = -1;
-let currentVisited = new Set();
-let currentWinMap = null;
-let currentQuery = '';
+let visitedIds = new Set();
 
 function clearPlaceholder() {
   if (dropTarget) {
@@ -162,7 +154,9 @@ async function getTabs(allTabs) {
     return result;
   }
   if (view === 'dups') {
-    return findDuplicates(allTabs);
+    const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
+    const dupSet = new Set(duplicates);
+    return allTabs.filter(t => dupSet.has(t.id));
   }
   return allTabs;
 }
@@ -183,7 +177,30 @@ async function activateTab(id) {
   }
 }
 
-function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
+async function getContainerIdentities() {
+  if (containerCache) {
+    return containerCache;
+  }
+  const stored = await browser.storage.local.get('containerIdentities');
+  if (stored.containerIdentities) {
+    containerCache = stored.containerIdentities;
+    return containerCache;
+  }
+  if (!browser.contextualIdentities) {
+    containerCache = [];
+    return containerCache;
+  }
+  try {
+    containerCache = await browser.contextualIdentities.query({});
+    await browser.storage.local.set({ containerIdentities: containerCache });
+  } catch (e) {
+    console.error('Contextual identities unavailable', e);
+    containerCache = [];
+  }
+  return containerCache;
+}
+
+function createTabRow(tab, isDuplicate, activeId, isVisited) {
   const div = document.createElement('div');
   div.className = 'tab';
   div.dataset.tab = tab.id;
@@ -241,39 +258,6 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     div.appendChild(indicator);
   }
 
-  div.addEventListener('click', (e) => {
-    if (e.target.tagName === 'BUTTON') return;
-    const idx = idIndexMap.get(tab.id);
-    if (e.ctrlKey || e.metaKey || e.shiftKey) {
-      e.preventDefault();
-      if (e.shiftKey && lastSelectedIndex !== -1) {
-        const start = Math.min(lastSelectedIndex, idx);
-        const end = Math.max(lastSelectedIndex, idx);
-        const select = !div.classList.contains('selected');
-        for (let i = start; i <= end; i++) {
-          tabItems[i].selected = select;
-          if (tabItems[i].el) updateSelection(tabItems[i].el, select);
-        }
-      } else {
-        const sel = !div.classList.contains('selected');
-        tabItems[idx].selected = sel;
-        updateSelection(div, sel);
-      }
-      lastSelectedIndex = idx;
-      return;
-    }
-    activateTab(tab.id);
-  });
-
-  div.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
-        activateTab(tab.id);
-      } else {
-        e.preventDefault();
-      }
-    }
-  });
 
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
@@ -284,60 +268,9 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
-  closeBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    await browser.tabs.remove(tab.id);
-    scheduleUpdate();
-  });
   div.appendChild(closeBtn);
 
-
-  div.addEventListener('dragstart', (e) => {
-    const selected = getSelectedTabIds();
-    if (selected.length > 1 && div.classList.contains('selected')) {
-      e.dataTransfer.setData('text/plain', selected.join(','));
-    } else {
-      e.dataTransfer.setData('text/plain', String(tab.id));
-    }
-    clearPlaceholder();
-  });
-
-  div.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    const rect = div.getBoundingClientRect();
-    const before = e.clientY < rect.top + rect.height / 2;
-    showPlaceholder(div, before);
-  });
-
-  div.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    clearPlaceholder();
-    const data = e.dataTransfer.getData('text/plain');
-    const ids = data.split(',').map(id => parseInt(id, 10)).filter(n => !isNaN(n));
-    const toId = parseInt(div.dataset.tab, 10);
-    if (!ids.length) return;
-    const toTab = await browser.tabs.get(toId);
-    const rect = div.getBoundingClientRect();
-    const before = e.clientY < rect.top + rect.height / 2;
-    let index = before ? toTab.index : toTab.index + 1;
-
-    for (const id of ids) {
-      if (id === toId) continue;
-      const fromTab = await browser.tabs.get(id);
-      let idx = index;
-      if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
-        idx--;
-      }
-      if (idx < 0) idx = 0;
-      await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
-      if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
-        index++;
-      }
-    }
-    scheduleUpdate();
-  });
-
-  div.addEventListener('dragend', clearPlaceholder);
+  // click and drag events handled via delegation
 
   return div;
 }
@@ -480,10 +413,9 @@ async function update() {
   document.getElementById('active-count').textContent = activeCount;
   let tabs = await getTabs(allTabs);
   const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
-  const dupIds = new Set(findDuplicates(allTabs).map(t => t.id));
+  const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
+  const dupIds = new Set(duplicates);
   const activeId = allTabs.find(t => t.active)?.id ?? -1;
-  const { visited = [] } = await browser.runtime.sendMessage({ type: 'getVisited' });
-  const visitedIds = new Set(visited);
   const searchInput = document.getElementById('search');
   const query = searchInput.value.trim();
   let list;
@@ -496,6 +428,13 @@ async function update() {
 }
 
 const scheduleUpdate = throttle(update);
+
+browser.runtime.onMessage.addListener((msg) => {
+  if (msg && msg.type === 'visitedUpdated') {
+    visitedIds = new Set(msg.visited || []);
+    scheduleUpdate();
+  }
+});
 
 document.getElementById('search').addEventListener('input', scheduleUpdate);
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
@@ -577,6 +516,10 @@ document.addEventListener('keydown', (e) => {
 async function init() {
   container = document.getElementById('tabs');
   container.addEventListener('scroll', saveScroll);
+  container.addEventListener('click', onContainerClick);
+  container.addEventListener('dragstart', onContainerDragStart);
+  container.addEventListener('dragover', onContainerDragOver);
+  container.addEventListener('drop', onContainerDrop);
   if (document.body.classList.contains('full')) {
     container.addEventListener('wheel', (e) => {
       if (container.scrollWidth > container.clientWidth) {
@@ -592,6 +535,8 @@ async function init() {
   }
   document.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
+  const { visited = [] } = await browser.storage.local.get('visited');
+  visitedIds = new Set(visited);
   await loadOptions();
   registerTabEvents();
   const select = document.getElementById('container-filter');
@@ -599,7 +544,7 @@ async function init() {
   let containersAvailable = !!browser.contextualIdentities;
   if (browser.contextualIdentities) {
     try {
-      containerIdents = await browser.contextualIdentities.query({});
+      containerIdents = await getContainerIdentities();
     } catch (e) {
       containersAvailable = false;
       console.error('Contextual identities unavailable', e);
@@ -613,7 +558,7 @@ async function init() {
   if (select) {
     if (browser.contextualIdentities) {
       try {
-        const identities = await browser.contextualIdentities.query({});
+        const identities = await getContainerIdentities();
         identities.forEach(ci => {
           containerMap.set(ci.cookieStoreId, ci);
           const opt = document.createElement('option');
@@ -646,7 +591,7 @@ async function init() {
   if (targetSelect) {
     if (browser.contextualIdentities) {
       try {
-        const identities = await browser.contextualIdentities.query({});
+        const identities = await getContainerIdentities();
         identities.forEach(ci => {
           const opt = document.createElement('option');
           opt.value = ci.cookieStoreId;
@@ -875,5 +820,84 @@ async function bulkAssignToContainer(containerId) {
 
 async function bulkRemoveFromContainer() {
   await bulkAssignToContainer('firefox-default');
+}
+
+function onContainerClick(e) {
+  const tabEl = e.target.closest('.tab');
+  if (!tabEl || !container.contains(tabEl)) return;
+  if (e.target.classList.contains('close-btn')) {
+    e.stopPropagation();
+    const id = parseInt(tabEl.dataset.tab, 10);
+    browser.tabs.remove(id).then(scheduleUpdate);
+    return;
+  }
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const idx = tabs.indexOf(tabEl);
+  if (e.ctrlKey || e.metaKey || e.shiftKey) {
+    e.preventDefault();
+    if (e.shiftKey && lastSelectedIndex !== -1) {
+      const start = Math.min(lastSelectedIndex, idx);
+      const end = Math.max(lastSelectedIndex, idx);
+      const select = !tabEl.classList.contains('selected');
+      for (let i = start; i <= end; i++) {
+        updateSelection(tabs[i], select);
+      }
+    } else {
+      updateSelection(tabEl, !tabEl.classList.contains('selected'));
+    }
+    lastSelectedIndex = idx;
+    return;
+  }
+  activateTab(parseInt(tabEl.dataset.tab, 10));
+}
+
+function onContainerDragStart(e) {
+  const tabEl = e.target.closest('.tab');
+  if (!tabEl) return;
+  const selected = getSelectedTabIds();
+  if (selected.length > 1 && tabEl.classList.contains('selected')) {
+    e.dataTransfer.setData('text/plain', selected.join(','));
+  } else {
+    e.dataTransfer.setData('text/plain', tabEl.dataset.tab);
+  }
+  clearPlaceholder();
+}
+
+function onContainerDragOver(e) {
+  const tabEl = e.target.closest('.tab');
+  if (!tabEl) return;
+  e.preventDefault();
+  const rect = tabEl.getBoundingClientRect();
+  const before = e.clientY < rect.top + rect.height / 2;
+  showPlaceholder(tabEl, before);
+}
+
+async function onContainerDrop(e) {
+  const tabEl = e.target.closest('.tab');
+  if (!tabEl) return;
+  e.preventDefault();
+  clearPlaceholder();
+  const data = e.dataTransfer.getData('text/plain');
+  const ids = data.split(',').map(id => parseInt(id, 10)).filter(n => !isNaN(n));
+  const toId = parseInt(tabEl.dataset.tab, 10);
+  if (!ids.length) return;
+  const toTab = await browser.tabs.get(toId);
+  const rect = tabEl.getBoundingClientRect();
+  const before = e.clientY < rect.top + rect.height / 2;
+  let index = before ? toTab.index : toTab.index + 1;
+  for (const id of ids) {
+    if (id === toId) continue;
+    const fromTab = await browser.tabs.get(id);
+    let idx = index;
+    if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
+      idx--;
+    }
+    if (idx < 0) idx = 0;
+    await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
+    if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
+      index++;
+    }
+  }
+  scheduleUpdate();
 }
 
