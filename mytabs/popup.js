@@ -263,10 +263,28 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     }
   });
 
+  const info = document.createElement('div');
+  info.className = 'tab-info';
+
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
-  div.appendChild(title);
+  info.appendChild(title);
+
+  let subtitle = '';
+  try {
+    subtitle = new URL(tab.url).hostname;
+  } catch (_) {
+    subtitle = tab.url;
+  }
+  if (subtitle && subtitle !== tab.title) {
+    const sub = document.createElement('div');
+    sub.className = 'subtitle';
+    sub.textContent = subtitle;
+    info.appendChild(sub);
+  }
+
+  div.appendChild(info);
 
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
