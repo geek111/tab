@@ -8,7 +8,7 @@ async function load(){
     theme='light',
     tileWidth=100,
     tileScale=0.9,
-    fontScale=0.45,
+    fontScale=1,
     scrollSpeed=1,
     showRecent=true,
     showDuplicates=true,
