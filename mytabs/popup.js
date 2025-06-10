@@ -113,6 +113,9 @@ async function loadOptions() {
 
 function updateSelection(row, selected) {
   row.classList.toggle('selected', selected);
+  if (row._item) {
+    row._item.selected = selected;
+  }
 }
 
 const saveScroll = debounce(() => {
@@ -203,6 +206,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   div.dataset.tab = tab.id;
   div.tabIndex = 0;
   div.draggable = true;
+  if (item) div._item = item;
   if (tab.id === activeId) {
     div.classList.add('active');
   }
@@ -273,48 +277,55 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
 function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   if (!container) return;
+  currentDupIds = dupIds;
+  currentActiveId = activeId;
+  currentVisited = visitedIds;
+  currentWinMap = winMap;
+  currentQuery = query;
+  tabItems = list.map(entry => ({ tab: entry.tab ?? entry, match: entry.match, selected: false, el: null }));
+  idIndexMap = new Map(tabItems.map((it, i) => [it.tab.id, i]));
+
   container.innerHTML = '';
-  if (!list.length) {
+  if (!tabItems.length) {
     const msg = document.createElement('div');
     msg.id = 'empty';
     msg.textContent = 'No tabs to display';
     container.appendChild(msg);
     return;
   }
-  const frag = document.createDocumentFragment();
-  let lastWin = -1;
-  for (const entry of list) {
-    const tab = entry.tab ?? entry;
-    const wId = tab.windowId;
-    if (document.body.classList.contains('full') && wId !== lastWin) {
-      lastWin = wId;
-      const header = document.createElement('div');
-      header.className = 'window-header';
-      header.textContent = `Window ${winMap?.get(wId) ?? wId}`;
-      header.dataset.win = wId;
-      header.addEventListener('dragover', e => e.preventDefault());
-      header.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        clearPlaceholder();
-        const data = e.dataTransfer.getData('text/plain');
-        const ids = data.split(',').map(id => parseInt(id, 10)).filter(n => !isNaN(n));
-        for (const id of ids) {
-          const fromTab = await browser.tabs.get(id);
-          if (fromTab.windowId !== wId) {
-            await browser.tabs.move(id, { windowId: wId, index: -1 });
-          }
-        }
-        if (ids.length) scheduleUpdate();
-      });
-      frag.appendChild(header);
-    }
-    const row = createTabRow(tab, dupIds.has(tab.id), activeId, visitedIds.has(tab.id));
-    if (query && entry.match && tab.title) {
-      const span = row.querySelector('.tab-title');
+
+  if (!virtualList) {
+    const sample = createTabRow(tabItems[0].tab, dupIds.has(tabItems[0].tab.id), activeId, visitedIds.has(tabItems[0].tab.id), tabItems[0]);
+    sample.style.position = 'absolute';
+    sample.style.visibility = 'hidden';
+    container.appendChild(sample);
+    rowHeight = sample.getBoundingClientRect().height || 32;
+    sample.remove();
+    virtualList = HyperList.create(container, {
+      itemHeight: rowHeight,
+      total: tabItems.length,
+      generate: generateRow
+    });
+  } else {
+    virtualList.refresh(container, {
+      itemHeight: rowHeight,
+      total: tabItems.length,
+      generate: generateRow
+    });
+  }
+}
+
+function generateRow(index) {
+  const item = tabItems[index];
+  if (!item) return document.createElement('div');
+  if (!item.el) {
+    item.el = createTabRow(item.tab, currentDupIds.has(item.tab.id), currentActiveId, currentVisited.has(item.tab.id), item);
+    if (currentQuery && item.match && item.tab.title) {
+      const span = item.el.querySelector('.tab-title');
       if (span) {
         let html = '';
         let last = 0;
-        for (const idx of entry.match) {
+        for (const idx of item.match) {
           html += escapeHtml(span.textContent.slice(last, idx));
           html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
           last = idx + 1;
@@ -323,9 +334,9 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
         span.innerHTML = html;
       }
     }
-    frag.appendChild(row);
+    if (item.selected) item.el.classList.add('selected');
   }
-  container.appendChild(frag);
+  return item.el;
 }
 
 function fuzzyMatchPositions(text, query) {
@@ -429,19 +440,17 @@ document.getElementById('search').addEventListener('input', scheduleUpdate);
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
-  const tabs = Array.from(document.querySelectorAll('.tab'));
-  if (!tabs.length) return;
+  if (!tabItems.length) return;
   if (document.activeElement.tagName === 'INPUT') return;
   const focused = document.activeElement;
   const isTab = focused.classList.contains('tab');
-  let idx = tabs.indexOf(focused);
+  let idx = isTab ? idIndexMap.get(parseInt(focused.dataset.tab, 10)) : -1;
 
   const moveFocus = (delta) => {
-    const newIdx = Math.min(Math.max(idx + delta, 0), tabs.length - 1);
-    const el = tabs[newIdx];
-    el.focus();
-    el.scrollIntoView({ block: 'nearest' });
+    const newIdx = Math.min(Math.max(idx + delta, 0), tabItems.length - 1);
     idx = newIdx;
+    container.scrollTop = newIdx * rowHeight;
+    requestAnimationFrame(() => { tabItems[newIdx].el?.focus(); });
     return newIdx;
   };
 
@@ -453,24 +462,35 @@ document.addEventListener('keydown', (e) => {
       if (lastSelectedIndex === -1) lastSelectedIndex = oldIdx;
       const start = Math.min(lastSelectedIndex, newIdx);
       const end = Math.max(lastSelectedIndex, newIdx);
-      tabs.forEach((t, i) => updateSelection(t, i >= start && i <= end));
+      for (let i = 0; i < tabItems.length; i++) {
+        const sel = i >= start && i <= end;
+        tabItems[i].selected = sel;
+        if (tabItems[i].el) updateSelection(tabItems[i].el, sel);
+      }
     } else if (!e.ctrlKey && !e.metaKey) {
-      tabs.forEach(t => updateSelection(t, false));
-      updateSelection(tabs[newIdx], true);
+      tabItems.forEach(it => {
+        it.selected = false;
+        if (it.el) updateSelection(it.el, false);
+      });
+      tabItems[newIdx].selected = true;
+      if (tabItems[newIdx].el) updateSelection(tabItems[newIdx].el, true);
       lastSelectedIndex = newIdx;
     } else {
       lastSelectedIndex = newIdx;
     }
   } else if (e.key === ' ' && isTab) {
     e.preventDefault();
-    updateSelection(focused, !focused.classList.contains('selected'));
-    lastSelectedIndex = tabs.indexOf(focused);
+    const item = tabItems[idx];
+    const sel = !item.selected;
+    item.selected = sel;
+    if (item.el) updateSelection(item.el, sel);
+    lastSelectedIndex = idx;
   } else if (e.key === 'Enter' && isTab) {
     focused.click();
   } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
     e.preventDefault();
-    tabs.forEach(t => updateSelection(t, true));
-    lastSelectedIndex = tabs.length - 1;
+    tabItems.forEach(it => { it.selected = true; if (it.el) updateSelection(it.el, true); });
+    lastSelectedIndex = tabItems.length - 1;
   } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     switch (e.key.toLowerCase()) {
       case 'c':
@@ -728,8 +748,7 @@ function showContextMenu(e) {
 document.addEventListener('click', () => context.classList.add('hidden'));
 
 function getSelectedTabIds() {
-  const rows = Array.from(document.querySelectorAll('.tab.selected'));
-  return rows.map(r => parseInt(r.dataset.tab, 10));
+  return tabItems.filter(it => it.selected).map(it => it.tab.id);
 }
 
 async function bulkClose() {
