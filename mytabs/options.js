@@ -6,7 +6,7 @@ async function load(){
   ]);
   const {
     theme='light',
-    tileWidth=100,
+    tileWidth=150,
     tileScale=0.9,
     fontScale=0.8125,
     scrollSpeed=1,
