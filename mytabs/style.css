@@ -131,9 +131,6 @@ body[data-theme="dark"] .tab.drop-after {
   text-overflow: ellipsis;
   cursor: pointer;
 }
-.sel {
-  margin-right: 0.2em;
-}
 .duplicate {
   background: #fff4f4;
 }
