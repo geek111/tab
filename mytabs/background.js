@@ -6,9 +6,21 @@ let visited = [];
 let recentTimer = null;
 let visitedTimer = null;
 
+function sendVisitedUpdate() {
+  browser.runtime.sendMessage({ type: 'visitedUpdated', visited })
+    .catch(() => {});
+}
+
 browser.storage.local.get(['recent', 'visited']).then(data => {
   recent = data.recent || [];
   visited = data.visited || [];
+});
+
+// Initialize duplicate tracking
+browser.tabs.query({}).then(tabs => {
+  for (const t of tabs) {
+    addDuplicate(t.id, t.url);
+  }
 });
 
 // Apply user-defined keyboard shortcuts if supported
@@ -39,6 +51,7 @@ function unmarkVisited(tabId) {
   if (idx !== -1) {
     visited.splice(idx, 1);
     scheduleVisitedSave();
+    sendVisitedUpdate();
   }
 }
 
@@ -72,12 +85,17 @@ function markVisited(tabId) {
   if (!visited.includes(tabId)) {
     visited.push(tabId);
     scheduleVisitedSave();
+    sendVisitedUpdate();
   }
 }
 
 browser.tabs.onActivated.addListener(info => {
   pushRecent(info.tabId);
   markVisited(info.tabId);
+});
+
+browser.tabs.onCreated.addListener(tab => {
+  addDuplicate(tab.id, tab.url);
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
@@ -90,7 +108,9 @@ browser.tabs.onRemoved.addListener((tabId) => {
   if (vidx !== -1) {
     visited.splice(vidx, 1);
     scheduleVisitedSave();
+    sendVisitedUpdate();
   }
+  removeDuplicate(tabId);
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
@@ -106,6 +126,8 @@ browser.runtime.onMessage.addListener((msg) => {
     return Promise.resolve({ recent });
   } else if (msg && msg.type === 'getVisited') {
     return Promise.resolve({ visited });
+  } else if (msg && msg.type === 'getDuplicates') {
+    return Promise.resolve({ duplicates: Array.from(dupIds) });
   } else if (msg && msg.type === 'unmarkVisited') {
     unmarkVisited(msg.tabId);
   }
