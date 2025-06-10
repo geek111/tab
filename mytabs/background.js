@@ -6,6 +6,11 @@ let visited = [];
 let recentTimer = null;
 let visitedTimer = null;
 
+function sendVisitedUpdate() {
+  browser.runtime.sendMessage({ type: 'visitedUpdated', visited })
+    .catch(() => {});
+}
+
 browser.storage.local.get(['recent', 'visited']).then(data => {
   recent = data.recent || [];
   visited = data.visited || [];
@@ -39,6 +44,7 @@ function unmarkVisited(tabId) {
   if (idx !== -1) {
     visited.splice(idx, 1);
     scheduleVisitedSave();
+    sendVisitedUpdate();
   }
 }
 
@@ -72,6 +78,7 @@ function markVisited(tabId) {
   if (!visited.includes(tabId)) {
     visited.push(tabId);
     scheduleVisitedSave();
+    sendVisitedUpdate();
   }
 }
 
@@ -90,6 +97,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
   if (vidx !== -1) {
     visited.splice(vidx, 1);
     scheduleVisitedSave();
+    sendVisitedUpdate();
   }
 });
 

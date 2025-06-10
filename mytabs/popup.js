@@ -13,6 +13,7 @@ let dropTarget = null;
 let containerMap = new Map();
 let filterContainerId = '';
 let targetSelect;
+let visitedIds = new Set();
 
 function clearPlaceholder() {
   if (dropTarget) {
@@ -460,8 +461,6 @@ async function update() {
   const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
   const dupIds = new Set(findDuplicates(allTabs).map(t => t.id));
   const activeId = allTabs.find(t => t.active)?.id ?? -1;
-  const { visited = [] } = await browser.runtime.sendMessage({ type: 'getVisited' });
-  const visitedIds = new Set(visited);
   const searchInput = document.getElementById('search');
   const query = searchInput.value.trim();
   let list;
@@ -474,6 +473,13 @@ async function update() {
 }
 
 const scheduleUpdate = throttle(update);
+
+browser.runtime.onMessage.addListener((msg) => {
+  if (msg && msg.type === 'visitedUpdated') {
+    visitedIds = new Set(msg.visited || []);
+    scheduleUpdate();
+  }
+});
 
 document.getElementById('search').addEventListener('input', scheduleUpdate);
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
@@ -561,6 +567,8 @@ async function init() {
   }
   document.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
+  const { visited = [] } = await browser.storage.local.get('visited');
+  visitedIds = new Set(visited);
   await loadOptions();
   registerTabEvents();
   const select = document.getElementById('container-filter');
