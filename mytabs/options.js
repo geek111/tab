@@ -1,6 +1,22 @@
 async function load(){
-  const data = await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale','scrollSpeed','showRecent','showDuplicates','enableMove']);
-  const {theme='light', tileWidth=100, tileScale=0.9, fontScale=0.45, scrollSpeed=1, showRecent=true, showDuplicates=true, enableMove=true} = data;
+  const data = await browser.storage.local.get([
+    'theme','tileWidth','tileScale','fontScale','closeScale','scrollSpeed',
+    'showRecent','showDuplicates','enableMove',
+    'keyOpenPopup','keyOpenFull','keyUnloadAll'
+  ]);
+  const {
+    theme='light',
+    tileWidth=100,
+    tileScale=0.9,
+    fontScale=0.45,
+    scrollSpeed=1,
+    showRecent=true,
+    showDuplicates=true,
+    enableMove=true,
+    keyOpenPopup='Alt+Shift+H',
+    keyOpenFull='Alt+Shift+F',
+    keyUnloadAll='Alt+Shift+U'
+  } = data;
   let closeScale = data.closeScale;
   if (closeScale === undefined) {
     closeScale = 0.5;
@@ -15,6 +31,9 @@ async function load(){
   document.getElementById('opt-show-recent').checked = showRecent;
   document.getElementById('opt-show-dups').checked = showDuplicates;
   document.getElementById('opt-enable-move').checked = enableMove;
+  document.getElementById('key-open-popup').value = keyOpenPopup;
+  document.getElementById('key-open-full').value = keyOpenFull;
+  document.getElementById('key-unload-all').value = keyUnloadAll;
   document.documentElement.style.setProperty('--tile-width', (tileWidth * tileScale) + 'px');
   document.documentElement.style.setProperty('--tile-scale', tileScale);
   document.documentElement.style.setProperty('--font-scale', fontScale);
@@ -30,7 +49,14 @@ async function save(){
   const showRecent=document.getElementById('opt-show-recent').checked;
   const showDuplicates=document.getElementById('opt-show-dups').checked;
   const enableMove=document.getElementById('opt-enable-move').checked;
-  await browser.storage.local.set({theme, tileWidth, tileScale, fontScale, closeScale, scrollSpeed, showRecent, showDuplicates, enableMove});
+  const keyOpenPopup=document.getElementById('key-open-popup').value.trim();
+  const keyOpenFull=document.getElementById('key-open-full').value.trim();
+  const keyUnloadAll=document.getElementById('key-unload-all').value.trim();
+  await browser.storage.local.set({
+    theme, tileWidth, tileScale, fontScale, closeScale, scrollSpeed,
+    showRecent, showDuplicates, enableMove,
+    keyOpenPopup, keyOpenFull, keyUnloadAll
+  });
 }
 
 function updateWidth(){

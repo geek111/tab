@@ -10,6 +10,29 @@ browser.storage.local.get(['recent', 'visited']).then(data => {
   visited = data.visited || [];
 });
 
+// Apply user-defined keyboard shortcuts if supported
+(async () => {
+  try {
+    const {
+      keyOpenPopup = 'Alt+Shift+H',
+      keyOpenFull = 'Alt+Shift+F',
+      keyUnloadAll = 'Alt+Shift+U'
+    } = await browser.storage.local.get([
+      'keyOpenPopup', 'keyOpenFull', 'keyUnloadAll'
+    ]);
+    if (browser.commands && browser.commands.update) {
+      try { await browser.commands.update({ name: 'open-tabs-helper', shortcut: keyOpenPopup }); } catch (_) {}
+      try { await browser.commands.update({ name: 'open-tabs-helper-full', shortcut: keyOpenFull }); } catch (_) {}
+      try { await browser.commands.update({ name: 'unload-all-tabs', shortcut: keyUnloadAll }); } catch (_) {}
+    }
+    if (browser.browserAction && browser.browserAction.setTitle) {
+      browser.browserAction.setTitle({ title: `KepiTAB (${keyOpenPopup})` });
+    }
+  } catch (e) {
+    console.error('Failed to apply shortcuts', e);
+  }
+})();
+
 function unmarkVisited(tabId) {
   const idx = visited.indexOf(tabId);
   if (idx !== -1) {

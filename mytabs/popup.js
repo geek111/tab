@@ -54,12 +54,14 @@ async function loadOptions() {
     showRecent = true,
     showDuplicates = true,
     enableMove = true,
-    scrollSpeed = 1
+    scrollSpeed = 1,
+    keyUnloadAll = 'Alt+Shift+U'
   } = await browser.storage.local.get([
     'showRecent',
     'showDuplicates',
     'enableMove',
-    'scrollSpeed'
+    'scrollSpeed',
+    'keyUnloadAll'
   ]);
   SHOW_RECENT = showRecent !== false;
   SHOW_DUPLICATES = showDuplicates !== false;
@@ -91,6 +93,8 @@ async function loadOptions() {
       if (view === 'dups') view = 'all';
     }
   }
+  const unloadBtn = document.getElementById('bulk-unload-all');
+  if (unloadBtn) unloadBtn.title = `Shortcut: ${keyUnloadAll}`;
 }
 
 function updateSelection(row, selected) {
