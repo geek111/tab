@@ -25,6 +25,14 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - Keyboard shortcuts open the popup, sidebar and full view.
 - Middle-clicking the toolbar icon opens the Full View window.
 
+## Keyboard Shortcuts
+
+- **Ctrl+A** – select all visible tabs
+- **C** – close selected tabs
+- **R** – reload selected tabs
+- **U** – unload selected tabs (Shift+U unloads all tabs)
+- **M** – move selected tabs to another window
+
 To install for development, load the directory as a temporary add-on in Firefox.
 
 ## License

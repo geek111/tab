@@ -417,7 +417,9 @@ document.addEventListener('keydown', (e) => {
 
   const moveFocus = (delta) => {
     const newIdx = Math.min(Math.max(idx + delta, 0), tabs.length - 1);
-    tabs[newIdx].focus();
+    const el = tabs[newIdx];
+    el.focus();
+    el.scrollIntoView({ block: 'nearest' });
     idx = newIdx;
     return newIdx;
   };
@@ -444,6 +446,29 @@ document.addEventListener('keydown', (e) => {
     lastSelectedIndex = tabs.indexOf(focused);
   } else if (e.key === 'Enter' && isTab) {
     focused.click();
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+    e.preventDefault();
+    tabs.forEach(t => updateSelection(t, true));
+    lastSelectedIndex = tabs.length - 1;
+  } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+    switch (e.key.toLowerCase()) {
+      case 'c':
+        bulkClose();
+        break;
+      case 'r':
+        bulkReload();
+        break;
+      case 'u':
+        if (e.shiftKey) {
+          bulkUnloadAll();
+        } else {
+          bulkDiscard();
+        }
+        break;
+      case 'm':
+        if (MOVE_ENABLED) bulkMove();
+        break;
+    }
   }
 });
 
