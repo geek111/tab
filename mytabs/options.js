@@ -1,9 +1,9 @@
 async function load(){
   const data = await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale','scrollSpeed','showRecent','showDuplicates','enableMove']);
-  const {theme='light', tileWidth=100, tileScale=0.9, fontScale=0.45, scrollSpeed=1, showRecent=true, showDuplicates=true, enableMove=true} = data;
+  const {theme='light', tileWidth=200, tileScale=0.9, fontScale=0.9, scrollSpeed=1, showRecent=true, showDuplicates=true, enableMove=true} = data;
   let closeScale = data.closeScale;
   if (closeScale === undefined) {
-    closeScale = 0.5;
+    closeScale = 1;
     browser.storage.local.set({ closeScale });
   }
   document.getElementById('theme').value = theme;
