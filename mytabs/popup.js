@@ -201,7 +201,7 @@ async function getContainerIdentities() {
   return containerCache;
 }
 
-function createTabRow(tab, isDuplicate, activeId, isVisited) {
+function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const div = document.createElement('div');
   div.className = 'tab';
   div.dataset.tab = tab.id;
