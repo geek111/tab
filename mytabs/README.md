@@ -10,7 +10,8 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - Visited tabs appear in **bold** while unvisited tabs are dimmed, making new pages easy to spot.
 - Double click a tab to search its page content and highlight results.
 - Perform bulk operations (close, reload, unload, move) on selected tabs, and a
-  command to unload all tabs at once.
+  command to unload all tabs at once. The keyboard shortcut for this command can
+  be configured on the Options page.
 - Each tab row includes a button to quickly close that tab.
 - Tabs can be reordered via drag and drop, including moving multiple selected tabs at once.
 - A **Full View** window shows tabs in multiple columns filled top-to-bottom.
@@ -22,7 +23,11 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   the Recent and Duplicates panels or the Move command.
 - The Close Button Scale adjusts the “×” size independent of the font scale.
 - A dark theme can also be enabled from the options page.
-- Keyboard shortcuts open the popup, sidebar and full view.
+- Keyboard shortcuts open the popup, sidebar and full view and can be changed from the Options page.
+- Default shortcuts:
+  - **Alt+Shift+H** opens the popup.
+  - **Alt+Shift+F** opens the Full View window.
+  - **Alt+Shift+U** unloads all tabs.
 - Middle-clicking the toolbar icon opens the Full View window.
 
 ## Keyboard Shortcuts
