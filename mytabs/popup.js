@@ -49,6 +49,16 @@ function debounce(fn, delay) {
   };
 }
 
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
+
 async function loadOptions() {
   const {
     showRecent = true,
@@ -316,10 +326,10 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   return div;
 }
 
-function renderTabs(tabs, activeId, dupIds, visitedIds, winMap) {
+function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   if (!container) return;
   container.innerHTML = '';
-  if (!tabs.length) {
+  if (!list.length) {
     const msg = document.createElement('div');
     msg.id = 'empty';
     msg.textContent = 'No tabs to display';
@@ -328,7 +338,8 @@ function renderTabs(tabs, activeId, dupIds, visitedIds, winMap) {
   }
   const frag = document.createDocumentFragment();
   let lastWin = -1;
-  for (const tab of tabs) {
+  for (const entry of list) {
+    const tab = entry.tab ?? entry;
     const wId = tab.windowId;
     if (document.body.classList.contains('full') && wId !== lastWin) {
       lastWin = wId;
@@ -353,15 +364,61 @@ function renderTabs(tabs, activeId, dupIds, visitedIds, winMap) {
       frag.appendChild(header);
     }
     const row = createTabRow(tab, dupIds.has(tab.id), activeId, visitedIds.has(tab.id));
+    if (query && entry.match && tab.title) {
+      const span = row.querySelector('.tab-title');
+      if (span) {
+        let html = '';
+        let last = 0;
+        for (const idx of entry.match) {
+          html += escapeHtml(span.textContent.slice(last, idx));
+          html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
+          last = idx + 1;
+        }
+        html += escapeHtml(span.textContent.slice(last));
+        span.innerHTML = html;
+      }
+    }
     frag.appendChild(row);
   }
   container.appendChild(frag);
 }
 
-function filterTabs(tabs, query) {
+function fuzzyMatchPositions(text, query) {
+  const pos = [];
+  let qi = 0;
   const q = query.toLowerCase();
-  return tabs.filter(t => (t.title && t.title.toLowerCase().includes(q)) ||
-                         (t.url && t.url.toLowerCase().includes(q)));
+  const t = text.toLowerCase();
+  for (let i = 0; i < t.length && qi < q.length; i++) {
+    if (t[i] === q[qi]) {
+      pos.push(i);
+      qi++;
+    }
+  }
+  return qi === q.length ? pos : null;
+}
+
+function fuzzyScore(pos) {
+  if (!pos) return -Infinity;
+  let cont = 1;
+  for (let i = 1; i < pos.length; i++) {
+    if (pos[i] === pos[i - 1] + 1) cont++;
+  }
+  return cont * 10 - pos[0];
+}
+
+function filterTabs(tabs, query) {
+  const results = [];
+  for (const tab of tabs) {
+    const title = tab.title || '';
+    const url = tab.url || '';
+    const posTitle = fuzzyMatchPositions(title, query);
+    const posUrl = posTitle ? null : fuzzyMatchPositions(url, query);
+    if (!posTitle && !posUrl) continue;
+    const score = fuzzyScore(posTitle || posUrl);
+    results.push({ tab, match: posTitle, score });
+  }
+  results.sort((a, b) => b.score - a.score);
+  return results;
 }
 
 function findDuplicates(tabs) {
@@ -403,10 +460,13 @@ async function update() {
   const visitedIds = new Set(visited);
   const searchInput = document.getElementById('search');
   const query = searchInput.value.trim();
+  let list;
   if (query) {
-    tabs = filterTabs(tabs, query);
+    list = filterTabs(tabs, query);
+  } else {
+    list = tabs.map(t => ({ tab: t }));
   }
-  renderTabs(tabs, activeId, dupIds, visitedIds, winMap);
+  renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
 }
 
 const scheduleUpdate = throttle(update);
