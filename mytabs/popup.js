@@ -12,6 +12,7 @@ let container; // tabs container cached after DOM load
 let dropTarget = null;
 let containerMap = new Map();
 let filterContainerId = '';
+let containerCache;
 let targetSelect;
 let visitedIds = new Set();
 
