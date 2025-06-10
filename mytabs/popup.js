@@ -12,6 +12,7 @@ let container; // tabs container cached after DOM load
 let dropTarget = null;
 let containerMap = new Map();
 let filterContainerId = '';
+let targetSelect;
 
 function clearPlaceholder() {
   if (dropTarget) {
@@ -588,6 +589,16 @@ async function init() {
       scheduleUpdate();
     });
   }
+  targetSelect = document.getElementById('container-target');
+  if (targetSelect) {
+    const identities = await browser.contextualIdentities.query({});
+    identities.forEach(ci => {
+      const opt = document.createElement('option');
+      opt.value = ci.cookieStoreId;
+      opt.textContent = ci.name;
+      targetSelect.appendChild(opt);
+    });
+  }
   const bulkCloseBtn = document.getElementById('bulk-close');
   if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
 
@@ -599,6 +610,15 @@ async function init() {
 
   const bulkUnloadAllBtn = document.getElementById('bulk-unload-all');
   if (bulkUnloadAllBtn) bulkUnloadAllBtn.addEventListener('click', bulkUnloadAll);
+
+  const addContainerBtn = document.getElementById('bulk-add-container');
+  if (addContainerBtn) addContainerBtn.addEventListener('click', () => {
+    const id = targetSelect ? targetSelect.value : 'firefox-default';
+    bulkAssignToContainer(id);
+  });
+
+  const removeContainerBtn = document.getElementById('bulk-remove-container');
+  if (removeContainerBtn) removeContainerBtn.addEventListener('click', bulkRemoveFromContainer);
 
   const moveBtn = document.getElementById('bulk-move');
   if (MOVE_ENABLED && moveBtn) moveBtn.addEventListener('click', bulkMove);
@@ -656,6 +676,11 @@ function showContextMenu(e) {
     addItem('Reload Selected', bulkReload);
     addItem('Unload Selected', bulkDiscard);
     if (MOVE_ENABLED) addItem('Move Selected', bulkMove);
+    addItem('Add Selected to Container', () => {
+      const id = targetSelect ? targetSelect.value : 'firefox-default';
+      return bulkAssignToContainer(id);
+    });
+    addItem('Remove Selected from Container', bulkRemoveFromContainer);
   }
 
   if (tabEl && (!selected.length || !tabEl.classList.contains('selected'))) {
@@ -734,8 +759,29 @@ async function bulkMove() {
   const currentWinId = ids.length ? (await browser.tabs.get(ids[0])).windowId : null;
   const other = windows.find(w => ids.length && w.id !== currentWinId);
   if (other) {
-    await Promise.all(ids.map(id => browser.tabs.move(id, {windowId: other.id, index: -1})));
+    await Promise.all(ids.map(id => browser.tabs.move(id, {windowId: other.id, index: -1}))); 
   }
   scheduleUpdate();
+}
+
+async function bulkAssignToContainer(containerId) {
+  const ids = getSelectedTabIds();
+  if (!ids.length) return;
+  if (ids.length > 10 && !confirm(`Move ${ids.length} tabs to the selected container?`)) return;
+  const tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
+  for (const tab of tabs) {
+    await browser.tabs.create({
+      url: tab.url,
+      cookieStoreId: containerId,
+      index: tab.index,
+      windowId: tab.windowId
+    });
+  }
+  await browser.tabs.remove(ids);
+  scheduleUpdate();
+}
+
+async function bulkRemoveFromContainer() {
+  await bulkAssignToContainer('firefox-default');
 }
 
