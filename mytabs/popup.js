@@ -181,11 +181,28 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
-    if (document.body.classList.contains('full')) {
-      icon.title = `${tab.title || tab.url}\n${tab.url}`;
-    }
     icon.onerror = () => icon.remove();
     div.appendChild(icon);
+
+    let tooltip;
+    const showTooltip = () => {
+      if (!document.body.classList.contains('full')) return;
+      tooltip = document.createElement('div');
+      tooltip.className = 'tab-tooltip';
+      tooltip.innerHTML = `${tab.title || tab.url}<br>${tab.url}`;
+      document.body.appendChild(tooltip);
+      const rect = icon.getBoundingClientRect();
+      tooltip.style.left = `${rect.right + window.scrollX + 5}px`;
+      tooltip.style.top = `${rect.top + window.scrollY}px`;
+    };
+    const hideTooltip = () => {
+      if (tooltip) {
+        tooltip.remove();
+        tooltip = null;
+      }
+    };
+    icon.addEventListener('mouseenter', showTooltip);
+    icon.addEventListener('mouseleave', hideTooltip);
   }
 
   div.addEventListener('click', (e) => {

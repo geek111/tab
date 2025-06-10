@@ -171,6 +171,24 @@ button:hover {
   background: var(--color-hover);
 }
 
+.tab-tooltip {
+  position: absolute;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+body[data-theme="dark"] .tab-tooltip {
+  background: var(--color-hover);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
 #bulk-actions {
   margin-top: 0.5em;
   text-align: right;
