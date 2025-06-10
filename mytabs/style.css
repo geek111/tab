@@ -10,6 +10,7 @@
   --tile-width: 200px;
   --tile-scale: 0.9;
   --font-scale: 0.9;
+  --close-scale: 1;
 }
 
 body {
@@ -148,6 +149,9 @@ button {
 }
 button:hover {
   background: var(--color-hover);
+}
+.close-btn {
+  font-size: calc(1em * var(--close-scale));
 }
 .hidden {
   display: none;

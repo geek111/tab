@@ -1,10 +1,16 @@
 async function load(){
-  const {theme='light', tileWidth=200, tileScale=0.9, fontScale=0.9, scrollSpeed=1, showRecent=true, showDuplicates=true, enableMove=true} =
-    await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','scrollSpeed','showRecent','showDuplicates','enableMove']);
+  const data = await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale','scrollSpeed','showRecent','showDuplicates','enableMove']);
+  const {theme='light', tileWidth=200, tileScale=0.9, fontScale=0.9, scrollSpeed=1, showRecent=true, showDuplicates=true, enableMove=true} = data;
+  let closeScale = data.closeScale;
+  if (closeScale === undefined) {
+    closeScale = 1;
+    browser.storage.local.set({ closeScale });
+  }
   document.getElementById('theme').value = theme;
   document.getElementById('tileWidth').value = tileWidth;
   document.getElementById('tileScale').value = tileScale;
   document.getElementById('fontScale').value = fontScale;
+  document.getElementById('closeScale').value = closeScale;
   document.getElementById('scrollSpeed').value = scrollSpeed;
   document.getElementById('opt-show-recent').checked = showRecent;
   document.getElementById('opt-show-dups').checked = showDuplicates;
@@ -12,17 +18,19 @@ async function load(){
   document.documentElement.style.setProperty('--tile-width', (tileWidth * tileScale) + 'px');
   document.documentElement.style.setProperty('--tile-scale', tileScale);
   document.documentElement.style.setProperty('--font-scale', fontScale);
+  document.documentElement.style.setProperty('--close-scale', closeScale);
 }
 async function save(){
   const theme=document.getElementById('theme').value;
   const tileWidth=parseInt(document.getElementById('tileWidth').value,10);
   const tileScale=parseFloat(document.getElementById('tileScale').value);
   const fontScale=parseFloat(document.getElementById('fontScale').value);
+  const closeScale=parseFloat(document.getElementById('closeScale').value);
   const scrollSpeed=parseFloat(document.getElementById('scrollSpeed').value);
   const showRecent=document.getElementById('opt-show-recent').checked;
   const showDuplicates=document.getElementById('opt-show-dups').checked;
   const enableMove=document.getElementById('opt-enable-move').checked;
-  await browser.storage.local.set({theme, tileWidth, tileScale, fontScale, scrollSpeed, showRecent, showDuplicates, enableMove});
+  await browser.storage.local.set({theme, tileWidth, tileScale, fontScale, closeScale, scrollSpeed, showRecent, showDuplicates, enableMove});
 }
 
 function updateWidth(){
@@ -47,6 +55,12 @@ function updateFont(){
   document.documentElement.style.setProperty('--font-scale', fontScale);
 }
 
+function updateCloseScale(){
+  const closeScale=parseFloat(document.getElementById('closeScale').value);
+  browser.storage.local.set({closeScale});
+  document.documentElement.style.setProperty('--close-scale', closeScale);
+}
+
 function updateScroll(){
   const scrollSpeed=parseFloat(document.getElementById('scrollSpeed').value);
   browser.storage.local.set({scrollSpeed});
@@ -55,6 +69,7 @@ function updateScroll(){
 const elTileWidth = document.getElementById('tileWidth');
 const elTileScale = document.getElementById('tileScale');
 const elFontScale = document.getElementById('fontScale');
+const elCloseScale = document.getElementById('closeScale');
 const elScrollSpeed = document.getElementById('scrollSpeed');
 
 elTileWidth.addEventListener('input', updateWidth);
@@ -65,6 +80,9 @@ elTileScale.addEventListener('change', updateScale);
 
 elFontScale.addEventListener('input', updateFont);
 elFontScale.addEventListener('change', updateFont);
+
+elCloseScale.addEventListener('input', updateCloseScale);
+elCloseScale.addEventListener('change', updateCloseScale);
 
 elScrollSpeed.addEventListener('input', updateScroll);
 elScrollSpeed.addEventListener('change', updateScroll);
