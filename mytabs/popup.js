@@ -427,7 +427,7 @@ async function update() {
   renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
 }
 
-const scheduleUpdate = throttle(update);
+const scheduleUpdate = debounce(update, 200);
 
 browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'visitedUpdated') {
