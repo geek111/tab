@@ -6,47 +6,9 @@ let visited = [];
 let recentTimer = null;
 let visitedTimer = null;
 
-// Track duplicate tabs by URL
-const dupMap = new Map(); // url -> array of tab ids
-const dupIds = new Set();
-const tabUrl = new Map();
-
-function refreshDuplicates(url) {
-  const arr = dupMap.get(url) || [];
-  for (const id of arr) dupIds.delete(id);
-  if (arr.length > 1) {
-    for (let i = 1; i < arr.length; i++) dupIds.add(arr[i]);
-  }
-}
-
-function addDuplicate(tabId, url) {
-  if (!url) return;
-  tabUrl.set(tabId, url);
-  let arr = dupMap.get(url);
-  if (!arr) {
-    arr = [tabId];
-    dupMap.set(url, arr);
-  } else {
-    arr.push(tabId);
-    dupMap.set(url, arr);
-  }
-  refreshDuplicates(url);
-}
-
-function removeDuplicate(tabId) {
-  const url = tabUrl.get(tabId);
-  if (!url) return;
-  tabUrl.delete(tabId);
-  const arr = dupMap.get(url);
-  if (!arr) return;
-  const idx = arr.indexOf(tabId);
-  if (idx !== -1) arr.splice(idx, 1);
-  if (!arr.length) {
-    dupMap.delete(url);
-  } else {
-    dupMap.set(url, arr);
-  }
-  refreshDuplicates(url);
+function sendVisitedUpdate() {
+  browser.runtime.sendMessage({ type: 'visitedUpdated', visited })
+    .catch(() => {});
 }
 
 browser.storage.local.get(['recent', 'visited']).then(data => {
@@ -89,6 +51,7 @@ function unmarkVisited(tabId) {
   if (idx !== -1) {
     visited.splice(idx, 1);
     scheduleVisitedSave();
+    sendVisitedUpdate();
   }
 }
 
@@ -122,6 +85,7 @@ function markVisited(tabId) {
   if (!visited.includes(tabId)) {
     visited.push(tabId);
     scheduleVisitedSave();
+    sendVisitedUpdate();
   }
 }
 
@@ -144,6 +108,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
   if (vidx !== -1) {
     visited.splice(vidx, 1);
     scheduleVisitedSave();
+    sendVisitedUpdate();
   }
   removeDuplicate(tabId);
 });
