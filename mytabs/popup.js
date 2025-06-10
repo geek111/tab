@@ -12,7 +12,7 @@ let container; // tabs container cached after DOM load
 let dropTarget = null;
 let containerMap = new Map();
 let filterContainerId = '';
-let containerCache = null;
+let containerCache;
 let targetSelect;
 let visitedIds = new Set();
 
@@ -428,7 +428,7 @@ async function update() {
   renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
 }
 
-const scheduleUpdate = throttle(update);
+const scheduleUpdate = debounce(update, 200);
 
 browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'visitedUpdated') {
