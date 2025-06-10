@@ -94,10 +94,6 @@ async function loadOptions() {
 }
 
 function updateSelection(row, selected) {
-  const check = row.querySelector('.sel');
-  if (check) {
-    check.checked = selected;
-  }
   row.classList.toggle('selected', selected);
 }
 
@@ -179,15 +175,6 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     div.classList.add('unvisited');
   }
 
-  const check = document.createElement('input');
-  check.type = 'checkbox';
-  check.className = 'sel';
-  div.appendChild(check);
-  check.addEventListener('change', () => {
-    div.classList.toggle('selected', check.checked);
-    const tabs = Array.from(document.querySelectorAll('.tab'));
-    lastSelectedIndex = tabs.indexOf(div);
-  });
 
   if (tab.favIconUrl) {
     const icon = document.createElement('img');
@@ -203,7 +190,6 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
   div.addEventListener('click', (e) => {
     if (e.target.tagName === 'BUTTON') return;
-    if (e.target.classList.contains('sel')) return;
     const tabs = Array.from(document.querySelectorAll('.tab'));
     const idx = tabs.indexOf(div);
     if (e.ctrlKey || e.metaKey || e.shiftKey) {
@@ -211,12 +197,12 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
       if (e.shiftKey && lastSelectedIndex !== -1) {
         const start = Math.min(lastSelectedIndex, idx);
         const end = Math.max(lastSelectedIndex, idx);
-        const select = !check.checked;
+        const select = !div.classList.contains('selected');
         for (let i = start; i <= end; i++) {
           updateSelection(tabs[i], select);
         }
       } else {
-        updateSelection(div, !check.checked);
+        updateSelection(div, !div.classList.contains('selected'));
       }
       lastSelectedIndex = idx;
       return;
@@ -440,7 +426,7 @@ document.addEventListener('keydown', (e) => {
     }
   } else if (e.key === ' ' && isTab) {
     e.preventDefault();
-    updateSelection(focused, !focused.querySelector('.sel').checked);
+    updateSelection(focused, !focused.classList.contains('selected'));
     lastSelectedIndex = tabs.indexOf(focused);
   } else if (e.key === 'Enter' && isTab) {
     focused.click();
@@ -537,7 +523,7 @@ function showContextMenu(e) {
     if (MOVE_ENABLED) addItem('Move Selected', bulkMove);
   }
 
-  if (tabEl && (!selected.length || !tabEl.querySelector('.sel').checked)) {
+  if (tabEl && (!selected.length || !tabEl.classList.contains('selected'))) {
     const id = parseInt(tabEl.dataset.tab, 10);
     addItem('Activate', () => activateTab(id));
     addItem('Unload', async () => {
@@ -574,8 +560,8 @@ function showContextMenu(e) {
 document.addEventListener('click', () => context.classList.add('hidden'));
 
 function getSelectedTabIds() {
-  const checks = Array.from(document.querySelectorAll('.sel:checked'));
-  return checks.map(c => parseInt(c.parentElement.dataset.tab, 10));
+  const rows = Array.from(document.querySelectorAll('.tab.selected'));
+  return rows.map(r => parseInt(r.dataset.tab, 10));
 }
 
 async function bulkClose() {
