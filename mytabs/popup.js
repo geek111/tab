@@ -165,9 +165,6 @@ function closeUI() {
 async function activateTab(id) {
   try {
     await browser.tabs.update(id, {active: true});
-    if (!document.body.classList.contains('full')) {
-      closeUI();
-    }
   } catch (e) {
     document.getElementById('error').textContent = 'Could not activate tab';
     document.querySelector(`[data-tab="${id}"]`)?.remove();
