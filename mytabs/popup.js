@@ -575,29 +575,45 @@ async function init() {
   await loadOptions();
   registerTabEvents();
   const select = document.getElementById('container-filter');
+  let containerIdents = [];
+  let containersAvailable = false;
+  if (browser.contextualIdentities) {
+    try {
+      containerIdents = await browser.contextualIdentities.query({});
+      containersAvailable = true;
+    } catch (e) {
+      console.error('Contextual identities unavailable', e);
+    }
+  }
   if (select) {
-    const identities = await browser.contextualIdentities.query({});
-    identities.forEach(ci => {
-      containerMap.set(ci.cookieStoreId, ci);
-      const opt = document.createElement('option');
-      opt.value = ci.cookieStoreId;
-      opt.textContent = ci.name;
-      select.appendChild(opt);
-    });
-    select.addEventListener('change', () => {
-      filterContainerId = select.value;
-      scheduleUpdate();
-    });
+    if (containersAvailable) {
+      containerIdents.forEach(ci => {
+        containerMap.set(ci.cookieStoreId, ci);
+        const opt = document.createElement('option');
+        opt.value = ci.cookieStoreId;
+        opt.textContent = ci.name;
+        select.appendChild(opt);
+      });
+      select.addEventListener('change', () => {
+        filterContainerId = select.value;
+        scheduleUpdate();
+      });
+    } else {
+      select.style.display = 'none';
+    }
   }
   targetSelect = document.getElementById('container-target');
   if (targetSelect) {
-    const identities = await browser.contextualIdentities.query({});
-    identities.forEach(ci => {
-      const opt = document.createElement('option');
-      opt.value = ci.cookieStoreId;
-      opt.textContent = ci.name;
-      targetSelect.appendChild(opt);
-    });
+    if (containersAvailable) {
+      containerIdents.forEach(ci => {
+        const opt = document.createElement('option');
+        opt.value = ci.cookieStoreId;
+        opt.textContent = ci.name;
+        targetSelect.appendChild(opt);
+      });
+    } else {
+      targetSelect.style.display = 'none';
+    }
   }
   const bulkCloseBtn = document.getElementById('bulk-close');
   if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
@@ -612,13 +628,25 @@ async function init() {
   if (bulkUnloadAllBtn) bulkUnloadAllBtn.addEventListener('click', bulkUnloadAll);
 
   const addContainerBtn = document.getElementById('bulk-add-container');
-  if (addContainerBtn) addContainerBtn.addEventListener('click', () => {
-    const id = targetSelect ? targetSelect.value : 'firefox-default';
-    bulkAssignToContainer(id);
-  });
+  if (addContainerBtn) {
+    if (containersAvailable) {
+      addContainerBtn.addEventListener('click', () => {
+        const id = targetSelect ? targetSelect.value : 'firefox-default';
+        bulkAssignToContainer(id);
+      });
+    } else {
+      addContainerBtn.disabled = true;
+    }
+  }
 
   const removeContainerBtn = document.getElementById('bulk-remove-container');
-  if (removeContainerBtn) removeContainerBtn.addEventListener('click', bulkRemoveFromContainer);
+  if (removeContainerBtn) {
+    if (containersAvailable) {
+      removeContainerBtn.addEventListener('click', bulkRemoveFromContainer);
+    } else {
+      removeContainerBtn.disabled = true;
+    }
+  }
 
   const moveBtn = document.getElementById('bulk-move');
   if (MOVE_ENABLED && moveBtn) moveBtn.addEventListener('click', bulkMove);
