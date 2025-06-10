@@ -231,37 +231,6 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
     div.appendChild(indicator);
   }
 
-  div.addEventListener('click', (e) => {
-    if (e.target.tagName === 'BUTTON') return;
-    const tabs = Array.from(document.querySelectorAll('.tab'));
-    const idx = tabs.indexOf(div);
-    if (e.ctrlKey || e.metaKey || e.shiftKey) {
-      e.preventDefault();
-      if (e.shiftKey && lastSelectedIndex !== -1) {
-        const start = Math.min(lastSelectedIndex, idx);
-        const end = Math.max(lastSelectedIndex, idx);
-        const select = !div.classList.contains('selected');
-        for (let i = start; i <= end; i++) {
-          updateSelection(tabs[i], select);
-        }
-      } else {
-        updateSelection(div, !div.classList.contains('selected'));
-      }
-      lastSelectedIndex = idx;
-      return;
-    }
-    activateTab(tab.id);
-  });
-
-  div.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
-        activateTab(tab.id);
-      } else {
-        e.preventDefault();
-      }
-    }
-  });
 
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
@@ -272,60 +241,9 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
-  closeBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    await browser.tabs.remove(tab.id);
-    scheduleUpdate();
-  });
   div.appendChild(closeBtn);
 
-
-  div.addEventListener('dragstart', (e) => {
-    const selected = getSelectedTabIds();
-    if (selected.length > 1 && div.classList.contains('selected')) {
-      e.dataTransfer.setData('text/plain', selected.join(','));
-    } else {
-      e.dataTransfer.setData('text/plain', String(tab.id));
-    }
-    clearPlaceholder();
-  });
-
-  div.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    const rect = div.getBoundingClientRect();
-    const before = e.clientY < rect.top + rect.height / 2;
-    showPlaceholder(div, before);
-  });
-
-  div.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    clearPlaceholder();
-    const data = e.dataTransfer.getData('text/plain');
-    const ids = data.split(',').map(id => parseInt(id, 10)).filter(n => !isNaN(n));
-    const toId = parseInt(div.dataset.tab, 10);
-    if (!ids.length) return;
-    const toTab = await browser.tabs.get(toId);
-    const rect = div.getBoundingClientRect();
-    const before = e.clientY < rect.top + rect.height / 2;
-    let index = before ? toTab.index : toTab.index + 1;
-
-    for (const id of ids) {
-      if (id === toId) continue;
-      const fromTab = await browser.tabs.get(id);
-      let idx = index;
-      if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
-        idx--;
-      }
-      if (idx < 0) idx = 0;
-      await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
-      if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
-        index++;
-      }
-    }
-    scheduleUpdate();
-  });
-
-  div.addEventListener('dragend', clearPlaceholder);
+  // click and drag events handled via delegation
 
   return div;
 }
@@ -555,6 +473,10 @@ document.addEventListener('keydown', (e) => {
 async function init() {
   container = document.getElementById('tabs');
   container.addEventListener('scroll', saveScroll);
+  container.addEventListener('click', onContainerClick);
+  container.addEventListener('dragstart', onContainerDragStart);
+  container.addEventListener('dragover', onContainerDragOver);
+  container.addEventListener('drop', onContainerDrop);
   if (document.body.classList.contains('full')) {
     container.addEventListener('wheel', (e) => {
       if (container.scrollWidth > container.clientWidth) {
@@ -856,5 +778,84 @@ async function bulkAssignToContainer(containerId) {
 
 async function bulkRemoveFromContainer() {
   await bulkAssignToContainer('firefox-default');
+}
+
+function onContainerClick(e) {
+  const tabEl = e.target.closest('.tab');
+  if (!tabEl || !container.contains(tabEl)) return;
+  if (e.target.classList.contains('close-btn')) {
+    e.stopPropagation();
+    const id = parseInt(tabEl.dataset.tab, 10);
+    browser.tabs.remove(id).then(scheduleUpdate);
+    return;
+  }
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const idx = tabs.indexOf(tabEl);
+  if (e.ctrlKey || e.metaKey || e.shiftKey) {
+    e.preventDefault();
+    if (e.shiftKey && lastSelectedIndex !== -1) {
+      const start = Math.min(lastSelectedIndex, idx);
+      const end = Math.max(lastSelectedIndex, idx);
+      const select = !tabEl.classList.contains('selected');
+      for (let i = start; i <= end; i++) {
+        updateSelection(tabs[i], select);
+      }
+    } else {
+      updateSelection(tabEl, !tabEl.classList.contains('selected'));
+    }
+    lastSelectedIndex = idx;
+    return;
+  }
+  activateTab(parseInt(tabEl.dataset.tab, 10));
+}
+
+function onContainerDragStart(e) {
+  const tabEl = e.target.closest('.tab');
+  if (!tabEl) return;
+  const selected = getSelectedTabIds();
+  if (selected.length > 1 && tabEl.classList.contains('selected')) {
+    e.dataTransfer.setData('text/plain', selected.join(','));
+  } else {
+    e.dataTransfer.setData('text/plain', tabEl.dataset.tab);
+  }
+  clearPlaceholder();
+}
+
+function onContainerDragOver(e) {
+  const tabEl = e.target.closest('.tab');
+  if (!tabEl) return;
+  e.preventDefault();
+  const rect = tabEl.getBoundingClientRect();
+  const before = e.clientY < rect.top + rect.height / 2;
+  showPlaceholder(tabEl, before);
+}
+
+async function onContainerDrop(e) {
+  const tabEl = e.target.closest('.tab');
+  if (!tabEl) return;
+  e.preventDefault();
+  clearPlaceholder();
+  const data = e.dataTransfer.getData('text/plain');
+  const ids = data.split(',').map(id => parseInt(id, 10)).filter(n => !isNaN(n));
+  const toId = parseInt(tabEl.dataset.tab, 10);
+  if (!ids.length) return;
+  const toTab = await browser.tabs.get(toId);
+  const rect = tabEl.getBoundingClientRect();
+  const before = e.clientY < rect.top + rect.height / 2;
+  let index = before ? toTab.index : toTab.index + 1;
+  for (const id of ids) {
+    if (id === toId) continue;
+    const fromTab = await browser.tabs.get(id);
+    let idx = index;
+    if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
+      idx--;
+    }
+    if (idx < 0) idx = 0;
+    await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
+    if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
+      index++;
+    }
+  }
+  scheduleUpdate();
 }
 
