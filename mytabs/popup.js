@@ -237,6 +237,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
   div.appendChild(title);
 
   const closeBtn = document.createElement('button');
+  closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
   closeBtn.addEventListener('click', async (e) => {
