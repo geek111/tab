@@ -327,14 +327,6 @@ function createTabRow(tab, isDuplicate, activeId, isVisited) {
 
   div.addEventListener('dragend', clearPlaceholder);
 
-  div.addEventListener('dblclick', async () => {
-    const query = prompt('Search text');
-    if (query) {
-      await browser.tabs.sendMessage(tab.id, { type: 'highlight', query });
-      browser.tabs.update(tab.id, { active: true });
-    }
-  });
-
   return div;
 }
 
