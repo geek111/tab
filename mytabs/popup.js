@@ -778,7 +778,11 @@ async function bulkMove() {
   const currentWinId = ids.length ? (await browser.tabs.get(ids[0])).windowId : null;
   const other = windows.find(w => ids.length && w.id !== currentWinId);
   if (other) {
-    await Promise.all(ids.map(id => browser.tabs.move(id, {windowId: other.id, index: -1}))); 
+    const tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
+    tabs.sort((a, b) => a.index - b.index);
+    for (const tab of tabs) {
+      await browser.tabs.move(tab.id, { windowId: other.id, index: -1 });
+    }
   }
   scheduleUpdate();
 }
@@ -787,14 +791,20 @@ async function bulkAssignToContainer(containerId) {
   const ids = getSelectedTabIds();
   if (!ids.length) return;
   if (ids.length > 10 && !confirm(`Move ${ids.length} tabs to the selected container?`)) return;
-  const tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
+  let tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
+  tabs.sort((a, b) => a.windowId === b.windowId ? a.index - b.index : a.windowId - b.windowId);
+  const offsets = new Map();
   for (const tab of tabs) {
+    const off = offsets.get(tab.windowId) || 0;
     await browser.tabs.create({
       url: tab.url,
       cookieStoreId: containerId,
-      index: tab.index,
-      windowId: tab.windowId
+      index: tab.index + off,
+      windowId: tab.windowId,
+      pinned: tab.pinned,
+      active: tab.active
     });
+    offsets.set(tab.windowId, off + 1);
   }
   await browser.tabs.remove(ids);
   scheduleUpdate();
