@@ -565,14 +565,19 @@ async function init() {
   registerTabEvents();
   const select = document.getElementById('container-filter');
   let containerIdents = [];
-  let containersAvailable = false;
+  let containersAvailable = !!browser.contextualIdentities;
   if (browser.contextualIdentities) {
     try {
       containerIdents = await browser.contextualIdentities.query({});
-      containersAvailable = true;
     } catch (e) {
+      containersAvailable = false;
       console.error('Contextual identities unavailable', e);
+      document.getElementById('error').textContent =
+        'Container actions disabled: ' + (e.message || e);
     }
+  } else {
+    document.getElementById('error').textContent =
+      'Container actions disabled: container feature not available';
   }
   if (select) {
     if (browser.contextualIdentities) {
@@ -591,7 +596,10 @@ async function init() {
         });
       } catch (e) {
         console.error('Contextual identities unavailable', e);
+        document.getElementById('error').textContent =
+          'Container actions disabled: ' + (e.message || e);
         select.disabled = true;
+        containersAvailable = false;
         document.getElementById('container-target')?.setAttribute('disabled', 'true');
         document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
         document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
@@ -616,7 +624,10 @@ async function init() {
         });
       } catch (e) {
         console.error('Contextual identities unavailable', e);
+        document.getElementById('error').textContent =
+          'Container actions disabled: ' + (e.message || e);
         targetSelect.disabled = true;
+        containersAvailable = false;
         document.getElementById('container-filter')?.setAttribute('disabled', 'true');
         document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
         document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
