@@ -241,7 +241,6 @@ body.full {
 body.full #tabs {
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--tile-width));
-  grid-auto-flow: column;
   gap: 0.5em;
   flex: 1 1 auto;
   max-height: none;
