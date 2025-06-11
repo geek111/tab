@@ -392,40 +392,46 @@ function findDuplicates(tabs) {
 }
 
 async function update() {
-  const allWins = document.body.classList.contains('full');
-  const queryOpts = allWins ? {} : { currentWindow: true };
-  let allTabs = await browser.tabs.query(queryOpts);
-  if (filterContainerId) {
-    allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
+  try {
+    const allWins = document.body.classList.contains('full');
+    const queryOpts = allWins ? {} : { currentWindow: true };
+    let allTabs = await browser.tabs.query(queryOpts);
+    if (filterContainerId) {
+      allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
+    }
+    if (allWins) {
+      const wins = await browser.windows.getAll({populate: false});
+      const order = new Map(wins.map((w, i) => [w.id, i]));
+      allTabs.sort((a, b) => {
+        const wa = order.get(a.windowId) ?? 0;
+        const wb = order.get(b.windowId) ?? 0;
+        return wa === wb ? a.index - b.index : wa - wb;
+      });
+    } else {
+      allTabs.sort((a, b) => a.index - b.index);
+    }
+    document.getElementById('total-count').textContent = allTabs.length;
+    const activeCount = allTabs.filter(t => !t.discarded).length;
+    document.getElementById('active-count').textContent = activeCount;
+    let tabs = await getTabs(allTabs);
+    const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
+    const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
+    const dupIds = new Set(duplicates);
+    const activeId = allTabs.find(t => t.active)?.id ?? -1;
+    const searchInput = document.getElementById('search');
+    const query = searchInput.value.trim();
+    let list;
+    if (query) {
+      list = filterTabs(tabs, query);
+    } else {
+      list = tabs.map(t => ({ tab: t }));
+    }
+    renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
+  } catch (e) {
+    console.error('Update failed', e);
+    document.getElementById('error').textContent =
+      'Error updating tabs: ' + (e.message || e);
   }
-  if (allWins) {
-    const wins = await browser.windows.getAll({populate: false});
-    const order = new Map(wins.map((w, i) => [w.id, i]));
-    allTabs.sort((a, b) => {
-      const wa = order.get(a.windowId) ?? 0;
-      const wb = order.get(b.windowId) ?? 0;
-      return wa === wb ? a.index - b.index : wa - wb;
-    });
-  } else {
-    allTabs.sort((a, b) => a.index - b.index);
-  }
-  document.getElementById('total-count').textContent = allTabs.length;
-  const activeCount = allTabs.filter(t => !t.discarded).length;
-  document.getElementById('active-count').textContent = activeCount;
-  let tabs = await getTabs(allTabs);
-  const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
-  const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
-  const dupIds = new Set(duplicates);
-  const activeId = allTabs.find(t => t.active)?.id ?? -1;
-  const searchInput = document.getElementById('search');
-  const query = searchInput.value.trim();
-  let list;
-  if (query) {
-    list = filterTabs(tabs, query);
-  } else {
-    list = tabs.map(t => ({ tab: t }));
-  }
-  renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
 }
 
 const scheduleUpdate = debounce(update, 200);
