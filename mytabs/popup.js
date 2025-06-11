@@ -143,6 +143,14 @@ function updateSelection(row, selected) {
   }
 }
 
+function clearSelection() {
+  for (const item of tabItems) {
+    item.selected = false;
+    if (item.el) updateSelection(item.el, false);
+  }
+  lastSelectedIndex = -1;
+}
+
 const saveScroll = debounce(() => {
   if (container) {
     browser.storage.local.set({ scrollTop: container.scrollTop });
@@ -548,6 +556,12 @@ document.addEventListener('keydown', (e) => {
     requestAnimationFrame(() => { tabItems[newIdx].el?.focus(); });
     return newIdx;
   };
+
+  if (e.key === 'Alt' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+    e.preventDefault();
+    clearSelection();
+    return;
+  }
 
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();
