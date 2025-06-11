@@ -16,6 +16,30 @@ let containerCache;
 let targetSelect;
 let visitedIds = new Set();
 
+let virtualList = null;
+let tabItems = [];
+let idIndexMap = new Map();
+let rowHeight = 0;
+let currentDupIds = new Set();
+let currentActiveId = -1;
+let currentVisited = new Set();
+let currentWinMap = null;
+let currentQuery = '';
+
+function resetTabState() {
+  if (virtualList) {
+    virtualList.destroy();
+  }
+  virtualList = null;
+  tabItems = [];
+  idIndexMap = new Map();
+  rowHeight = 0;
+  currentDupIds = new Set();
+  currentActiveId = -1;
+  currentVisited = new Set();
+  currentWinMap = null;
+  currentQuery = '';
+}
 function clearPlaceholder() {
   if (dropTarget) {
     dropTarget.classList.remove('drop-before', 'drop-after');
@@ -288,6 +312,11 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
 
   container.innerHTML = '';
   if (!tabItems.length) {
+    if (virtualList) {
+      virtualList.destroy();
+      virtualList = null;
+    }
+    rowHeight = 0;
     const msg = document.createElement('div');
     msg.id = 'empty';
     msg.textContent = 'No tabs to display';
@@ -684,11 +713,16 @@ function unregisterTabEvents() {
   browser.tabs.onAttached.removeListener(updateListener);
 }
 
+function cleanup() {
+  unregisterTabEvents();
+  resetTabState();
+}
+
 document.addEventListener('DOMContentLoaded', init);
 if (document.readyState !== 'loading') {
   init();
 }
-window.addEventListener('unload', unregisterTabEvents);
+window.addEventListener('unload', cleanup);
 
 // custom context menu
 const context = document.getElementById('context');
