@@ -193,9 +193,12 @@ function closeUI() {
   window.close();
 }
 
-async function activateTab(id) {
+async function activateTab(id, winId) {
   try {
     await browser.tabs.update(id, {active: true});
+    if (winId) {
+      await browser.windows.update(winId, {focused: true});
+    }
   } catch (e) {
     document.getElementById('error').textContent = 'Could not activate tab';
     document.querySelector(`[data-tab="${id}"]`)?.remove();
@@ -229,6 +232,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const div = document.createElement('div');
   div.className = 'tab';
   div.dataset.tab = tab.id;
+  div.dataset.windowId = tab.windowId;
   div.tabIndex = 0;
   div.draggable = true;
   if (item) div._item = item;
@@ -809,7 +813,8 @@ function showContextMenu(e) {
 
   if (tabEl && (!selected.length || !tabEl.classList.contains('selected'))) {
     const id = parseInt(tabEl.dataset.tab, 10);
-    addItem('Activate', () => activateTab(id));
+    const win = parseInt(tabEl.dataset.windowId, 10);
+    addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       await browser.tabs.discard(id);
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
@@ -944,7 +949,10 @@ function onContainerClick(e) {
     lastSelectedIndex = idx;
     return;
   }
-  activateTab(parseInt(tabEl.dataset.tab, 10));
+  activateTab(
+    parseInt(tabEl.dataset.tab, 10),
+    parseInt(tabEl.dataset.windowId, 10)
+  );
 }
 
 function onContainerDragStart(e) {
