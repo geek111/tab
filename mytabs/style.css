@@ -239,14 +239,13 @@ body.full {
   max-width: none;
 }
 body.full #tabs {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--tile-width), 1fr));
-  grid-auto-flow: row dense;
-  gap: 0.5em;
+  column-width: var(--tile-width);
+  column-fill: auto;
+  column-gap: 0.5em;
   flex: 1 1 auto;
   max-height: none;
   overflow-y: auto;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 body.full #counts,
 body.full #menu {
