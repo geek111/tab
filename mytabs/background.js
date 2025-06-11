@@ -6,6 +6,36 @@ let visited = [];
 let recentTimer = null;
 let visitedTimer = null;
 
+// Track duplicate tabs by URL
+const dupMap = new Map();
+const dupIds = new Set();
+
+function addDuplicate(tabId, url) {
+  let ids = dupMap.get(url);
+  if (!ids) {
+    ids = new Set([tabId]);
+    dupMap.set(url, ids);
+  } else {
+    ids.add(tabId);
+    if (ids.size > 1) {
+      for (const id of ids) dupIds.add(id);
+    }
+  }
+}
+
+function removeDuplicate(tabId) {
+  for (const [url, ids] of dupMap.entries()) {
+    if (ids.delete(tabId)) {
+      if (ids.size <= 1) {
+        for (const id of ids) dupIds.delete(id);
+      }
+      if (ids.size === 0) dupMap.delete(url);
+      dupIds.delete(tabId);
+      break;
+    }
+  }
+}
+
 function sendVisitedUpdate() {
   browser.runtime.sendMessage({ type: 'visitedUpdated', visited })
     .catch(() => {});
@@ -118,6 +148,10 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     unmarkVisited(tabId);
   } else if (changeInfo.discarded === false) {
     markVisited(tabId);
+  }
+  if (changeInfo.url) {
+    removeDuplicate(tabId);
+    addDuplicate(tabId, changeInfo.url);
   }
 });
 
