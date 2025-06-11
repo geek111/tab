@@ -21,5 +21,5 @@
 
   // tile width based on theme settings only
 
-  // layout now handled purely via CSS grid
+  // layout handled via CSS columns
 })();

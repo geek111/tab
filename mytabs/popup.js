@@ -617,9 +617,9 @@ async function init() {
   container.addEventListener('drop', onContainerDrop);
   if (document.body.classList.contains('full')) {
     container.addEventListener('wheel', (e) => {
-      if (container.scrollWidth > container.clientWidth) {
+      if (container.scrollHeight > container.clientHeight) {
         e.preventDefault();
-        container.scrollLeft += e.deltaY * SCROLL_SPEED;
+        container.scrollTop += e.deltaY * SCROLL_SPEED;
       }
     }, { passive: false });
     document.addEventListener('wheel', (e) => {
