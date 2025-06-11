@@ -264,7 +264,7 @@ body.full #menu button {
 body.full .tab {
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  width: 100%;
+  width: var(--tile-width);
   box-sizing: border-box;
 }
 
