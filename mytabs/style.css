@@ -99,7 +99,7 @@ body[data-theme="dark"] #context div:hover {
   padding: 0.2em;
   border-bottom: 1px solid var(--color-border);
   break-inside: avoid;
-  width: var(--tile-width);
+  width: 100%;
   box-sizing: border-box;
 }
 .tab-icon {
