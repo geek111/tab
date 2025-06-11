@@ -1,0 +1,8 @@
+{
+  "name": "kepi-tab",
+  "version": "1.0.0",
+  "description": "Development tooling",
+  "devDependencies": {
+    "stylelint": "^15.0.0"
+  }
+}
