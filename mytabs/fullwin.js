@@ -34,6 +34,8 @@
     }
   });
 
+  window.addEventListener('theme-applied', updateCols);
+
   window.addEventListener('resize', updateCols);
   updateCols();
 })();

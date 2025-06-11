@@ -16,6 +16,7 @@
     if (document.body.classList.contains('full')) {
       document.body.style.removeProperty('width');
     }
+    window.dispatchEvent(new Event('theme-applied'));
   }
 
   apply();
