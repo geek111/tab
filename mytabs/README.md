@@ -39,6 +39,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - **R** – reload selected tabs
 - **U** – unload selected tabs (Shift+U unloads all tabs)
 - **M** – move selected tabs to another window
+- **Alt** – deselect all tabs
 
 To install for development, load the directory as a temporary add-on in Firefox.
 
