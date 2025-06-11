@@ -268,20 +268,3 @@ body.full .tab {
   width: var(--tile-width);
   box-sizing: border-box;
 }
-
-.window-header {
-  font-weight: bold;
-  margin-top: 0.5em;
-  break-inside: avoid;
-  break-before: column;
-  padding: 0.2em 0.4em;
-  font-size: 1.1em;
-  background: var(--color-active);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-}
-
-body[data-theme="dark"] .window-header {
-  background: var(--color-active);
-}
