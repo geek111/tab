@@ -240,8 +240,8 @@ body.full {
 }
 body.full #tabs {
   display: grid;
-  grid-template-columns: repeat(auto-fill, var(--tile-width));
-  grid-auto-flow: column;
+  grid-template-columns: 1fr;
+  grid-auto-flow: row;
   gap: 0.5em;
   flex: 1 1 auto;
   max-height: none;
@@ -265,7 +265,7 @@ body.full #menu button {
 body.full .tab {
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  width: var(--tile-width);
+  width: 100%;
   box-sizing: border-box;
 }
 
