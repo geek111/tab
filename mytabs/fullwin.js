@@ -19,5 +19,13 @@
     browser.storage.local.set({ fullSize: data });
   });
 
+  function applyTileWidth() {
+    const width = Math.max(window.innerWidth / 5, 150);
+    document.documentElement.style.setProperty('--tile-width', width + 'px');
+  }
+
+  applyTileWidth();
+  window.addEventListener('resize', applyTileWidth);
+
   // layout now handled purely via CSS grid
 })();
