@@ -303,12 +303,14 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     rowHeight = sample.getBoundingClientRect().height || 32;
     sample.remove();
     virtualList = HyperList.create(container, {
+      height: container.clientHeight || 400,
       itemHeight: rowHeight,
       total: tabItems.length,
       generate: generateRow
     });
   } else {
     virtualList.refresh(container, {
+      height: container.clientHeight || 400,
       itemHeight: rowHeight,
       total: tabItems.length,
       generate: generateRow
