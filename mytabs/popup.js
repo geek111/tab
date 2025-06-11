@@ -911,6 +911,8 @@ async function bulkMove() {
 }
 
 async function bulkAssignToContainer(containerId) {
+  const errorEl = document.getElementById('error');
+  if (errorEl) errorEl.textContent = '';
   const ids = getSelectedTabIds();
   if (!ids.length) return;
   if (ids.length > 10 && !confirm(`Move ${ids.length} tabs to the selected container?`)) return;
@@ -918,9 +920,14 @@ async function bulkAssignToContainer(containerId) {
   tabs.sort((a, b) => a.windowId === b.windowId ? a.index - b.index : a.windowId - b.windowId);
   const offsets = new Map();
   const movedIds = [];
+  const failed = [];
   for (const tab of tabs) {
     const off = offsets.get(tab.windowId) || 0;
     try {
+      if (/^(about:|moz-extension:|chrome:|file:|view-source:)/.test(tab.url)) {
+        failed.push(tab.title || tab.url);
+        continue;
+      }
       await browser.tabs.create({
         url: tab.url,
         cookieStoreId: containerId,
@@ -933,13 +940,16 @@ async function bulkAssignToContainer(containerId) {
       movedIds.push(tab.id);
     } catch (e) {
       console.error('Failed to move tab', e);
-      document.getElementById('error').textContent = 'Some tabs could not be moved';
+      failed.push(tab.title || tab.url);
     }
   }
   if (movedIds.length) {
     await browser.tabs.remove(movedIds);
   }
   scheduleUpdate();
+  if (failed.length) {
+    if (errorEl) errorEl.textContent = `Some tabs could not be moved: ${failed.join(', ')}`;
+  }
 }
 
 async function bulkRemoveFromContainer() {
