@@ -25,6 +25,7 @@
   }
 
   applyTileWidth();
+  window.addEventListener('theme-applied', applyTileWidth);
   window.addEventListener('resize', applyTileWidth);
 
   // layout now handled purely via CSS grid
