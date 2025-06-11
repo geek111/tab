@@ -239,9 +239,9 @@ body.full {
   max-width: none;
 }
 body.full #tabs {
-  column-width: var(--tile-width);
-  column-gap: 0.5em;
-  column-count: var(--cols);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--tile-width), 1fr));
+  gap: 0.5em;
   flex: 1 1 auto;
   max-height: none;
   overflow-y: auto;
