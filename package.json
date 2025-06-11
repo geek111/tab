@@ -4,5 +4,8 @@
   "description": "Development tooling",
   "devDependencies": {
     "stylelint": "^15.0.0"
+  },
+  "dependencies": {
+    "stylelint-order": "^6.0.4"
   }
 }
