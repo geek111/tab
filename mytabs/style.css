@@ -241,7 +241,7 @@ body.full {
 body.full #tabs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(var(--tile-width), 1fr));
-  gap: 0.5em;
+  gap: 0;
   flex: 1 1 auto;
   max-height: none;
   overflow-y: auto;

@@ -193,9 +193,12 @@ function closeUI() {
   window.close();
 }
 
-async function activateTab(id) {
+async function activateTab(id, winId) {
   try {
     await browser.tabs.update(id, {active: true});
+    if (winId) {
+      await browser.windows.update(winId, {focused: true});
+    }
   } catch (e) {
     document.getElementById('error').textContent = 'Could not activate tab';
     document.querySelector(`[data-tab="${id}"]`)?.remove();
@@ -229,6 +232,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const div = document.createElement('div');
   div.className = 'tab';
   div.dataset.tab = tab.id;
+  div.dataset.windowId = tab.windowId;
   div.tabIndex = 0;
   div.draggable = true;
   if (item) div._item = item;
@@ -324,26 +328,79 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     return;
   }
 
-  if (!virtualList) {
-    const sample = createTabRow(tabItems[0].tab, dupIds.has(tabItems[0].tab.id), activeId, visitedIds.has(tabItems[0].tab.id), tabItems[0]);
-    sample.style.position = 'absolute';
-    sample.style.visibility = 'hidden';
-    container.appendChild(sample);
-    rowHeight = sample.getBoundingClientRect().height || 32;
-    sample.remove();
-    virtualList = HyperList.create(container, {
-      height: container.clientHeight || 400,
-      itemHeight: rowHeight,
-      total: tabItems.length,
-      generate: generateRow
-    });
+  if (document.body.classList.contains('full')) {
+    if (virtualList) {
+      virtualList.destroy();
+      virtualList = null;
+    }
+    if (!rowHeight) {
+      const sample = createTabRow(
+        tabItems[0].tab,
+        dupIds.has(tabItems[0].tab.id),
+        activeId,
+        visitedIds.has(tabItems[0].tab.id),
+        tabItems[0]
+      );
+      sample.style.position = 'absolute';
+      sample.style.visibility = 'hidden';
+      container.appendChild(sample);
+      rowHeight = sample.getBoundingClientRect().height || 32;
+      sample.remove();
+    }
+    for (const item of tabItems) {
+      const el = createTabRow(
+        item.tab,
+        dupIds.has(item.tab.id),
+        activeId,
+        visitedIds.has(item.tab.id),
+        item
+      );
+      if (currentQuery && item.match && item.tab.title) {
+        const span = el.querySelector('.tab-title');
+        if (span) {
+          let html = '';
+          let last = 0;
+          for (const idx of item.match) {
+            html += escapeHtml(span.textContent.slice(last, idx));
+            html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
+            last = idx + 1;
+          }
+          html += escapeHtml(span.textContent.slice(last));
+          span.innerHTML = html;
+        }
+      }
+      if (item.selected) el.classList.add('selected');
+      item.el = el;
+      container.appendChild(el);
+    }
   } else {
-    virtualList.refresh(container, {
-      height: container.clientHeight || 400,
-      itemHeight: rowHeight,
-      total: tabItems.length,
-      generate: generateRow
-    });
+    if (!virtualList) {
+      const sample = createTabRow(
+        tabItems[0].tab,
+        dupIds.has(tabItems[0].tab.id),
+        activeId,
+        visitedIds.has(tabItems[0].tab.id),
+        tabItems[0]
+      );
+      sample.style.position = 'absolute';
+      sample.style.visibility = 'hidden';
+      container.appendChild(sample);
+      rowHeight = sample.getBoundingClientRect().height || 32;
+      sample.remove();
+      virtualList = HyperList.create(container, {
+        height: container.clientHeight || 400,
+        itemHeight: rowHeight,
+        total: tabItems.length,
+        generate: generateRow
+      });
+    } else {
+      virtualList.refresh(container, {
+        height: container.clientHeight || 400,
+        itemHeight: rowHeight,
+        total: tabItems.length,
+        generate: generateRow
+      });
+    }
   }
 }
 
@@ -756,7 +813,8 @@ function showContextMenu(e) {
 
   if (tabEl && (!selected.length || !tabEl.classList.contains('selected'))) {
     const id = parseInt(tabEl.dataset.tab, 10);
-    addItem('Activate', () => activateTab(id));
+    const win = parseInt(tabEl.dataset.windowId, 10);
+    addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       await browser.tabs.discard(id);
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
@@ -891,7 +949,10 @@ function onContainerClick(e) {
     lastSelectedIndex = idx;
     return;
   }
-  activateTab(parseInt(tabEl.dataset.tab, 10));
+  activateTab(
+    parseInt(tabEl.dataset.tab, 10),
+    parseInt(tabEl.dataset.windowId, 10)
+  );
 }
 
 function onContainerDragStart(e) {
