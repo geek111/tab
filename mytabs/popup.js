@@ -917,19 +917,28 @@ async function bulkAssignToContainer(containerId) {
   let tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
   tabs.sort((a, b) => a.windowId === b.windowId ? a.index - b.index : a.windowId - b.windowId);
   const offsets = new Map();
+  const movedIds = [];
   for (const tab of tabs) {
     const off = offsets.get(tab.windowId) || 0;
-    await browser.tabs.create({
-      url: tab.url,
-      cookieStoreId: containerId,
-      index: tab.index + off,
-      windowId: tab.windowId,
-      pinned: tab.pinned,
-      active: tab.active
-    });
-    offsets.set(tab.windowId, off + 1);
+    try {
+      await browser.tabs.create({
+        url: tab.url,
+        cookieStoreId: containerId,
+        index: tab.index + off,
+        windowId: tab.windowId,
+        pinned: tab.pinned,
+        active: tab.active
+      });
+      offsets.set(tab.windowId, off + 1);
+      movedIds.push(tab.id);
+    } catch (e) {
+      console.error('Failed to move tab', e);
+      document.getElementById('error').textContent = 'Some tabs could not be moved';
+    }
   }
-  await browser.tabs.remove(ids);
+  if (movedIds.length) {
+    await browser.tabs.remove(movedIds);
+  }
   scheduleUpdate();
 }
 
