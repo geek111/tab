@@ -249,8 +249,8 @@ body.full #tabs-wrapper {
 }
 body.full #tabs {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--tile-width), 1fr));
-  /* expands to fill width; extra columns scroll horizontally */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(var(--tile-width), 1fr);
   gap: 0.5em;
   width: max-content;
   min-width: 100%;
