@@ -7,5 +7,8 @@
   },
   "dependencies": {
     "stylelint-order": "^6.0.4"
+  },
+  "scripts": {
+    "lint": "stylelint mytabs/style.css"
   }
 }

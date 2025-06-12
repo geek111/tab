@@ -238,6 +238,11 @@ body.full {
   flex-direction: column;
   max-width: none;
 }
+body.full #tabs-wrapper {
+  overflow-x: auto;
+  min-width: max-content;
+  width: 100%;
+}
 body.full #tabs {
   column-width: var(--tile-width);
   column-fill: auto;
