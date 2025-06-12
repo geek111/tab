@@ -237,33 +237,34 @@ async function getContainerIdentities() {
 }
 
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
-  const div = document.createElement('div');
-  div.className = 'tab';
-  div.dataset.tab = tab.id;
-  div.dataset.windowId = tab.windowId;
-  div.tabIndex = 0;
-  div.draggable = true;
-  if (item) div._item = item;
+  const row = document.createElement('div');
+  row.className = 'tab';
+  row.dataset.tab = tab.id;
+  row.dataset.windowId = tab.windowId;
+  row.tabIndex = 0;
+  row.draggable = true;
+  if (item) row._item = item;
   if (tab.id === activeId) {
-    div.classList.add('active');
+    row.classList.add('active');
   }
   if (isDuplicate) {
-    div.classList.add('duplicate');
+    row.classList.add('duplicate');
   }
   if (isVisited) {
-    div.classList.add('visited');
+    row.classList.add('visited');
   } else if (!isVisited && !tab.discarded) {
-    div.classList.add('unvisited');
+    row.classList.add('unvisited');
   }
 
 
+  let icon;
   if (tab.favIconUrl) {
-    const icon = document.createElement('img');
+    icon = document.createElement('img');
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
     icon.onerror = () => icon.remove();
-    div.appendChild(icon);
+    row.appendChild(icon);
 
     let tooltip;
     const showTooltip = () => {
@@ -294,24 +295,24 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     indicator.className = 'container-indicator';
     indicator.style.backgroundColor = ctx.colorCode;
     indicator.title = ctx.name;
-    div.appendChild(indicator);
+    row.appendChild(indicator);
   }
 
 
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
-  div.appendChild(title);
+  row.appendChild(title);
 
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
-  div.appendChild(closeBtn);
+  row.appendChild(closeBtn);
 
   // click and drag events handled via delegation
 
-  return div;
+  return row;
 }
 
 function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
@@ -636,15 +637,15 @@ async function init() {
   container.addEventListener('drop', onContainerDrop);
   if (document.body.classList.contains('full')) {
     container.addEventListener('wheel', (e) => {
-      if (container.scrollHeight > container.clientHeight) {
+      if (container.scrollWidth > container.clientWidth) {
         e.preventDefault();
-        container.scrollTop += e.deltaY * SCROLL_SPEED;
+        container.scrollLeft += e.deltaY * SCROLL_SPEED;
       }
     }, { passive: false });
     document.addEventListener('wheel', (e) => {
       if (!container || e.target.closest('#tabs')) return;
       e.preventDefault();
-      container.scrollTop += e.deltaY * SCROLL_SPEED;
+      container.scrollLeft += e.deltaY * SCROLL_SPEED;
     }, { passive: false });
   }
   document.addEventListener('contextmenu', showContextMenu);
