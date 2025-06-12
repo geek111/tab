@@ -938,33 +938,34 @@ async function bulkAssignToContainer(containerId) {
   if (ids.length > 10 && !confirm(`Move ${ids.length} tabs to the selected container?`)) return;
   let tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
   tabs.sort((a, b) => a.windowId === b.windowId ? a.index - b.index : a.windowId - b.windowId);
-  const offsets = new Map();
-  const movedIds = [];
   const failed = [];
   for (const tab of tabs) {
-    const off = offsets.get(tab.windowId) || 0;
     try {
       if (/^(about:|moz-extension:|chrome:|file:|view-source:)/.test(tab.url)) {
         failed.push(tab.title || tab.url);
         continue;
       }
-      await browser.tabs.create({
+      const newTab = await browser.tabs.create({
         url: tab.url,
         cookieStoreId: containerId,
-        index: tab.index + off,
+        index: tab.index,
         windowId: tab.windowId,
         pinned: tab.pinned,
         active: tab.active
       });
-      offsets.set(tab.windowId, off + 1);
-      movedIds.push(tab.id);
+      try {
+        await browser.tabs.remove(tab.id);
+      } catch (e) {
+        console.error('Failed to remove tab', e);
+        failed.push(tab.title || tab.url);
+        if (newTab && newTab.id) {
+          await browser.tabs.remove(newTab.id);
+        }
+      }
     } catch (e) {
       console.error('Failed to move tab', e);
       failed.push(tab.title || tab.url);
     }
-  }
-  if (movedIds.length) {
-    await browser.tabs.remove(movedIds);
   }
   scheduleUpdate();
   if (failed.length) {
