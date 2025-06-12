@@ -245,6 +245,7 @@ body.full #tabs-wrapper {
   height: 100%;
   flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
 }
 body.full #tabs {
   display: grid;
@@ -266,24 +267,4 @@ body.full #menu {
 }
 body.full #menu button {
   flex: 1 1 auto;
-}
-body.full .tab {
-  display: table-row;
-}
-body.full .tab td {
-  padding: 0.2em;
-  border-bottom: 1px solid var(--color-border);
-}
-body.full .tab:hover td {
-  background: var(--color-hover);
-}
-body.full .tab.active td {
-  background: var(--color-active);
-  font-weight: bold;
-}
-body.full .tab.selected td {
-  background: var(--color-selected);
-}
-body.full .tab:focus td {
-  outline: 1px solid #888;
 }
