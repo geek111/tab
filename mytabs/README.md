@@ -17,6 +17,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - Pinned and active tabs retain their state and original order when moved between windows or containers.
 - Container-related actions require Firefox's container feature and the `contextualIdentities` permission. If containers are disabled, the container filter and "Add to Container" buttons will not be shown.
 - A **Full View** window shows tabs in a responsive grid that fills the entire window.
+  - The number of columns adapts to the window size.
   - Custom context menu reveals extension version and links to the Options page.
   - The mouse wheel scrolls the tab list even when the pointer is over the menu or search field.
   - In Full View, overflowing columns can be scrolled horizontally with the mouse wheel.
