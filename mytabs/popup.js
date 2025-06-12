@@ -248,8 +248,8 @@ async function getContainerIdentities() {
 }
 
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
+  const row = document.createElement('div');
   const isFull = document.body.classList.contains('full');
-  const row = isFull ? document.createElement('tr') : document.createElement('div');
   row.className = 'tab';
   row.dataset.tab = tab.id;
   row.dataset.windowId = tab.windowId;
@@ -269,20 +269,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   }
 
 
-  let iconCell;
   if (tab.favIconUrl) {
     icon = document.createElement('img');
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
     icon.onerror = () => icon.remove();
-    if (isFull) {
-      iconCell = document.createElement('td');
-      iconCell.appendChild(icon);
-      row.appendChild(iconCell);
-    } else {
-      row.appendChild(icon);
-    }
+    row.appendChild(icon);
 
     let tooltip;
     const showTooltip = () => {
@@ -313,38 +306,20 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     indicator.className = 'container-indicator';
     indicator.style.backgroundColor = ctx.colorCode;
     indicator.title = ctx.name;
-    if (isFull) {
-      const cell = document.createElement('td');
-      cell.appendChild(indicator);
-      row.appendChild(cell);
-    } else {
-      row.appendChild(indicator);
-    }
+    row.appendChild(indicator);
   }
 
 
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
-  if (isFull) {
-    const titleCell = document.createElement('td');
-    titleCell.appendChild(title);
-    row.appendChild(titleCell);
-  } else {
-    row.appendChild(title);
-  }
+  row.appendChild(title);
 
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
-  if (isFull) {
-    const closeCell = document.createElement('td');
-    closeCell.appendChild(closeBtn);
-    row.appendChild(closeCell);
-  } else {
-    row.appendChild(closeBtn);
-  }
+  row.appendChild(closeBtn);
 
   // click and drag events handled via delegation
 
