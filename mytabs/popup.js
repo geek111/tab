@@ -554,8 +554,11 @@ document.addEventListener('keydown', (e) => {
   const moveFocus = (delta) => {
     const newIdx = Math.min(Math.max(idx + delta, 0), tabItems.length - 1);
     idx = newIdx;
-    container.scrollTop = newIdx * rowHeight;
-    requestAnimationFrame(() => { tabItems[newIdx].el?.focus(); });
+    const el = tabItems[newIdx].el;
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
     return newIdx;
   };
 
