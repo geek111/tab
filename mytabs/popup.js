@@ -8,7 +8,8 @@ let MOVE_ENABLED = true;
 let SCROLL_SPEED = 1;
 
 let lastSelectedIndex = -1;
-let container; // tabs container cached after DOM load
+let container; // tab list element
+let scrollContainer; // scrolling element (wrapper in full view)
 let dropTarget = null;
 let containerMap = new Map();
 let filterContainerId = '';
@@ -152,16 +153,26 @@ function clearSelection() {
 }
 
 const saveScroll = debounce(() => {
-  if (container) {
-    browser.storage.local.set({ scrollTop: container.scrollTop });
+  if (!scrollContainer) return;
+  if (document.body.classList.contains('full')) {
+    browser.storage.local.set({ scrollLeftFull: scrollContainer.scrollLeft });
+  } else {
+    browser.storage.local.set({ scrollTop: scrollContainer.scrollTop });
   }
 }, 200);
 
 async function restoreScroll() {
   if (restored) return;
-  const { scrollTop = 0 } = await browser.storage.local.get('scrollTop');
-  if (container) {
-    container.scrollTop = scrollTop;
+  if (document.body.classList.contains('full')) {
+    const { scrollLeftFull = 0 } = await browser.storage.local.get('scrollLeftFull');
+    if (scrollContainer) {
+      scrollContainer.scrollLeft = scrollLeftFull;
+    }
+  } else {
+    const { scrollTop = 0 } = await browser.storage.local.get('scrollTop');
+    if (scrollContainer) {
+      scrollContainer.scrollTop = scrollTop;
+    }
   }
   restored = true;
 }
@@ -629,22 +640,25 @@ document.addEventListener('keydown', (e) => {
 
 async function init() {
   container = document.getElementById('tabs');
-  container.addEventListener('scroll', saveScroll);
+  scrollContainer = document.body.classList.contains('full')
+    ? document.getElementById('tabs-wrapper')
+    : container;
+  scrollContainer.addEventListener('scroll', saveScroll);
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);
   container.addEventListener('drop', onContainerDrop);
   if (document.body.classList.contains('full')) {
-    container.addEventListener('wheel', (e) => {
-      if (container.scrollHeight > container.clientHeight) {
+    scrollContainer.addEventListener('wheel', (e) => {
+      if (scrollContainer.scrollWidth > scrollContainer.clientWidth) {
         e.preventDefault();
-        container.scrollTop += e.deltaY * SCROLL_SPEED;
+        scrollContainer.scrollLeft += e.deltaY * SCROLL_SPEED;
       }
     }, { passive: false });
     document.addEventListener('wheel', (e) => {
-      if (!container || e.target.closest('#tabs')) return;
+      if (!scrollContainer || e.target.closest('#tabs-wrapper')) return;
       e.preventDefault();
-      container.scrollTop += e.deltaY * SCROLL_SPEED;
+      scrollContainer.scrollLeft += e.deltaY * SCROLL_SPEED;
     }, { passive: false });
   }
   document.addEventListener('contextmenu', showContextMenu);
