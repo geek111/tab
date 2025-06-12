@@ -252,6 +252,7 @@ body.full #tabs {
   gap: 0.5em;
   width: 100%;
   min-height: 100%;
+  max-height: none;
 }
 body.full #counts,
 body.full #menu {
