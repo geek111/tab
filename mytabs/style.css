@@ -248,9 +248,13 @@ body.full #tabs-wrapper {
   min-height: 0;
 }
 body.full #tabs {
-  width: 100%;
-  height: auto;
-  border-collapse: collapse;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(var(--tile-width), 1fr);
+  gap: 0.5em;
+  width: max-content;
+  min-width: 100%;
+  height: 100%;
 }
 body.full #counts,
 body.full #menu {

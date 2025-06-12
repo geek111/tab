@@ -21,5 +21,5 @@
 
   // tile width based on theme settings only
 
-  // layout handled via an HTML table
+  // layout handled via CSS grid
 })();
