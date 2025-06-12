@@ -248,33 +248,41 @@ async function getContainerIdentities() {
 }
 
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
-  const div = document.createElement('div');
-  div.className = 'tab';
-  div.dataset.tab = tab.id;
-  div.dataset.windowId = tab.windowId;
-  div.tabIndex = 0;
-  div.draggable = true;
-  if (item) div._item = item;
+  const isFull = document.body.classList.contains('full');
+  const row = isFull ? document.createElement('tr') : document.createElement('div');
+  row.className = 'tab';
+  row.dataset.tab = tab.id;
+  row.dataset.windowId = tab.windowId;
+  row.tabIndex = 0;
+  row.draggable = true;
+  if (item) row._item = item;
   if (tab.id === activeId) {
-    div.classList.add('active');
+    row.classList.add('active');
   }
   if (isDuplicate) {
-    div.classList.add('duplicate');
+    row.classList.add('duplicate');
   }
   if (isVisited) {
-    div.classList.add('visited');
+    row.classList.add('visited');
   } else if (!isVisited && !tab.discarded) {
-    div.classList.add('unvisited');
+    row.classList.add('unvisited');
   }
 
 
+  let iconCell;
   if (tab.favIconUrl) {
     const icon = document.createElement('img');
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
     icon.onerror = () => icon.remove();
-    div.appendChild(icon);
+    if (isFull) {
+      iconCell = document.createElement('td');
+      iconCell.appendChild(icon);
+      row.appendChild(iconCell);
+    } else {
+      row.appendChild(icon);
+    }
 
     let tooltip;
     const showTooltip = () => {
@@ -305,24 +313,42 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     indicator.className = 'container-indicator';
     indicator.style.backgroundColor = ctx.colorCode;
     indicator.title = ctx.name;
-    div.appendChild(indicator);
+    if (isFull) {
+      const cell = document.createElement('td');
+      cell.appendChild(indicator);
+      row.appendChild(cell);
+    } else {
+      row.appendChild(indicator);
+    }
   }
 
 
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
-  div.appendChild(title);
+  if (isFull) {
+    const titleCell = document.createElement('td');
+    titleCell.appendChild(title);
+    row.appendChild(titleCell);
+  } else {
+    row.appendChild(title);
+  }
 
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
-  div.appendChild(closeBtn);
+  if (isFull) {
+    const closeCell = document.createElement('td');
+    closeCell.appendChild(closeBtn);
+    row.appendChild(closeCell);
+  } else {
+    row.appendChild(closeBtn);
+  }
 
   // click and drag events handled via delegation
 
-  return div;
+  return row;
 }
 
 function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
