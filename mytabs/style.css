@@ -251,11 +251,10 @@ body.full #tabs-wrapper {
 }
 body.full #tabs {
   display: grid;
-  grid-template-columns: repeat(auto-fill, var(--tile-width));
-  grid-template-rows: repeat(auto-fit, minmax(var(--row-height), 1fr));
+  grid-template-rows: repeat(auto-fit, var(--row-height));
   grid-auto-columns: var(--tile-width);
   grid-auto-flow: column;
-  grid-auto-rows: minmax(var(--row-height), 1fr);
+  grid-auto-rows: var(--row-height);
   gap: 0.2em;
   width: max-content;
   min-width: 100%;
