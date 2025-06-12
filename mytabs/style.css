@@ -245,8 +245,7 @@ body.full #tabs {
   flex: 1 1 auto;
   max-height: none;
   overflow-y: auto;
-  overflow-x: auto;
-  width: max-content;
+  overflow-x: hidden;
 }
 body.full #counts,
 body.full #menu {
