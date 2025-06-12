@@ -237,6 +237,7 @@ body.full {
   display: flex;
   flex-direction: column;
   max-width: none;
+  overflow: hidden;
 }
 body.full #tabs-wrapper {
   overflow-y: auto;
