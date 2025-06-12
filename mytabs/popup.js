@@ -271,7 +271,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
 
   let iconCell;
   if (tab.favIconUrl) {
-    const icon = document.createElement('img');
+    icon = document.createElement('img');
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
