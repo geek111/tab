@@ -230,8 +230,8 @@ body[data-theme="dark"] .tab-tooltip {
 
 /* Layout tweaks for full view */
 body.full {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   padding: 0.5em;
   box-sizing: border-box;
   display: flex;
@@ -245,14 +245,13 @@ body.full #tabs-wrapper {
   height: 100%;
   flex: 1 1 auto;
   min-height: 0;
-  height: 100%;
 }
 body.full #tabs {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), 1fr));
   gap: 0.5em;
   width: 100%;
-  height: max-content;
+  min-height: 100%;
 }
 body.full #counts,
 body.full #menu {
