@@ -913,60 +913,6 @@ async function bulkMove() {
 async function bulkAssignToContainer(containerId) {
   const errorEl = document.getElementById('error');
   if (errorEl) errorEl.textContent = '';
-
-  async function performMove() {
-    const ids = getSelectedTabIds();
-    if (!ids.length) return;
-    if (ids.length > 10 &&
-        !confirm(`Move ${ids.length} tabs to the selected container?`)) {
-      return;
-    }
-    let tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
-    tabs.sort((a, b) =>
-      a.windowId === b.windowId ? a.index - b.index : a.windowId - b.windowId);
-    const failed = [];
-    for (const tab of tabs) {
-      try {
-        if (/^(about:|moz-extension:|chrome:|file:|view-source:)/.test(tab.url)) {
-          failed.push(tab.title || tab.url);
-          continue;
-        }
-        const newTab = await browser.tabs.create({
-          url: tab.url,
-          cookieStoreId: containerId,
-          index: tab.index,
-          windowId: tab.windowId,
-          pinned: tab.pinned,
-          active: tab.active
-        });
-        try {
-          await browser.tabs.remove(tab.id);
-        } catch (e) {
-          console.error('Failed to remove tab', e);
-          failed.push(tab.title || tab.url);
-          if (newTab && newTab.id) {
-            await browser.tabs.remove(newTab.id);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to move tab', e);
-        failed.push(tab.title || tab.url);
-      }
-    }
-    scheduleUpdate();
-    if (failed.length) {
-      if (errorEl) {
-        errorEl.textContent =
-          `Some tabs could not be moved: ${failed.join(', ')}`;
-      }
-    }
-  }
-
-  if (containerId === 'firefox-default') {
-    // default container always exists
-    return await performMove();
-  }
-
   if (browser.contextualIdentities) {
     try {
       let identities = await browser.contextualIdentities.query({});
@@ -982,14 +928,49 @@ async function bulkAssignToContainer(containerId) {
       }
     } catch (e) {
       console.error('Contextual identities unavailable', e);
-      if (errorEl) {
-        errorEl.textContent =
-          'Container actions disabled: ' + (e.message || e);
-      }
+      if (errorEl) errorEl.textContent =
+        'Container actions disabled: ' + (e.message || e);
       return;
     }
   }
-  return await performMove();
+  const ids = getSelectedTabIds();
+  if (!ids.length) return;
+  if (ids.length > 10 && !confirm(`Move ${ids.length} tabs to the selected container?`)) return;
+  let tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
+  tabs.sort((a, b) => a.windowId === b.windowId ? a.index - b.index : a.windowId - b.windowId);
+  const failed = [];
+  for (const tab of tabs) {
+    try {
+      if (/^(about:|moz-extension:|chrome:|file:|view-source:)/.test(tab.url)) {
+        failed.push(tab.title || tab.url);
+        continue;
+      }
+      const newTab = await browser.tabs.create({
+        url: tab.url,
+        cookieStoreId: containerId,
+        index: tab.index,
+        windowId: tab.windowId,
+        pinned: tab.pinned,
+        active: tab.active
+      });
+      try {
+        await browser.tabs.remove(tab.id);
+      } catch (e) {
+        console.error('Failed to remove tab', e);
+        failed.push(tab.title || tab.url);
+        if (newTab && newTab.id) {
+          await browser.tabs.remove(newTab.id);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to move tab', e);
+      failed.push(tab.title || tab.url);
+    }
+  }
+  scheduleUpdate();
+  if (failed.length) {
+    if (errorEl) errorEl.textContent = `Some tabs could not be moved: ${failed.join(', ')}`;
+  }
 }
 
 async function bulkRemoveFromContainer() {
