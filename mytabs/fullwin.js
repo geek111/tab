@@ -21,5 +21,5 @@
 
   // tile width based on theme settings only
 
-  // layout handled via a CSS grid that can scroll horizontally
+  // layout handled via CSS grid
 })();

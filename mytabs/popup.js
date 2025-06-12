@@ -8,7 +8,8 @@ let MOVE_ENABLED = true;
 let SCROLL_SPEED = 1;
 
 let lastSelectedIndex = -1;
-let container; // tabs container cached after DOM load
+let container; // tab list element
+let scrollContainer; // scrolling element (wrapper in full view)
 let dropTarget = null;
 let containerMap = new Map();
 let filterContainerId = '';
@@ -152,16 +153,26 @@ function clearSelection() {
 }
 
 const saveScroll = debounce(() => {
-  if (container) {
-    browser.storage.local.set({ scrollTop: container.scrollTop });
+  if (!scrollContainer) return;
+  if (document.body.classList.contains('full')) {
+    browser.storage.local.set({ scrollLeftFull: scrollContainer.scrollLeft });
+  } else {
+    browser.storage.local.set({ scrollTop: scrollContainer.scrollTop });
   }
 }, 200);
 
 async function restoreScroll() {
   if (restored) return;
-  const { scrollTop = 0 } = await browser.storage.local.get('scrollTop');
-  if (container) {
-    container.scrollTop = scrollTop;
+  if (document.body.classList.contains('full')) {
+    const { scrollLeftFull = 0 } = await browser.storage.local.get('scrollLeftFull');
+    if (scrollContainer) {
+      scrollContainer.scrollLeft = scrollLeftFull;
+    }
+  } else {
+    const { scrollTop = 0 } = await browser.storage.local.get('scrollTop');
+    if (scrollContainer) {
+      scrollContainer.scrollTop = scrollTop;
+    }
   }
   restored = true;
 }
@@ -237,7 +248,8 @@ async function getContainerIdentities() {
 }
 
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
-  const row = document.createElement('div');
+  const isFull = document.body.classList.contains('full');
+  const row = isFull ? document.createElement('tr') : document.createElement('div');
   row.className = 'tab';
   row.dataset.tab = tab.id;
   row.dataset.windowId = tab.windowId;
@@ -257,14 +269,20 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   }
 
 
-  let icon;
+  let iconCell;
   if (tab.favIconUrl) {
     icon = document.createElement('img');
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
     icon.onerror = () => icon.remove();
-    row.appendChild(icon);
+    if (isFull) {
+      iconCell = document.createElement('td');
+      iconCell.appendChild(icon);
+      row.appendChild(iconCell);
+    } else {
+      row.appendChild(icon);
+    }
 
     let tooltip;
     const showTooltip = () => {
@@ -295,20 +313,38 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     indicator.className = 'container-indicator';
     indicator.style.backgroundColor = ctx.colorCode;
     indicator.title = ctx.name;
-    row.appendChild(indicator);
+    if (isFull) {
+      const cell = document.createElement('td');
+      cell.appendChild(indicator);
+      row.appendChild(cell);
+    } else {
+      row.appendChild(indicator);
+    }
   }
 
 
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
-  row.appendChild(title);
+  if (isFull) {
+    const titleCell = document.createElement('td');
+    titleCell.appendChild(title);
+    row.appendChild(titleCell);
+  } else {
+    row.appendChild(title);
+  }
 
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
-  row.appendChild(closeBtn);
+  if (isFull) {
+    const closeCell = document.createElement('td');
+    closeCell.appendChild(closeBtn);
+    row.appendChild(closeCell);
+  } else {
+    row.appendChild(closeBtn);
+  }
 
   // click and drag events handled via delegation
 
@@ -630,22 +666,25 @@ document.addEventListener('keydown', (e) => {
 
 async function init() {
   container = document.getElementById('tabs');
-  container.addEventListener('scroll', saveScroll);
+  scrollContainer = document.body.classList.contains('full')
+    ? document.getElementById('tabs-wrapper')
+    : container;
+  scrollContainer.addEventListener('scroll', saveScroll);
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);
   container.addEventListener('drop', onContainerDrop);
   if (document.body.classList.contains('full')) {
-    container.addEventListener('wheel', (e) => {
-      if (container.scrollWidth > container.clientWidth) {
+    scrollContainer.addEventListener('wheel', (e) => {
+      if (scrollContainer.scrollWidth > scrollContainer.clientWidth) {
         e.preventDefault();
-        container.scrollLeft += e.deltaY * SCROLL_SPEED;
+        scrollContainer.scrollLeft += e.deltaY * SCROLL_SPEED;
       }
     }, { passive: false });
     document.addEventListener('wheel', (e) => {
-      if (!container || e.target.closest('#tabs')) return;
+      if (!scrollContainer || e.target.closest('#tabs-wrapper')) return;
       e.preventDefault();
-      container.scrollLeft += e.deltaY * SCROLL_SPEED;
+      scrollContainer.scrollLeft += e.deltaY * SCROLL_SPEED;
     }, { passive: false });
   }
   document.addEventListener('contextmenu', showContextMenu);
