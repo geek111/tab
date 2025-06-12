@@ -241,6 +241,7 @@ body.full {
 body.full #tabs-wrapper {
   overflow-y: hidden;
   overflow-x: auto;
+  min-width: max-content;
   width: 100%;
   height: 100%;
   flex: 1 1 auto;
