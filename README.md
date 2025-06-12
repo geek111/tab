@@ -11,5 +11,5 @@ Configuration is stored in `.stylelintrc.json` and uses the
 
 ```bash
 npm install
-npx stylelint mytabs/style.css
+npm run lint
 ```

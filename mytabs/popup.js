@@ -270,7 +270,9 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       if (!document.body.classList.contains('full')) return;
       tooltip = document.createElement('div');
       tooltip.className = 'tab-tooltip';
-      tooltip.innerHTML = `${tab.title || tab.url}<br>${tab.url}`;
+      const safeTitle = escapeHtml(tab.title || tab.url);
+      const safeUrl = escapeHtml(tab.url);
+      tooltip.innerHTML = `${safeTitle}<br>${safeUrl}`;
       document.body.appendChild(tooltip);
       const rect = icon.getBoundingClientRect();
       tooltip.style.left = `${rect.right + window.scrollX + 5}px`;
