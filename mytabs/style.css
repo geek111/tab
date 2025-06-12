@@ -239,18 +239,18 @@ body.full {
   max-width: none;
 }
 body.full #tabs-wrapper {
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   min-width: 100%;
   height: 100%;
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 body.full #tabs {
-  column-width: var(--tile-width);
-  column-gap: 0.5em;
-  column-fill: auto;
-  height: 100%;
-  width: max-content;
+  width: 100%;
+  height: auto;
+  border-collapse: collapse;
 }
 body.full #counts,
 body.full #menu {
@@ -267,9 +267,22 @@ body.full #menu button {
   flex: 1 1 auto;
 }
 body.full .tab {
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  margin-bottom: 0.5em;
-  width: 100%;
-  box-sizing: border-box;
+  display: table-row;
+}
+body.full .tab td {
+  padding: 0.2em;
+  border-bottom: 1px solid var(--color-border);
+}
+body.full .tab:hover td {
+  background: var(--color-hover);
+}
+body.full .tab.active td {
+  background: var(--color-active);
+  font-weight: bold;
+}
+body.full .tab.selected td {
+  background: var(--color-selected);
+}
+body.full .tab:focus td {
+  outline: 1px solid #888;
 }
