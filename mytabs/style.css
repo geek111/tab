@@ -91,7 +91,7 @@ body[data-theme="dark"] #context div:hover {
 }
 
 #tabs {
-  margin-top: 0.2em;
+  margin-top: 0;
   max-height: 400px;
   overflow-y: auto;
 }
