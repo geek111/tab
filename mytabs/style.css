@@ -13,7 +13,7 @@
   --close-scale: 0.5;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
@@ -250,8 +250,8 @@ body.full #tabs-wrapper,
   height: 100%;
   flex: 1 1 auto;
   min-height: 0;
-  margin: 0;
-  padding: 0;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 body.full #tabs,
 .tab-grid {
@@ -260,7 +260,9 @@ body.full #tabs,
   grid-auto-columns: 200px;
   grid-auto-flow: column;
   grid-auto-rows: minmax(40px, 1fr);
-  gap: 0px;
+  gap: 0;
+  row-gap: 0;
+  column-gap: 0;
   width: max-content;
   min-width: 100%;
   height: 100%;
@@ -268,14 +270,14 @@ body.full #tabs,
   align-content: stretch;
   justify-items: start;
   align-items: start;
-  margin: 0;
-  padding: 0;
+  margin: 0 !important;
+  padding: 0 !important;
   box-sizing: border-box;
 }
 body.full .tab,
 .tab-card {
-  padding: 0;
-  margin: 0;
+  padding: 0 !important;
+  margin: 0 !important;
   border: 1px solid #ddd;
   border-top-width: 0;
   border-left-width: 0;
