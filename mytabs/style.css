@@ -265,8 +265,8 @@ body.full #tabs,
   row-gap: 0;
   column-gap: 0;
   width: max-content;
-  height: auto;
-  align-content: start;
+  height: 100%;
+  align-content: stretch;
   justify-items: start;
   align-items: start;
   margin: 0 !important;
