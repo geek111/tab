@@ -653,13 +653,15 @@ async function init() {
     scrollContainer.addEventListener('wheel', (e) => {
       if (scrollContainer.scrollWidth > scrollContainer.clientWidth) {
         e.preventDefault();
-        scrollContainer.scrollLeft += e.deltaY * SCROLL_SPEED;
+        const delta = e.deltaX || e.deltaY;
+        scrollContainer.scrollLeft += delta * SCROLL_SPEED;
       }
     }, { passive: false });
     document.addEventListener('wheel', (e) => {
       if (!scrollContainer || e.target.closest('#tabs-wrapper')) return;
       e.preventDefault();
-      scrollContainer.scrollLeft += e.deltaY * SCROLL_SPEED;
+      const delta = e.deltaX || e.deltaY;
+      scrollContainer.scrollLeft += delta * SCROLL_SPEED;
     }, { passive: false });
   }
   document.addEventListener('contextmenu', showContextMenu);
