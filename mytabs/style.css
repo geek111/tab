@@ -278,6 +278,7 @@ body.full .tab,
 .tab-card {
   padding: 0 !important;
   margin: 0 !important;
+  border-bottom: none !important;
   box-sizing: border-box;
 }
 body.full .tab-title {
