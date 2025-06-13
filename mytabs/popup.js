@@ -250,7 +250,7 @@ async function getContainerIdentities() {
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const row = document.createElement('div');
   const isFull = document.body.classList.contains('full');
-  row.className = 'tab';
+  row.className = 'tab tab-card';
   row.dataset.tab = tab.id;
   row.dataset.windowId = tab.windowId;
   row.tabIndex = 0;

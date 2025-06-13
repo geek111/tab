@@ -1,17 +1,17 @@
 :root {
   --color-bg: #fff;
   --color-text: #333;
-  --color-border: #ccc;
+  --color-border: #ddd;
   --color-hover: #f5f5f5;
   --color-active: #eef5ff;
   --color-selected: #dceaff;
   --color-muted: #888;
   --color-visited: #f0fff0;
-  --tile-width: 150px;
+  --tile-width: 200px;
   --tile-scale: 0.9;
   --font-scale: 0.8125;
   --close-scale: 0.5;
-  --row-height: 36px;
+  --row-height: 40px;
 }
 
 /* ensure borders never add spacing */
@@ -244,19 +244,20 @@ body.full {
   flex-direction: column;
   max-width: none;
 }
-body.full #tabs-wrapper {
-  overflow-y: hidden;
+body.full #tabs-wrapper,
+.tab-grid-wrapper {
   overflow-x: auto;
-  min-width: max-content;
+  overflow-y: hidden;
   width: 100%;
   height: 100%;
   flex: 1 1 auto;
   min-height: 0;
-  min-width: 100%;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
-body.full #tabs {
+body.full #tabs,
+.tab-grid {
   display: grid;
   grid-template-rows: repeat(auto-fill, minmax(var(--row-height), 1fr));
   grid-auto-columns: var(--tile-width);
@@ -274,7 +275,8 @@ body.full #tabs {
   padding: 0;
   box-sizing: border-box;
 }
-body.full .tab {
+body.full .tab,
+.tab-card {
   padding: 0;
   margin: 0;
   border: 1px solid var(--color-border);
@@ -282,7 +284,8 @@ body.full .tab {
   border-left-width: 0;
   box-sizing: border-box;
 }
-body.full .tab-title {
+body.full .tab-title,
+.tab-card .tab-title {
   padding: 2px 4px;
 }
 body.full #counts,
