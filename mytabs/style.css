@@ -95,6 +95,9 @@ body[data-theme="dark"] #context div:hover {
   max-height: 400px;
   overflow-y: auto;
 }
+body.full #tabs {
+  max-height: none;
+}
 
 .tab {
   display: flex;
