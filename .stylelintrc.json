@@ -1,7 +1,6 @@
 {
   "plugins": ["stylelint-order"],
   "rules": {
-    "indentation": 2,
     "block-no-empty": true,
     "order/properties-order": null
   }
