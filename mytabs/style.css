@@ -267,6 +267,7 @@ body.full #tabs {
   align-items: start;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 body.full .tab {
   padding: 0;
@@ -275,6 +276,9 @@ body.full .tab {
   border-top-width: 0;
   border-left-width: 0;
   box-sizing: border-box;
+}
+body.full .tab-title {
+  padding: 2px 4px;
 }
 body.full #counts,
 body.full #menu {
