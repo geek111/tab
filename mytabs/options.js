@@ -28,6 +28,7 @@ async function load(){
   document.getElementById('fontScale').value = fontScale;
   document.getElementById('closeScale').value = closeScale;
   document.getElementById('scrollSpeed').value = scrollSpeed;
+  document.getElementById('scrollSpeedValue').textContent = scrollSpeed;
   document.getElementById('opt-show-recent').checked = showRecent;
   document.getElementById('opt-show-dups').checked = showDuplicates;
   document.getElementById('opt-enable-move').checked = enableMove;
@@ -88,8 +89,10 @@ function updateCloseScale(){
 }
 
 function updateScroll(){
-  const scrollSpeed=parseFloat(document.getElementById('scrollSpeed').value);
+  const el = document.getElementById('scrollSpeed');
+  const scrollSpeed = parseFloat(el.value);
   browser.storage.local.set({scrollSpeed});
+  document.getElementById('scrollSpeedValue').textContent = scrollSpeed.toFixed(1);
 }
 
 const elTileWidth = document.getElementById('tileWidth');
