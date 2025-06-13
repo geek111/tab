@@ -244,8 +244,8 @@ body.full {
 }
 body.full #tabs-wrapper,
 .tab-grid-wrapper {
-  overflow-y: hidden;
-  overflow-x: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   width: 100%;
   height: 100%;
   flex: 1 1 auto;
@@ -256,16 +256,13 @@ body.full #tabs-wrapper,
 body.full #tabs,
 .tab-grid {
   display: grid;
-  grid-auto-columns: 200px;
-  grid-auto-flow: column;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), 1fr));
   grid-auto-rows: auto;
   gap: 0;
   row-gap: 0;
   column-gap: 0;
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
   height: 100%;
-  min-height: 100%;
   align-content: start;
   justify-items: start;
   align-items: start;
