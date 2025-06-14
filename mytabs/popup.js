@@ -248,7 +248,7 @@ async function getContainerIdentities() {
 }
 
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
-  const row = document.createElement('div');
+  const row = document.createElement('tr');
   const isFull = document.body.classList.contains('full');
   row.className = 'tab';
   row.dataset.tab = tab.id;
@@ -269,14 +269,15 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   }
 
 
+  const iconCell = document.createElement('td');
   if (tab.favIconUrl) {
-    icon = document.createElement('img');
+    const icon = document.createElement('img');
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
     icon.onerror = () => icon.remove();
-    row.appendChild(icon);
-
+    iconCell.appendChild(icon);
+  
     let tooltip;
     const showTooltip = () => {
       if (!document.body.classList.contains('full')) return;
@@ -299,27 +300,34 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     icon.addEventListener('mouseenter', showTooltip);
     icon.addEventListener('mouseleave', hideTooltip);
   }
+  row.appendChild(iconCell);
 
+  const indicatorCell = document.createElement('td');
   const ctx = containerMap.get(tab.cookieStoreId);
   if (ctx) {
     const indicator = document.createElement('span');
     indicator.className = 'container-indicator';
     indicator.style.backgroundColor = ctx.colorCode;
     indicator.title = ctx.name;
-    row.appendChild(indicator);
+    indicatorCell.appendChild(indicator);
   }
+  row.appendChild(indicatorCell);
 
 
+  const titleCell = document.createElement('td');
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
-  row.appendChild(title);
+  titleCell.appendChild(title);
+  row.appendChild(titleCell);
 
+  const closeCell = document.createElement('td');
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
-  row.appendChild(closeBtn);
+  closeCell.appendChild(closeBtn);
+  row.appendChild(closeCell);
 
   // click and drag events handled via delegation
 
@@ -640,7 +648,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function init() {
-  container = document.getElementById('tabs');
+  container = document.getElementById('tabs-body');
   scrollContainer = document.body.classList.contains('full')
     ? document.getElementById('tabs-wrapper')
     : container;
