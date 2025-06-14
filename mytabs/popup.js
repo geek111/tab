@@ -248,7 +248,7 @@ async function getContainerIdentities() {
 }
 
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
-  const row = document.createElement('tr');
+  const row = document.createElement('div');
   const isFull = document.body.classList.contains('full');
   row.className = 'tab';
   row.dataset.tab = tab.id;
@@ -269,7 +269,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   }
 
 
-  const iconCell = document.createElement('td');
+  const iconCell = document.createElement('div');
   if (tab.favIconUrl) {
     const icon = document.createElement('img');
     icon.className = 'tab-icon';
@@ -302,7 +302,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   }
   row.appendChild(iconCell);
 
-  const indicatorCell = document.createElement('td');
+  const indicatorCell = document.createElement('div');
   const ctx = containerMap.get(tab.cookieStoreId);
   if (ctx) {
     const indicator = document.createElement('span');
@@ -314,14 +314,14 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   row.appendChild(indicatorCell);
 
 
-  const titleCell = document.createElement('td');
+  const titleCell = document.createElement('div');
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
   titleCell.appendChild(title);
   row.appendChild(titleCell);
 
-  const closeCell = document.createElement('td');
+  const closeCell = document.createElement('div');
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
