@@ -156,7 +156,7 @@ body[data-theme="dark"] .tab.drop-after {
   padding: 0 0.2em;
   vertical-align: middle;
 }
-.tab > div:nth-child(2) {
+.tab > div:nth-child(3) {
   flex: 1 1 auto;
   min-width: 0;
 }
