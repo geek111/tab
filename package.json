@@ -9,6 +9,7 @@
     "stylelint-order": "^6.0.4"
   },
   "scripts": {
-    "lint": "stylelint mytabs/style.css"
+    "lint": "stylelint mytabs/style.css",
+    "test": "echo 'No tests specified'"
   }
 }
