@@ -826,6 +826,12 @@ if (document.readyState !== 'loading') {
 }
 window.addEventListener('unload', cleanup);
 
+// recompute item height when theme or scaling changes
+window.addEventListener('theme-applied', () => {
+  rowHeight = 0;
+  scheduleUpdate();
+});
+
 // custom context menu
 const context = document.getElementById('context');
 function showContextMenu(e) {
