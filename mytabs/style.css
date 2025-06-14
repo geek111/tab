@@ -257,7 +257,7 @@ body.full {
 }
 body.full #tabs-wrapper,
 .tab-grid-wrapper {
-  overflow-y: hidden;
+  overflow-y: auto;
   overflow-x: auto;
   width: 100%;
   height: 100%;
@@ -302,11 +302,4 @@ body.full #menu {
 }
 body.full #menu button {
   flex: 1 1 auto;
-}
-
-body.full .tab-grid {
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(var(--tile-width), 1fr);
-  overflow-y: hidden;
-  overflow-x: auto;
 }
