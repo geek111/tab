@@ -271,7 +271,7 @@ body.full #tabs,
   display: grid;
   position: relative;
   width: 100%;
-  grid-auto-rows: minmax(45px, auto);
+  grid-auto-rows: max-content;
   gap: 0.4em;
   grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), 1fr));
   height: 100%;
@@ -285,11 +285,6 @@ body.full .tab,
   margin: 0 !important;
   border-bottom: none !important;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-}
-.tab-card .title {
-  text-overflow: ellipsis;
 }
 body.full .tab-title {
   padding: 2px 0;
