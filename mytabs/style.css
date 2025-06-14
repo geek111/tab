@@ -267,11 +267,6 @@ body.full #tabs-wrapper,
   padding: 0 !important;
 }
 
-body.full #tabs-wrapper {
-  overflow-y: hidden;
-  overflow-x: auto;
-}
-
 body.full #tabs,
 .tab-grid {
   display: grid;
