@@ -100,7 +100,8 @@ body.full #tabs {
 }
 
 .tab {
-  display: table-row;
+  display: flex;
+  align-items: center;
   padding: 0;
   border-bottom: none;
   break-inside: avoid;
@@ -147,7 +148,7 @@ body[data-theme="dark"] .tab.drop-after {
   text-overflow: ellipsis;
   cursor: pointer;
 }
-.tab td {
+.tab > div {
   padding: 0 0.2em;
   vertical-align: middle;
 }
@@ -259,10 +260,10 @@ body.full #tabs-wrapper,
 }
 body.full #tabs,
 .tab-grid {
-  display: table;
+  display: grid;
   position: relative;
   width: 100%;
-  border-collapse: collapse;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), 1fr));
   height: 100%;
   margin: 0 !important;
   padding: 0 !important;
