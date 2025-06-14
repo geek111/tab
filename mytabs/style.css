@@ -170,6 +170,8 @@ button:hover {
 }
 .close-btn {
   font-size: calc(1em * var(--close-scale));
+  padding: 0;
+  line-height: 1;
 }
 .hidden {
   display: none;
