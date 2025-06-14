@@ -257,7 +257,7 @@ body.full {
 }
 body.full #tabs-wrapper,
 .tab-grid-wrapper {
-  overflow-y: hidden;
+  overflow-y: auto;
   overflow-x: auto;
   width: 100%;
   height: 100%;
@@ -265,6 +265,11 @@ body.full #tabs-wrapper,
   min-height: 0;
   margin: 0 !important;
   padding: 0 !important;
+}
+
+body.full #tabs-wrapper {
+  overflow-y: hidden;
+  overflow-x: auto;
 }
 
 body.full #tabs,
@@ -281,12 +286,6 @@ body.full #tabs,
   box-sizing: border-box;
 }
 
-body.full .tab-grid {
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(var(--tile-width), 1fr);
-  overflow-y: hidden;
-  overflow-x: auto;
-}
 body.full .tab,
 .tab-card {
   padding: 0 !important;
