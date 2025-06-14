@@ -257,7 +257,7 @@ body.full {
 }
 body.full #tabs-wrapper,
 .tab-grid-wrapper {
-  overflow-y: hidden;
+  overflow-y: auto;
   overflow-x: auto;
   width: 100%;
   height: 100%;
@@ -265,6 +265,10 @@ body.full #tabs-wrapper,
   min-height: 0;
   margin: 0 !important;
   padding: 0 !important;
+}
+
+body.full #tabs-wrapper {
+  overflow-y: hidden;
 }
 body.full #tabs,
 .tab-grid {
