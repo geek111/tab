@@ -106,6 +106,7 @@ body.full #tabs {
   border-bottom: none;
   break-inside: avoid;
   box-sizing: border-box;
+  min-width: 0;
 }
 .tab-icon {
   width: calc(16px * var(--font-scale));
