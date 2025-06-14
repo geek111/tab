@@ -648,7 +648,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function init() {
-  container = document.getElementById('tabs-body');
+  container = document.getElementById('tabs-body') ||
+              document.getElementById('tabs');
   scrollContainer = document.body.classList.contains('full')
     ? document.getElementById('tabs-wrapper')
     : container;
