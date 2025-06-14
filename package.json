@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "description": "Development tooling",
   "devDependencies": {
+    "eslint": "^9.29.0",
+    "eslint-plugin-import": "^2.31.0",
     "stylelint": "^15.0.0"
   },
   "dependencies": {
     "stylelint-order": "^6.0.4"
   },
   "scripts": {
-    "lint": "stylelint mytabs/style.css"
+    "lint": "stylelint mytabs/style.css && npm run lint:js",
+    "lint:js": "ESLINT_USE_FLAT_CONFIG=false eslint mytabs/*.js"
   }
 }
