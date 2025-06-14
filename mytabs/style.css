@@ -250,7 +250,8 @@ body.full #tabs {
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--tile-width));
   grid-auto-flow: row;
-  gap: 0.2em;
+  row-gap: 0;
+  column-gap: 0;
   width: max-content;
   min-width: 100%;
   min-height: 100%;
