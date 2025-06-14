@@ -267,14 +267,27 @@ body.full #tabs-wrapper,
   padding: 0 !important;
 }
 
-body.full #tabs,
-.tab-grid {
+body.full #tabs {
   display: grid;
   position: relative;
   width: max-content;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--tile-width);
   grid-auto-rows: max-content;
   gap: 0.4em;
-  grid-template-columns: repeat(auto-fill, var(--tile-width));
+  height: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+.tab-grid {
+  display: grid;
+  position: relative;
+  width: 100%;
+  grid-auto-rows: max-content;
+  gap: 0.4em;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), 1fr));
   height: 100%;
   margin: 0 !important;
   padding: 0 !important;
