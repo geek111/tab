@@ -257,7 +257,7 @@ body.full {
 }
 body.full #tabs-wrapper,
 .tab-grid-wrapper {
-  overflow-y: auto;
+  overflow-y: hidden;
   overflow-x: auto;
   width: 100%;
   height: 100%;
@@ -270,10 +270,10 @@ body.full #tabs,
 .tab-grid {
   display: grid;
   position: relative;
-  width: 100%;
+  width: max-content;
   grid-auto-rows: max-content;
   gap: 0.4em;
-  grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), 1fr));
+  grid-template-columns: repeat(auto-fill, var(--tile-width));
   height: 100%;
   margin: 0 !important;
   padding: 0 !important;
