@@ -512,6 +512,12 @@ function findDuplicates(tabs) {
 }
 
 async function update() {
+  const isFull = document.body.classList.contains('full');
+  const prevScroll = scrollContainer
+    ? isFull
+      ? scrollContainer.scrollLeft
+      : scrollContainer.scrollTop
+    : 0;
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? {} : { currentWindow: true };
@@ -551,6 +557,13 @@ async function update() {
     console.error('Update failed', e);
     document.getElementById('error').textContent =
       'Error updating tabs: ' + (e.message || e);
+  }
+  if (scrollContainer) {
+    if (isFull) {
+      scrollContainer.scrollLeft = prevScroll;
+    } else {
+      scrollContainer.scrollTop = prevScroll;
+    }
   }
 }
 
