@@ -95,7 +95,7 @@ body[data-theme="dark"] #context div:hover {
 #tabs {
   margin-top: 0;
   max-height: 400px;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 body.full #tabs {
   max-height: none;
@@ -261,7 +261,7 @@ body.full #tabs-wrapper,
 .tab-grid-wrapper {
   overflow-x: auto;
   overflow-y: hidden;
-  height: 100%;
+  height: 100vh;
   width: 100%;
   flex: 1 1 auto;
   min-height: 0;
@@ -276,14 +276,14 @@ body.full #tabs,
   gap: 0;
   width: fit-content;
   min-width: 100%;
-  height: 100%;
+  height: 100vh;
   min-height: 100%;
   margin: 0 !important;
   padding: 0 !important;
   box-sizing: border-box;
 }
-body.full .tab,
-.tab-card {
+.tab-card,
+.tab {
   margin: 0;
   padding: 0;
   border: none;
@@ -291,7 +291,6 @@ body.full .tab,
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: var(--tile-width);
 }
 body.full .tab-title {
   padding: 2px 0;
