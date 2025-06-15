@@ -281,8 +281,8 @@ body.full #tabs,
   box-sizing: border-box;
 }
 .tab-grid.horizontal {
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(var(--tile-width), 1fr);
+  width: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(var(--tile-width), 1fr));
 }
 body.full .tab,
 .tab-card {
