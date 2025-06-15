@@ -280,6 +280,10 @@ body.full #tabs,
   padding: 0 !important;
   box-sizing: border-box;
 }
+.tab-grid.horizontal {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(var(--tile-width), 1fr);
+}
 body.full .tab,
 .tab-card {
   padding: 0 !important;
