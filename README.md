@@ -7,8 +7,8 @@ Container-related actions require Firefox's container feature and the `contextua
 
 Install dev dependencies and run Stylelint to check the stylesheet.
 Configuration is stored in `.stylelintrc.json` and uses the
-`stylelint-order` plugin. Run `npm install` before executing
-`npm run lint`.
+`stylelint-order` plugin. Before running the linter, execute
+`npm install` and then run `npm run lint`.
 
 ```bash
 npm install
