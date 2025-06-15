@@ -8,6 +8,7 @@
   --color-muted: #888;
   --color-visited: #f0fff0;
   --tile-width: 150px;
+  --tile-height: 32px;
   --tile-scale: 0.9;
   --font-scale: 0.8125;
   --close-scale: 0.5;
@@ -257,10 +258,10 @@ body.full {
 }
 body.full #tabs-wrapper,
 .tab-grid-wrapper {
-  overflow-y: hidden;
   overflow-x: auto;
-  width: 100%;
+  overflow-y: hidden;
   height: 100%;
+  width: 100%;
   flex: 1 1 auto;
   min-height: 0;
   margin: 0 !important;
@@ -269,29 +270,26 @@ body.full #tabs-wrapper,
 body.full #tabs,
 .tab-grid {
   display: grid;
-  position: relative;
+  grid-template-columns: repeat(auto-fill, var(--tile-width));
+  grid-auto-rows: var(--tile-height);
+  gap: 0;
   width: fit-content;
   min-width: 100%;
-  grid-auto-rows: max-content;
-  grid-auto-flow: column;
-  grid-auto-columns: var(--tile-width);
-  gap: 0;
   height: 100%;
   min-height: 100%;
   margin: 0 !important;
   padding: 0 !important;
   box-sizing: border-box;
 }
-.tab-grid.horizontal {
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(var(--tile-width), 1fr);
-}
 body.full .tab,
 .tab-card {
-  padding: 0 !important;
-  margin: 0 !important;
-  border-bottom: none !important;
+  margin: 0;
+  padding: 0;
+  border: none;
   box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   width: var(--tile-width);
 }
 body.full .tab-title {
