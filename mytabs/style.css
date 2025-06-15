@@ -270,10 +270,11 @@ body.full #tabs,
 .tab-grid {
   display: grid;
   position: relative;
-  width: 100%;
+  width: max-content;
   grid-auto-rows: max-content;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--tile-width);
   gap: 0.4em;
-  grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), 1fr));
   height: 100%;
   margin: 0 !important;
   padding: 0 !important;
@@ -285,6 +286,7 @@ body.full .tab,
   margin: 0 !important;
   border-bottom: none !important;
   box-sizing: border-box;
+  width: var(--tile-width);
 }
 body.full .tab-title {
   padding: 2px 0;
