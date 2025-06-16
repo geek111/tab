@@ -96,6 +96,7 @@ body[data-theme="dark"] #context div:hover {
   margin-top: 0;
   max-height: 400px;
   overflow-y: hidden;
+  padding-right: 0.5em; /* avoid scrollbar overlap */
 }
 body.full #tabs {
   max-height: none;
@@ -183,8 +184,19 @@ button:hover {
 }
 .close-btn {
   font-size: calc(1em * var(--close-scale));
-  padding: 0;
+  padding: 0 0.2em;
   line-height: 1;
+  color: #fff;
+  background: #cc0000;
+  border: 1px solid #000;
+  border-radius: 2px;
+}
+.close-btn:hover {
+  background: #a00000;
+}
+body.popup .close-btn {
+  font-size: calc(1.6em * var(--close-scale));
+  margin-right: 0.2em;
 }
 .hidden {
   display: none;
