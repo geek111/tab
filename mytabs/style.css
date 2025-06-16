@@ -7,6 +7,7 @@
   --color-selected: #dceaff;
   --color-muted: #888;
   --color-visited: #f0fff0;
+  --color-divider: #fffae6;
   --tile-width: 150px;
   --tile-height: 32px;
   --tile-scale: 0.9;
@@ -44,6 +45,7 @@ body[data-theme="dark"] {
   --color-selected: #224466;
   --color-muted: #aaa;
   --color-visited: #304030;
+  --color-divider: #555533;
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -61,6 +63,9 @@ body[data-theme="dark"] .tab:hover {
 }
 body[data-theme="dark"] .duplicate {
   background: #663333;
+}
+body[data-theme="dark"] .window-separator {
+  background: var(--color-divider);
 }
 body[data-theme="dark"] .selected {
   background: var(--color-active);
@@ -167,6 +172,20 @@ body.popup .tab > div {
 }
 .duplicate {
   background: #fff4f4;
+}
+
+.window-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.1em;
+  letter-spacing: 0.05em;
+  background: var(--color-divider);
+  border: 2px dashed var(--color-border);
+  border-radius: 6px;
+  height: var(--tile-height);
+  box-sizing: border-box;
 }
 button {
   padding: 0.3em 0.6em;
