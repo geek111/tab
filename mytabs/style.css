@@ -7,6 +7,7 @@
   --color-selected: #dceaff;
   --color-muted: #888;
   --color-visited: #f0fff0;
+  --color-window-header: #eee;
   --tile-width: 150px;
   --tile-height: 32px;
   --tile-scale: 0.9;
@@ -44,6 +45,7 @@ body[data-theme="dark"] {
   --color-selected: #224466;
   --color-muted: #aaa;
   --color-visited: #304030;
+  --color-window-header: #444;
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -298,6 +300,15 @@ body.full #tabs,
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.window-header {
+  grid-column: 1 / -1;
+  background: var(--color-window-header);
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  padding: 0 0.2em;
+  border-top: 1px solid var(--color-border);
 }
 body.full .tab-title {
   padding: 2px 0;

@@ -344,6 +344,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   return row;
 }
 
+function createWindowHeader(winNum) {
+  const header = document.createElement('div');
+  header.className = 'window-header';
+  header.textContent = `Window ${winNum}`;
+  return header;
+}
+
 function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   if (!container) return;
   currentDupIds = dupIds;
@@ -385,7 +392,14 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       document.documentElement.style.setProperty('--tile-height', rowHeight + 'px');
       sample.remove();
     }
+    let prevWin = null;
     for (const item of tabItems) {
+      const winId = item.tab.windowId;
+      if (winMap && winMap.size > 1 && winId !== prevWin) {
+        const header = createWindowHeader(winMap.get(winId) ?? winId);
+        container.appendChild(header);
+        prevWin = winId;
+      }
       const el = createTabRow(
         item.tab,
         dupIds.has(item.tab.id),
