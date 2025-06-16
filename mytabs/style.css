@@ -165,6 +165,12 @@ body[data-theme="dark"] .tab.drop-after {
 body.popup .tab > div {
   padding: 0 0.1em;
 }
+.tab > div:last-child {
+  margin-left: auto;
+}
+body.popup .tab > div:last-child {
+  padding-right: 0.3em;
+}
 .tab > div:nth-child(3) {
   flex: 1 1 auto;
   min-width: 0;
@@ -202,8 +208,24 @@ button:hover {
 }
 .close-btn {
   font-size: calc(1em * var(--close-scale));
+  width: 1.2em;
+  height: 1.2em;
+  line-height: 1.2em;
+  text-align: center;
   padding: 0;
-  line-height: 1;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.close-btn:hover {
+  background: var(--color-hover);
+  color: #c00;
+}
+body.popup .close-btn {
+  margin-right: 2px;
 }
 .hidden {
   display: none;
