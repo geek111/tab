@@ -15,6 +15,7 @@
   --close-scale: 0.5;
 }
 
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -120,9 +121,6 @@ body.popup .tab {
 body.popup .tab > div:last-child {
   margin-left: auto;
   margin-right: 0.5em;
-=======
-  width: 100%;
-  box-sizing: border-box;
 }
 body.popup #tabs {
   overflow-y: auto;
@@ -237,6 +235,28 @@ button:hover {
   font-size: calc(1em * var(--close-scale));
   padding: 0;
   line-height: 1;
+  width: 1.2em;
+  height: 1.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-muted);
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s, color 0.2s;
+  border-radius: 50%;
+}
+
+.tab:hover .close-btn,
+.close-btn:focus {
+  opacity: 1;
+  color: var(--color-text);
+}
+
+.close-btn:hover,
+.close-btn:focus {
+  background: var(--color-hover);
 }
 .hidden {
   display: none;
