@@ -27,6 +27,16 @@ let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
 
+function adjustGridWidth() {
+  if (!document.body.classList.contains('full')) return;
+  const wrapper = document.getElementById('tabs-wrapper');
+  const grid = document.getElementById('tabs');
+  if (!wrapper || !grid || !grid.lastElementChild) return;
+  const last = grid.lastElementChild;
+  const width = Math.max(wrapper.clientWidth, last.offsetLeft + last.offsetWidth);
+  grid.style.width = width + 'px';
+}
+
 function resetTabState() {
   if (virtualList) {
     virtualList.destroy();
@@ -355,6 +365,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     msg.id = 'empty';
     msg.textContent = 'No tabs to display';
     container.appendChild(msg);
+    adjustGridWidth();
     return;
   }
 
@@ -434,6 +445,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       });
     }
   }
+  adjustGridWidth();
 }
 
 function generateRow(index) {
@@ -845,6 +857,12 @@ window.addEventListener('unload', cleanup);
 window.addEventListener('theme-applied', () => {
   rowHeight = 0;
   scheduleUpdate();
+});
+
+window.addEventListener('resize', () => {
+  if (document.body.classList.contains('full')) {
+    requestAnimationFrame(adjustGridWidth);
+  }
 });
 
 // custom context menu
