@@ -186,6 +186,9 @@ button:hover {
   padding: 0;
   line-height: 1;
 }
+body.popup .close-btn {
+  font-size: calc(1em * var(--close-scale) * 1.3);
+}
 .hidden {
   display: none;
 }
