@@ -161,6 +161,9 @@ body[data-theme="dark"] .tab.drop-after {
 body.popup .tab > div {
   padding: 0 0.1em;
 }
+body.popup .tab > div:last-child {
+  padding-right: 0.4em;
+}
 .tab > div:nth-child(3) {
   flex: 1 1 auto;
   min-width: 0;
@@ -185,6 +188,17 @@ button:hover {
   font-size: calc(1em * var(--close-scale));
   padding: 0;
   line-height: 1;
+}
+body.popup .close-btn {
+  font-size: calc(1.5em * var(--close-scale));
+  background: #000;
+  color: #f00;
+  border: 1px solid #f00;
+  border-radius: 3px;
+}
+body.popup .close-btn:hover {
+  background: #f00;
+  color: #000;
 }
 .hidden {
   display: none;
