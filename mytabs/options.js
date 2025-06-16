@@ -19,7 +19,7 @@ async function load(){
   } = data;
   let closeScale = data.closeScale;
   if (closeScale === undefined) {
-    closeScale = 0.5;
+    closeScale = 0.8;
     browser.storage.local.set({ closeScale });
   }
   document.getElementById('theme').value = theme;
