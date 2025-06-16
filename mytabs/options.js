@@ -7,7 +7,7 @@ async function load(){
   const {
     theme='light',
     tileWidth=150,
-    tileScale=0.9,
+    tileScale=0.75,
     fontScale=0.8125,
     scrollSpeed=1,
     showRecent=true,
