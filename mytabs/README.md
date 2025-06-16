@@ -29,6 +29,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - Options page lets you choose theme, tile width, tile scale, font scale and close button scale and toggle features such as
   the Recent and Duplicates panels or the Move command.
 - The Close Button Scale adjusts the “×” size independent of the font scale.
+- Each tab row now uses a colored close button that changes to red on hover.
 - A dark theme can also be enabled from the options page.
 - Keyboard shortcuts open the popup, sidebar and full view and can be changed from the Options page.
 - Default shortcuts:

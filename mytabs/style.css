@@ -6,6 +6,7 @@
   --color-active: #eef5ff;
   --color-selected: #dceaff;
   --color-muted: #888;
+  --color-close: #c33;
   --color-visited: #f0fff0;
   --tile-width: 150px;
   --tile-height: 32px;
@@ -43,6 +44,7 @@ body[data-theme="dark"] {
   --color-active: #335577;
   --color-selected: #224466;
   --color-muted: #aaa;
+  --color-close: #f66;
   --color-visited: #304030;
   background: var(--color-bg);
   color: var(--color-text);
@@ -120,9 +122,6 @@ body.popup .tab {
 body.popup .tab > div:last-child {
   margin-left: auto;
   margin-right: 0.5em;
-=======
-  width: 100%;
-  box-sizing: border-box;
 }
 body.popup #tabs {
   overflow-y: auto;
@@ -237,6 +236,20 @@ button:hover {
   font-size: calc(1em * var(--close-scale));
   padding: 0;
   line-height: 1;
+  width: calc(16px * var(--font-scale));
+  height: calc(16px * var(--font-scale));
+  color: var(--color-muted);
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  transition: color 0.2s, background 0.2s;
+}
+.close-btn:hover {
+  color: var(--color-close);
+  background: var(--color-hover);
 }
 .hidden {
   display: none;
