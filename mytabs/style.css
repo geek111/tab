@@ -92,10 +92,12 @@ body[data-theme="dark"] #context div:hover {
   box-sizing: border-box;
 }
 
+#tabs-wrapper {
+  max-height: 400px;
+  overflow-y: auto;
+}
 #tabs {
   margin-top: 0;
-  max-height: 400px;
-  overflow-y: hidden;
 }
 body.full #tabs {
   max-height: none;

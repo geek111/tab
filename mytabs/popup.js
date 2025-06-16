@@ -675,11 +675,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function init() {
-  container = document.getElementById('tabs-body') ||
-              document.getElementById('tabs');
-  scrollContainer = document.body.classList.contains('full')
-    ? document.getElementById('tabs-wrapper')
-    : container;
+  container = document.getElementById('tabs');
+  scrollContainer = document.getElementById('tabs-wrapper') || container;
   scrollContainer.addEventListener('scroll', saveScroll);
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
