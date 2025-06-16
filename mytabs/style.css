@@ -263,6 +263,7 @@ body.full #tabs-wrapper,
 .tab-grid-wrapper {
   overflow-x: auto;
   overflow-y: hidden;
+  overscroll-behavior-x: contain;
   flex: 1 1 auto;
   display: block;
   width: 100%;
