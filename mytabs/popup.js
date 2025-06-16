@@ -336,8 +336,8 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const closeCell = document.createElement('div');
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
-  closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
+  closeBtn.innerHTML = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 1 L9 9 M9 1 L1 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
   closeCell.appendChild(closeBtn);
   row.appendChild(closeCell);
 
