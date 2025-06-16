@@ -62,6 +62,10 @@ body[data-theme="dark"] .tab:hover {
 body[data-theme="dark"] .duplicate {
   background: #663333;
 }
+body[data-theme="dark"] .window-separator {
+  background: var(--color-active);
+  color: var(--color-bg);
+}
 body[data-theme="dark"] .selected {
   background: var(--color-active);
 }
@@ -167,6 +171,21 @@ body.popup .tab > div {
 }
 .duplicate {
   background: #fff4f4;
+}
+
+.window-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9em;
+  background: var(--color-selected);
+  color: var(--color-text);
+  border: 2px solid var(--color-border);
+  border-radius: 6px;
+  height: calc(var(--tile-height) * 0.9);
+  margin: 0.4em 0;
+  box-sizing: border-box;
 }
 button {
   padding: 0.3em 0.6em;
@@ -277,7 +296,7 @@ body.full #tabs-wrapper,
 body.full #tabs,
 .tab-grid {
   display: grid;
-  grid-template-rows: repeat(auto-fill, var(--tile-height));
+  grid-auto-rows: minmax(var(--tile-height), auto);
   grid-auto-columns: var(--tile-width);
   grid-auto-flow: column;
   gap: 0;
