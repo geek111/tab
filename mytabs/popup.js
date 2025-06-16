@@ -385,7 +385,15 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       document.documentElement.style.setProperty('--tile-height', rowHeight + 'px');
       sample.remove();
     }
+    let prevWin = null;
     for (const item of tabItems) {
+      if (currentWinMap && item.tab.windowId !== prevWin) {
+        prevWin = item.tab.windowId;
+        const sep = document.createElement('div');
+        sep.className = 'window-sep';
+        sep.textContent = 'Window ' + currentWinMap.get(prevWin);
+        container.appendChild(sep);
+      }
       const el = createTabRow(
         item.tab,
         dupIds.has(item.tab.id),
