@@ -112,6 +112,8 @@ body.popup #tabs {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
+  width: 100%;
+  box-sizing: border-box;
 }
 body.popup .tab {
   width: 100%;
@@ -120,16 +122,6 @@ body.popup .tab {
 body.popup .tab > div:last-child {
   margin-left: auto;
   margin-right: 0.5em;
-=======
-  width: 100%;
-  box-sizing: border-box;
-}
-body.popup #tabs {
-  overflow-y: auto;
-  overflow-x: hidden;
-  width: 100%;
-  box-sizing: border-box;
-
 }
 body.full #tabs {
   max-height: none;
@@ -234,9 +226,28 @@ button:hover {
   background: var(--color-hover);
 }
 .close-btn {
-  font-size: calc(1em * var(--close-scale));
+  width: calc(1em * var(--close-scale));
+  height: calc(1em * var(--close-scale));
   padding: 0;
   line-height: 1;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.close-btn svg {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.tab .close-btn {
+  visibility: hidden;
+}
+.tab:hover .close-btn,
+.tab.active .close-btn,
+.tab.selected .close-btn {
+  visibility: visible;
 }
 .hidden {
   display: none;

@@ -336,8 +336,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const closeCell = document.createElement('div');
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
-  closeBtn.textContent = '×';
+  closeBtn.innerHTML =
+    '<svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">' +
+    '<path d="M2 2 L10 10 M10 2 L2 10" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    '</svg>';
   closeBtn.title = 'Close tab';
+  closeBtn.setAttribute('aria-label', 'Close tab');
   closeCell.appendChild(closeBtn);
   row.appendChild(closeCell);
 
