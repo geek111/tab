@@ -34,6 +34,9 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
 }
+body.popup {
+  max-width: 100%;
+}
 
 body[data-theme="dark"] {
   --color-bg: #222;
