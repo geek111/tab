@@ -278,7 +278,7 @@ body.full #tabs,
   grid-auto-columns: var(--tile-width);
   grid-auto-flow: column;
   gap: 0;
-  width: max-content;
+  width: fit-content;
   height: 100%;
   min-height: 100%;
   margin: 0 !important;
