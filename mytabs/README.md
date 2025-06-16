@@ -25,6 +25,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   - Scroll speed can be adjusted from the Options page to make scrolling more aggressive.
   - Hovering a tab's icon in Full View shows a custom tooltip with the tab title and URL.
   - The columns can extend wider than the window and a horizontal scrollbar appears when needed.
+  - Tabs from each window are separated by labeled dividers with more spacing for clarity.
 - Options page lets you choose theme, tile width, tile scale, font scale and close button scale and toggle features such as
   the Recent and Duplicates panels or the Move command.
 - The Close Button Scale adjusts the “×” size independent of the font scale.
