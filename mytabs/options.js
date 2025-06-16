@@ -27,6 +27,9 @@ async function load(){
   document.getElementById('tileScale').value = tileScale;
   document.getElementById('fontScale').value = fontScale;
   document.getElementById('closeScale').value = closeScale;
+  document.getElementById('closeScaleValue').textContent = closeScale;
+  const preview = document.getElementById('closePreview');
+  if (preview) preview.style.fontSize = `calc(1em * ${closeScale})`;
   document.getElementById('scrollSpeed').value = scrollSpeed;
   document.getElementById('scrollSpeedValue').textContent = scrollSpeed;
   document.getElementById('opt-show-recent').checked = showRecent;
@@ -86,6 +89,9 @@ function updateCloseScale(){
   const closeScale=parseFloat(document.getElementById('closeScale').value);
   browser.storage.local.set({closeScale});
   document.documentElement.style.setProperty('--close-scale', closeScale);
+  document.getElementById('closeScaleValue').textContent = closeScale.toFixed(1);
+  const preview = document.getElementById('closePreview');
+  if (preview) preview.style.fontSize = `calc(1em * ${closeScale})`;
 }
 
 function updateScroll(){
