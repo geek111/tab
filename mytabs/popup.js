@@ -385,7 +385,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       sample.style.position = 'absolute';
       sample.style.visibility = 'hidden';
       container.appendChild(sample);
-      rowHeight = sample.getBoundingClientRect().height || 32;
+      rowHeight = Math.ceil(sample.getBoundingClientRect().height) || 32;
       document.documentElement.style.setProperty('--tile-height', rowHeight + 'px');
       sample.remove();
     }
@@ -427,7 +427,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       sample.style.position = 'absolute';
       sample.style.visibility = 'hidden';
       container.appendChild(sample);
-      rowHeight = sample.getBoundingClientRect().height || 32;
+      rowHeight = Math.ceil(sample.getBoundingClientRect().height) || 32;
       document.documentElement.style.setProperty('--tile-height', rowHeight + 'px');
       sample.remove();
       virtualList = HyperList.create(container, {
