@@ -13,6 +13,8 @@
   --tile-height: calc(32px * var(--tile-scale));
   --font-scale: 0.8125;
   --close-scale: 0.5;
+  --color-close: #888;
+  --color-close-hover: #f33;
 }
 
 *, *::before, *::after {
@@ -44,6 +46,8 @@ body[data-theme="dark"] {
   --color-selected: #224466;
   --color-muted: #aaa;
   --color-visited: #304030;
+  --color-close: #ccc;
+  --color-close-hover: #f66;
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -120,16 +124,6 @@ body.popup .tab {
 body.popup .tab > div:last-child {
   margin-left: auto;
   margin-right: 0.5em;
-=======
-  width: 100%;
-  box-sizing: border-box;
-}
-body.popup #tabs {
-  overflow-y: auto;
-  overflow-x: hidden;
-  width: 100%;
-  box-sizing: border-box;
-
 }
 body.full #tabs {
   max-height: none;
@@ -234,9 +228,19 @@ button:hover {
   background: var(--color-hover);
 }
 .close-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-close);
+  visibility: hidden;
   font-size: calc(1em * var(--close-scale));
   padding: 0;
   line-height: 1;
+}
+.tab:hover .close-btn {
+  visibility: visible;
+}
+.close-btn:hover {
+  color: var(--color-close-hover);
 }
 .hidden {
   display: none;
