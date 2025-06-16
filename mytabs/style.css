@@ -204,6 +204,16 @@ button:hover {
   font-size: calc(1em * var(--close-scale));
   padding: 0;
   line-height: 1;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  margin: 0;
+}
+.tab:hover .close-btn {
+  color: var(--color-text);
+}
+.tab > div:last-child {
+  padding-right: 0.5em;
 }
 .hidden {
   display: none;
