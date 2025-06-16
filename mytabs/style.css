@@ -100,6 +100,19 @@ body[data-theme="dark"] #context div:hover {
   margin-top: 0;
   max-height: 400px;
   overflow-y: hidden;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+body.popup {
+  overflow-x: hidden;
+}
+body.popup #tabs {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+body.popup .tab {
+  width: 100%;
 }
 body.full #tabs {
   max-height: none;
