@@ -8,11 +8,11 @@
 
   function apply(){
     document.body.dataset.theme = theme;
-    const width = tileWidth * tileScale;
-    document.documentElement.style.setProperty('--tile-width', width + 'px');
     const isPopup = document.body.classList.contains('popup');
     const scale = isPopup ? tileScale * 0.8 : tileScale;
     const font = isPopup ? fontScale * 0.85 : fontScale;
+    const width = tileWidth * scale;
+    document.documentElement.style.setProperty('--tile-width', width + 'px');
     document.documentElement.style.setProperty('--tile-scale', scale);
     document.documentElement.style.setProperty('--font-scale', font);
     document.documentElement.style.setProperty('--close-scale', closeScale);
