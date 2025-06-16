@@ -674,18 +674,18 @@ async function init() {
   container.addEventListener('dragover', onContainerDragOver);
   container.addEventListener('drop', onContainerDrop);
   if (document.body.classList.contains('full')) {
-    scrollContainer.addEventListener('wheel', (e) => {
-      if (scrollContainer.scrollWidth > scrollContainer.clientWidth) {
-        e.preventDefault();
-        const delta = e.deltaX || e.deltaY;
-        scrollContainer.scrollLeft += delta * SCROLL_SPEED;
-      }
-    }, { passive: false });
-    document.addEventListener('wheel', (e) => {
-      if (!scrollContainer || e.target.closest('#tabs-wrapper')) return;
+    function onWheel(e) {
+      if (scrollContainer.scrollWidth <= scrollContainer.clientWidth) return;
       e.preventDefault();
       const delta = e.deltaX || e.deltaY;
-      scrollContainer.scrollLeft += delta * SCROLL_SPEED;
+      const max = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+      const next = scrollContainer.scrollLeft + delta * SCROLL_SPEED;
+      scrollContainer.scrollLeft = Math.max(0, Math.min(max, next));
+    }
+    scrollContainer.addEventListener('wheel', onWheel, { passive: false });
+    document.addEventListener('wheel', (e) => {
+      if (!scrollContainer || e.target.closest('#tabs-wrapper')) return;
+      onWheel(e);
     }, { passive: false });
   }
   document.addEventListener('contextmenu', showContextMenu);
