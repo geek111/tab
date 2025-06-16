@@ -168,6 +168,14 @@ body.popup .tab > div {
 .duplicate {
   background: #fff4f4;
 }
+.window-separator {
+  grid-column: 1 / -1;
+  border-top: 2px solid var(--color-border);
+  background: var(--color-hover);
+  font-weight: bold;
+  text-align: center;
+  line-height: var(--tile-height);
+}
 button {
   padding: 0.3em 0.6em;
   margin-left: 0;
