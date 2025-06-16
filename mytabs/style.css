@@ -204,6 +204,17 @@ button:hover {
   font-size: calc(1em * var(--close-scale));
   padding: 0;
   line-height: 1;
+  width: 1.2em;
+  height: 1.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+}
+.close-btn:hover {
+  background: var(--color-hover);
+  border-radius: 2px;
 }
 .hidden {
   display: none;

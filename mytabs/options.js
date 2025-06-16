@@ -27,6 +27,7 @@ async function load(){
   document.getElementById('tileScale').value = tileScale;
   document.getElementById('fontScale').value = fontScale;
   document.getElementById('closeScale').value = closeScale;
+  elClosePreview.style.fontSize = `calc(1em * ${closeScale})`;
   document.getElementById('scrollSpeed').value = scrollSpeed;
   document.getElementById('scrollSpeedValue').textContent = scrollSpeed;
   document.getElementById('opt-show-recent').checked = showRecent;
@@ -86,6 +87,7 @@ function updateCloseScale(){
   const closeScale=parseFloat(document.getElementById('closeScale').value);
   browser.storage.local.set({closeScale});
   document.documentElement.style.setProperty('--close-scale', closeScale);
+  elClosePreview.style.fontSize = `calc(1em * ${closeScale})`;
 }
 
 function updateScroll(){
@@ -99,6 +101,7 @@ const elTileWidth = document.getElementById('tileWidth');
 const elTileScale = document.getElementById('tileScale');
 const elFontScale = document.getElementById('fontScale');
 const elCloseScale = document.getElementById('closeScale');
+const elClosePreview = document.getElementById('closePreview');
 const elScrollSpeed = document.getElementById('scrollSpeed');
 
 elTileWidth.addEventListener('input', updateWidth);
