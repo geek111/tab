@@ -110,6 +110,11 @@ body.full #tabs {
   box-sizing: border-box;
   min-width: 0;
 }
+
+body:not(.full) #tabs .tab {
+  width: 100%;
+  height: var(--tile-height);
+}
 .tab-icon {
   width: calc(16px * var(--font-scale));
   height: calc(16px * var(--font-scale));
