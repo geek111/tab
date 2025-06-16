@@ -148,6 +148,7 @@ async function loadOptions() {
 }
 
 function updateSelection(row, selected) {
+  if (!row.classList.contains('tab')) return;
   row.classList.toggle('selected', selected);
   if (row._item) {
     row._item.selected = selected;
@@ -156,6 +157,7 @@ function updateSelection(row, selected) {
 
 function clearSelection() {
   for (const item of tabItems) {
+    if (item.separator) continue;
     item.selected = false;
     if (item.el) updateSelection(item.el, false);
   }
@@ -344,6 +346,14 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   return row;
 }
 
+function createWindowSeparator(label) {
+  const div = document.createElement('div');
+  div.className = 'window-separator';
+  div.textContent = label;
+  div.tabIndex = -1;
+  return div;
+}
+
 function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   if (!container) return;
   currentDupIds = dupIds;
@@ -351,8 +361,20 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   currentVisited = visitedIds;
   currentWinMap = winMap;
   currentQuery = query;
-  tabItems = list.map(entry => ({ tab: entry.tab ?? entry, match: entry.match, selected: false, el: null }));
-  idIndexMap = new Map(tabItems.map((it, i) => [it.tab.id, i]));
+  const full = document.body.classList.contains('full') && winMap;
+  tabItems = [];
+  idIndexMap = new Map();
+  let lastWin = -1;
+  for (const entry of list) {
+    const tab = entry.tab ?? entry;
+    if (full && tab.windowId !== lastWin) {
+      tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
+      lastWin = tab.windowId;
+    }
+    const item = { tab, match: entry.match, selected: false, el: null };
+    tabItems.push(item);
+    idIndexMap.set(tab.id, tabItems.length - 1);
+  }
 
   container.innerHTML = '';
   if (virtualList) {
@@ -371,43 +393,51 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
 
   if (document.body.classList.contains('full')) {
     if (!rowHeight) {
-      const sample = createTabRow(
-        tabItems[0].tab,
-        dupIds.has(tabItems[0].tab.id),
-        activeId,
-        visitedIds.has(tabItems[0].tab.id),
-        tabItems[0]
-      );
-      sample.style.position = 'absolute';
-      sample.style.visibility = 'hidden';
-      container.appendChild(sample);
-      rowHeight = sample.getBoundingClientRect().height || 32;
-      document.documentElement.style.setProperty('--tile-height', rowHeight + 'px');
-      sample.remove();
+      const sampleItem = tabItems.find(it => !it.separator);
+      if (sampleItem) {
+        const sample = createTabRow(
+          sampleItem.tab,
+          dupIds.has(sampleItem.tab.id),
+          activeId,
+          visitedIds.has(sampleItem.tab.id),
+          sampleItem
+        );
+        sample.style.position = 'absolute';
+        sample.style.visibility = 'hidden';
+        container.appendChild(sample);
+        rowHeight = sample.getBoundingClientRect().height || 32;
+        document.documentElement.style.setProperty('--tile-height', rowHeight + 'px');
+        sample.remove();
+      }
     }
     for (const item of tabItems) {
-      const el = createTabRow(
-        item.tab,
-        dupIds.has(item.tab.id),
-        activeId,
-        visitedIds.has(item.tab.id),
-        item
-      );
-      if (currentQuery && item.match && item.tab.title) {
-        const span = el.querySelector('.tab-title');
-        if (span) {
-          let html = '';
-          let last = 0;
-          for (const idx of item.match) {
-            html += escapeHtml(span.textContent.slice(last, idx));
-            html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
-            last = idx + 1;
+      let el;
+      if (item.separator) {
+        el = createWindowSeparator(item.label);
+      } else {
+        el = createTabRow(
+          item.tab,
+          dupIds.has(item.tab.id),
+          activeId,
+          visitedIds.has(item.tab.id),
+          item
+        );
+        if (currentQuery && item.match && item.tab.title) {
+          const span = el.querySelector('.tab-title');
+          if (span) {
+            let html = '';
+            let last = 0;
+            for (const idx of item.match) {
+              html += escapeHtml(span.textContent.slice(last, idx));
+              html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
+              last = idx + 1;
+            }
+            html += escapeHtml(span.textContent.slice(last));
+            span.innerHTML = html;
           }
-          html += escapeHtml(span.textContent.slice(last));
-          span.innerHTML = html;
         }
+        if (item.selected) el.classList.add('selected');
       }
-      if (item.selected) el.classList.add('selected');
       item.el = el;
       container.appendChild(el);
     }
@@ -595,7 +625,10 @@ document.addEventListener('keydown', (e) => {
   let idx = isTab ? idIndexMap.get(parseInt(focused.dataset.tab, 10)) : -1;
 
   const moveFocus = (delta) => {
-    const newIdx = Math.min(Math.max(idx + delta, 0), tabItems.length - 1);
+    let newIdx = idx;
+    do {
+      newIdx = Math.min(Math.max(newIdx + delta, 0), tabItems.length - 1);
+    } while (tabItems[newIdx] && tabItems[newIdx].separator);
     idx = newIdx;
     const el = tabItems[newIdx].el;
     requestAnimationFrame(() => {
@@ -620,12 +653,14 @@ document.addEventListener('keydown', (e) => {
       const start = Math.min(lastSelectedIndex, newIdx);
       const end = Math.max(lastSelectedIndex, newIdx);
       for (let i = 0; i < tabItems.length; i++) {
+        if (tabItems[i].separator) continue;
         const sel = i >= start && i <= end;
         tabItems[i].selected = sel;
         if (tabItems[i].el) updateSelection(tabItems[i].el, sel);
       }
     } else if (!e.ctrlKey && !e.metaKey) {
       tabItems.forEach(it => {
+        if (it.separator) return;
         it.selected = false;
         if (it.el) updateSelection(it.el, false);
       });
@@ -646,8 +681,14 @@ document.addEventListener('keydown', (e) => {
     focused.click();
   } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
     e.preventDefault();
-    tabItems.forEach(it => { it.selected = true; if (it.el) updateSelection(it.el, true); });
-    lastSelectedIndex = tabItems.length - 1;
+    let last = -1;
+    tabItems.forEach((it, i) => {
+      if (it.separator) return;
+      it.selected = true;
+      if (it.el) updateSelection(it.el, true);
+      last = i;
+    });
+    lastSelectedIndex = last;
   } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     switch (e.key.toLowerCase()) {
       case 'c':
@@ -929,7 +970,7 @@ function showContextMenu(e) {
 document.addEventListener('click', () => context.classList.add('hidden'));
 
 function getSelectedTabIds() {
-  return tabItems.filter(it => it.selected).map(it => it.tab.id);
+  return tabItems.filter(it => !it.separator && it.selected).map(it => it.tab.id);
 }
 
 async function bulkClose() {
