@@ -100,6 +100,7 @@ body[data-theme="dark"] #context div:hover {
   margin-top: 0;
   max-height: 400px;
   overflow-y: hidden;
+
   overflow-x: hidden;
   width: 100%;
   box-sizing: border-box;
@@ -119,6 +120,16 @@ body.popup .tab {
 body.popup .tab > div:last-child {
   margin-left: auto;
   margin-right: 0.5em;
+=======
+  width: 100%;
+  box-sizing: border-box;
+}
+body.popup #tabs {
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+
 }
 body.full #tabs {
   max-height: none;
@@ -132,6 +143,9 @@ body.full #tabs {
   break-inside: avoid;
   box-sizing: border-box;
   min-width: 0;
+}
+body.popup .tab {
+  width: 100%;
 }
 .tab-icon {
   width: calc(16px * var(--font-scale));
