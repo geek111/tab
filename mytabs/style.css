@@ -96,6 +96,7 @@ body[data-theme="dark"] #context div:hover {
   margin-top: 0;
   max-height: 400px;
   overflow-y: hidden;
+  padding-right: 0.5em;
 }
 body.full #tabs {
   max-height: none;
@@ -104,7 +105,7 @@ body.full #tabs {
 .tab {
   display: flex;
   align-items: center;
-  padding: 0;
+  padding: 0 0.3em 0 0;
   border-bottom: none;
   break-inside: avoid;
   box-sizing: border-box;
@@ -182,9 +183,25 @@ button:hover {
   background: var(--color-hover);
 }
 .close-btn {
-  font-size: calc(1em * var(--close-scale));
+  font-size: calc(1.1em * var(--close-scale));
+  width: calc(1.4em * var(--close-scale));
+  height: calc(1.4em * var(--close-scale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   line-height: 1;
+  margin-right: 0.3em;
+  color: #fff;
+  background: linear-gradient(#e44, #900);
+  border: 2px solid #000;
+  border-radius: 50%;
+}
+
+body[data-theme="dark"] .close-btn {
+  background: linear-gradient(#a33, #600);
+  border-color: #222;
+  color: #fff;
 }
 .hidden {
   display: none;
