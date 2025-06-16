@@ -101,6 +101,9 @@ body[data-theme="dark"] #context div:hover {
   max-height: 400px;
   overflow-y: hidden;
 }
+body.popup #tabs {
+  padding-right: 0.4em;
+}
 body.full #tabs {
   max-height: none;
 }
@@ -202,8 +205,24 @@ button:hover {
 }
 .close-btn {
   font-size: calc(1em * var(--close-scale));
-  padding: 0;
+  width: 1.2em;
+  height: 1.2em;
   line-height: 1;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 2px;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.close-btn:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
 }
 .hidden {
   display: none;
