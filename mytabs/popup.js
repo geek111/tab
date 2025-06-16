@@ -355,11 +355,11 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   idIndexMap = new Map(tabItems.map((it, i) => [it.tab.id, i]));
 
   container.innerHTML = '';
+  if (virtualList) {
+    virtualList.destroy();
+    virtualList = null;
+  }
   if (!tabItems.length) {
-    if (virtualList) {
-      virtualList.destroy();
-      virtualList = null;
-    }
     rowHeight = 0;
     const msg = document.createElement('div');
     msg.id = 'empty';
@@ -370,10 +370,6 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   }
 
   if (document.body.classList.contains('full')) {
-    if (virtualList) {
-      virtualList.destroy();
-      virtualList = null;
-    }
     if (!rowHeight) {
       const sample = createTabRow(
         tabItems[0].tab,
