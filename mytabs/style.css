@@ -104,6 +104,9 @@ body[data-theme="dark"] #context div:hover {
 body.full #tabs {
   max-height: none;
 }
+body.popup #tabs {
+  padding-right: 1em; /* space for the scrollbar */
+}
 
 .tab {
   display: flex;
@@ -204,6 +207,13 @@ button:hover {
   font-size: calc(1em * var(--close-scale));
   padding: 0;
   line-height: 1;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.close-btn:hover {
+  color: var(--color-text);
 }
 .hidden {
   display: none;
