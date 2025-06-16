@@ -15,6 +15,10 @@
   --close-scale: 0.5;
 }
 
+body.popup {
+  --close-scale: 1;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -96,6 +100,10 @@ body[data-theme="dark"] #context div:hover {
   margin-top: 0;
   max-height: 400px;
   overflow-y: hidden;
+}
+body.popup #tabs {
+  padding-right: 1.5em;
+  overflow-y: auto;
 }
 body.full #tabs {
   max-height: none;
@@ -185,6 +193,18 @@ button:hover {
   font-size: calc(1em * var(--close-scale));
   padding: 0;
   line-height: 1;
+}
+body.popup .close-btn {
+  font-size: calc(1.2em * var(--close-scale));
+  width: calc(1.2em * var(--close-scale));
+  height: calc(1.2em * var(--close-scale));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #c00;
+  border: 1px solid #000;
+  border-radius: 4px;
 }
 .hidden {
   display: none;
