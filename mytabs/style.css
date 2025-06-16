@@ -100,7 +100,7 @@ body[data-theme="dark"] #context div:hover {
   margin-top: 0;
   max-height: 400px;
   overflow-y: hidden;
-  overflow-x: auto;
+  overflow-x: hidden;
   width: 100%;
   box-sizing: border-box;
 }
