@@ -34,6 +34,9 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
 }
+body.popup {
+  max-width: 100%;
+}
 
 body[data-theme="dark"] {
   --color-bg: #222;
@@ -104,6 +107,7 @@ body[data-theme="dark"] #context div:hover {
   width: 100%;
   box-sizing: border-box;
 }
+<<<<<<< HEAD
 body.popup {
   overflow-x: hidden;
 }
@@ -118,6 +122,10 @@ body.popup .tab {
 }
 body.popup .tab > div:last-child {
   margin-left: auto;
+=======
+body.popup #tabs {
+  overflow-y: auto;
+>>>>>>> origin/testing
 }
 body.full #tabs {
   max-height: none;
