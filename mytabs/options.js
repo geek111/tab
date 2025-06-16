@@ -99,6 +99,7 @@ const elTileWidth = document.getElementById('tileWidth');
 const elTileScale = document.getElementById('tileScale');
 const elFontScale = document.getElementById('fontScale');
 const elCloseScale = document.getElementById('closeScale');
+const elCloseDemo = document.getElementById('close-demo');
 const elScrollSpeed = document.getElementById('scrollSpeed');
 
 elTileWidth.addEventListener('input', updateWidth);
@@ -112,6 +113,11 @@ elFontScale.addEventListener('change', updateFont);
 
 elCloseScale.addEventListener('input', updateCloseScale);
 elCloseScale.addEventListener('change', updateCloseScale);
+if (elCloseDemo) {
+  elCloseDemo.addEventListener('click', (e) => {
+    e.preventDefault();
+  });
+}
 
 elScrollSpeed.addEventListener('input', updateScroll);
 elScrollSpeed.addEventListener('change', updateScroll);
