@@ -10,8 +10,11 @@
     document.body.dataset.theme = theme;
     const width = tileWidth * tileScale;
     document.documentElement.style.setProperty('--tile-width', width + 'px');
-    document.documentElement.style.setProperty('--tile-scale', tileScale);
-    document.documentElement.style.setProperty('--font-scale', fontScale);
+    const isPopup = document.body.classList.contains('popup');
+    const scale = isPopup ? tileScale * 0.8 : tileScale;
+    const font = isPopup ? fontScale * 0.85 : fontScale;
+    document.documentElement.style.setProperty('--tile-scale', scale);
+    document.documentElement.style.setProperty('--font-scale', font);
     document.documentElement.style.setProperty('--close-scale', closeScale);
     if (document.body.classList.contains('full')) {
       document.body.style.removeProperty('width');
