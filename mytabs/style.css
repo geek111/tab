@@ -169,6 +169,13 @@ body.popup .tab > div {
   flex: 1 1 auto;
   min-width: 0;
 }
+.close-cell {
+  flex: 0 0 calc(16px * var(--font-scale));
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 0.3em;
+  box-sizing: border-box;
+}
 .duplicate {
   background: #fff4f4;
 }
@@ -201,9 +208,20 @@ button:hover {
   background: var(--color-hover);
 }
 .close-btn {
+  width: 1.2em;
+  height: 1.2em;
   font-size: calc(1em * var(--close-scale));
-  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
   line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+.close-btn:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
 }
 .hidden {
   display: none;

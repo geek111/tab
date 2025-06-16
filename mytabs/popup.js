@@ -334,6 +334,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   row.appendChild(titleCell);
 
   const closeCell = document.createElement('div');
+  closeCell.className = 'close-cell';
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
