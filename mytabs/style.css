@@ -99,7 +99,10 @@ body[data-theme="dark"] #context div:hover {
 #tabs {
   margin-top: 0;
   max-height: 400px;
-  overflow-y: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 body.full #tabs {
   max-height: none;
