@@ -96,6 +96,7 @@ body[data-theme="dark"] #context div:hover {
   margin-top: 0;
   max-height: 400px;
   overflow-y: hidden;
+  padding-right: 0.9em; /* ensure buttons clear the scrollbar */
 }
 body.full #tabs {
   max-height: none;
@@ -104,7 +105,7 @@ body.full #tabs {
 .tab {
   display: flex;
   align-items: center;
-  padding: 0;
+  padding: 0 0.4em 0 0; /* extra space for large close button */
   border-bottom: none;
   break-inside: avoid;
   box-sizing: border-box;
@@ -183,8 +184,34 @@ button:hover {
 }
 .close-btn {
   font-size: calc(1em * var(--close-scale));
+  width: calc(1.5em * var(--close-scale));
+  height: calc(1.5em * var(--close-scale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   line-height: 1;
+  margin-right: 0.4em;
+  color: #fff;
+  background: linear-gradient(#d22, #000);
+  border: 2px solid #000;
+  border-radius: 6px;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.5);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.close-btn:hover {
+  background: linear-gradient(#f44, #300);
+  box-shadow: 0 3px 5px rgba(0,0,0,0.5);
+}
+
+body[data-theme="dark"] .close-btn {
+  background: linear-gradient(#900, #200);
+  border-color: #000;
+}
+
+body[data-theme="dark"] .close-btn:hover {
+  background: linear-gradient(#c33, #400);
 }
 .hidden {
   display: none;
