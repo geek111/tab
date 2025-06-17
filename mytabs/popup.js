@@ -295,22 +295,28 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     iconCell.appendChild(icon);
   
     let tooltip;
-    const showTooltip = () => {
-      if (!document.body.classList.contains('full')) return;
-      hideAllTooltips();
-      tooltip = document.createElement('div');
-      tooltip.className = 'tab-tooltip';
-      const safeTitle = escapeHtml(tab.title || tab.url);
-      const safeUrl = escapeHtml(tab.url);
-      tooltip.innerHTML = `${safeTitle}<br>${safeUrl}`;
-      document.body.appendChild(tooltip);
-      const rect = icon.getBoundingClientRect();
-      tooltip.style.left = `${rect.right + window.scrollX + 5}px`;
-      tooltip.style.top = `${rect.top + window.scrollY}px`;
-      requestAnimationFrame(() => {
-        tooltip.classList.add('visible');
-      });
-    };
+      const showTooltip = () => {
+        if (!document.body.classList.contains('full')) return;
+        hideAllTooltips();
+        tooltip = document.createElement('div');
+        tooltip.className = 'tab-tooltip';
+        const safeTitle = escapeHtml(tab.title || tab.url);
+        const safeUrl = escapeHtml(tab.url);
+        tooltip.innerHTML = `${safeTitle}<br>${safeUrl}`;
+        document.body.appendChild(tooltip);
+        const rect = icon.getBoundingClientRect();
+        tooltip.style.top = `${rect.top + window.scrollY}px`;
+        tooltip.classList.remove('left');
+        tooltip.style.left = `${rect.right + window.scrollX + 5}px`;
+        const tipRect = tooltip.getBoundingClientRect();
+        if (tipRect.right > window.innerWidth) {
+          tooltip.classList.add('left');
+          tooltip.style.left = `${rect.left + window.scrollX - tipRect.width - 5}px`;
+        }
+        requestAnimationFrame(() => {
+          tooltip.classList.add('visible');
+        });
+      };
     const hideTooltip = () => {
       if (tooltip) {
         tooltip.classList.remove('visible');
