@@ -103,6 +103,10 @@ function escapeHtml(str) {
   }[c]));
 }
 
+function truncateText(str, maxLen = 80) {
+  return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
+}
+
 async function loadOptions() {
   const {
     showRecent = true,
@@ -300,8 +304,10 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       hideAllTooltips();
       tooltip = document.createElement('div');
       tooltip.className = 'tab-tooltip';
-      const safeTitle = escapeHtml(tab.title || tab.url);
-      const safeUrl = escapeHtml(tab.url);
+      const truncatedTitle = truncateText(tab.title || tab.url);
+      const truncatedUrl = truncateText(tab.url);
+      const safeTitle = escapeHtml(truncatedTitle);
+      const safeUrl = escapeHtml(truncatedUrl);
       tooltip.innerHTML = `${safeTitle}<br>${safeUrl}`;
       document.body.appendChild(tooltip);
       const rect = icon.getBoundingClientRect();
