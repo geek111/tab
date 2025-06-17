@@ -291,6 +291,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
+    icon.draggable = false;
     icon.onerror = () => icon.remove();
     iconCell.appendChild(icon);
   
@@ -360,6 +361,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
+  closeBtn.draggable = false;
   closeCell.appendChild(closeBtn);
   row.appendChild(closeCell);
 
