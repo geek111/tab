@@ -265,20 +265,21 @@ button:hover {
 
 .tab-tooltip {
   position: absolute;
-  background: var(--color-bg);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  padding: 0.2em 0.4em;
+  background: rgba(48, 48, 48, 0.95);
+  color: #fff;
+  padding: 0.3em 0.6em;
   border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
   pointer-events: none;
   z-index: 1000;
 }
 
 body[data-theme="dark"] .tab-tooltip {
-  background: var(--color-hover);
-  color: var(--color-text);
-  border-color: var(--color-border);
+  background: rgba(48, 48, 48, 0.95);
+  color: #fff;
 }
 
 #bulk-actions {
