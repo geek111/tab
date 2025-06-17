@@ -559,6 +559,19 @@ document.getElementById('btn-all').addEventListener('click', () => { view = 'all
 document.addEventListener('keydown', (e) => {
   if (!tabItems.length) return;
   if (document.activeElement.tagName === 'INPUT') return;
+  const searchInput = document.getElementById('search');
+  if (searchInput) {
+    if (e.key === 'Escape') {
+      searchInput.value = '';
+      searchInput.dispatchEvent(new Event('input'));
+      return;
+    }
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      searchInput.value += e.key;
+      searchInput.dispatchEvent(new Event('input'));
+      return;
+    }
+  }
   const focused = document.activeElement;
   const isTab = focused.classList.contains('tab');
   let idx = isTab ? idIndexMap.get(parseInt(focused.dataset.tab, 10)) : -1;
