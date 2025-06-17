@@ -1062,6 +1062,9 @@ async function bulkMove() {
 }
 
 async function bulkAssignToContainer(containerId) {
+  if (!containerId) {
+    containerId = 'firefox-default';
+  }
   const errorEl = document.getElementById('error');
   if (errorEl) errorEl.textContent = '';
   if (browser.contextualIdentities) {
