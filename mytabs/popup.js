@@ -1064,7 +1064,7 @@ async function bulkMove() {
 async function bulkAssignToContainer(containerId) {
   const errorEl = document.getElementById('error');
   if (errorEl) errorEl.textContent = '';
-  if (browser.contextualIdentities) {
+  if (browser.contextualIdentities && containerId !== 'firefox-default') {
     try {
       let identities = await browser.contextualIdentities.query({});
       let exists = identities.some(ci => ci.cookieStoreId === containerId);
