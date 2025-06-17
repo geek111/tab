@@ -684,8 +684,29 @@ browser.runtime.onMessage.addListener((msg) => {
   }
 });
 
-document.getElementById('search').addEventListener('input', scheduleUpdate);
+const searchBox = document.getElementById('search');
+searchBox.addEventListener('input', scheduleUpdate);
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
+
+document.addEventListener('keydown', (e) => {
+  if (!searchBox) return;
+  if (e.key === 'Escape') {
+    if (searchBox.value) {
+      searchBox.value = '';
+      scheduleUpdate();
+    }
+    return;
+  }
+  if (document.activeElement.tagName !== 'INPUT' &&
+      e.key.length === 1 &&
+      !e.ctrlKey && !e.metaKey && !e.altKey) {
+    searchBox.focus();
+    searchBox.value += e.key;
+    scheduleUpdate();
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
 
 document.addEventListener('keydown', (e) => {
   if (!tabItems.length) return;

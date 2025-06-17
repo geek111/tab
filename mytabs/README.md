@@ -20,6 +20,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   - The number of columns adapts to the window size.
   - Custom context menu reveals extension version and links to the Options page.
   - The mouse wheel scrolls the tab list even when the pointer is over the menu or search field.
+  - Typing with no input focused automatically fills the search box. Press **Escape** to clear it.
   - In Full View, overflowing columns can be scrolled horizontally with the mouse wheel.
     Trackpad gestures and horizontal wheels are supported.
   - Scroll speed can be adjusted from the Options page to make scrolling more aggressive.
