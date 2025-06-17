@@ -265,20 +265,44 @@ button:hover {
 
 .tab-tooltip {
   position: absolute;
-  background: var(--color-bg);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  padding: 0.2em 0.4em;
+  background: rgba(60, 60, 60, 0.95);
+  color: #fff;
+  border: 1px solid #666;
+  padding: 0.3em 0.6em;
+  font-size: 0.85em;
   border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
   pointer-events: none;
   z-index: 1000;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.tab-tooltip.visible {
+  opacity: 1;
+  transform: none;
+}
+
+.tab-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -5px;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent rgba(60, 60, 60, 0.95) transparent transparent;
 }
 
 body[data-theme="dark"] .tab-tooltip {
-  background: var(--color-hover);
-  color: var(--color-text);
-  border-color: var(--color-border);
+  background: rgba(40, 40, 40, 0.95);
+  color: #eee;
+  border-color: #555;
+}
+
+body[data-theme="dark"] .tab-tooltip::after {
+  border-color: transparent rgba(40, 40, 40, 0.95) transparent transparent;
 }
 
 #bulk-actions {
