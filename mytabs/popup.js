@@ -300,7 +300,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   
     let tooltip;
     const showTooltip = () => {
-      if (!document.body.classList.contains('full')) return;
+      // Allow tooltips in both popup and full views
       hideAllTooltips();
       tooltip = document.createElement('div');
       tooltip.className = 'tab-tooltip';
