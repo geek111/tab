@@ -297,6 +297,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     let tooltip;
     const showTooltip = () => {
       if (!document.body.classList.contains('full')) return;
+      hideAllTooltips();
       tooltip = document.createElement('div');
       tooltip.className = 'tab-tooltip';
       const safeTitle = escapeHtml(tab.title || tab.url);
