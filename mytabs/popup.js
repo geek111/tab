@@ -351,6 +351,12 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     indicator.style.backgroundColor = ctx.colorCode;
     indicator.title = ctx.name;
     indicatorCell.appendChild(indicator);
+    if (document.body.classList.contains('full')) {
+      const label = document.createElement('span');
+      label.className = 'container-name';
+      label.textContent = ctx.name;
+      indicatorCell.appendChild(label);
+    }
   }
   row.appendChild(indicatorCell);
 

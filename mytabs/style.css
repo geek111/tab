@@ -153,9 +153,18 @@ body.popup .tab {
   height: calc(16px * var(--font-scale));
 }
 .container-indicator {
+  display: inline-block;
   width: calc(10px * var(--font-scale));
   height: calc(10px * var(--font-scale));
   border-radius: 50%;
+}
+.container-name {
+  margin-left: 0.25em;
+  font-size: 0.8em;
+  white-space: nowrap;
+}
+body.popup .container-name {
+  display: none;
 }
 .tab:hover {
   background: var(--color-hover);
