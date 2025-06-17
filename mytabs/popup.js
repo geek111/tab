@@ -363,6 +363,11 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   closeCell.appendChild(closeBtn);
   row.appendChild(closeCell);
 
+  // ensure dragging works from any cell in popup mode
+  row.querySelectorAll('*').forEach(el => {
+    el.draggable = true;
+  });
+
   // click and drag events handled via delegation
 
   return row;
@@ -1146,12 +1151,15 @@ function onContainerDragStart(e) {
   hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   if (!tabEl) return;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.dropEffect = 'move';
   const selected = getSelectedTabIds();
   if (selected.length > 1 && tabEl.classList.contains('selected')) {
     e.dataTransfer.setData('text/plain', selected.join(','));
   } else {
     e.dataTransfer.setData('text/plain', tabEl.dataset.tab);
   }
+  e.dataTransfer.setDragImage(tabEl, 0, 0);
   clearPlaceholder();
 }
 
@@ -1160,6 +1168,7 @@ function onContainerDragOver(e) {
   const tabEl = e.target.closest('.tab');
   if (!tabEl) return;
   e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
   const rect = tabEl.getBoundingClientRect();
   const before = e.clientY < rect.top + rect.height / 2;
   showPlaceholder(tabEl, before);

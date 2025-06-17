@@ -137,6 +137,7 @@ body.full #tabs {
   break-inside: avoid;
   box-sizing: border-box;
   min-width: 0;
+  user-select: none;
 }
 body.popup .tab {
   width: 100%;
