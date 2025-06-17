@@ -267,6 +267,39 @@ async function getContainerIdentities() {
   return containerCache;
 }
 
+function refreshContainerDropdowns(identities) {
+  const filter = document.getElementById('container-filter');
+  const target = document.getElementById('container-target');
+  containerMap.clear();
+  identities.forEach(ci => containerMap.set(ci.cookieStoreId, ci));
+  if (filter) {
+    const current = filter.value;
+    filter.textContent = '';
+    const optAll = document.createElement('option');
+    optAll.value = '';
+    optAll.textContent = 'All Containers';
+    filter.appendChild(optAll);
+    identities.forEach(ci => {
+      const opt = document.createElement('option');
+      opt.value = ci.cookieStoreId;
+      opt.textContent = ci.name;
+      filter.appendChild(opt);
+    });
+    filter.value = containerMap.has(current) ? current : '';
+  }
+  if (target) {
+    const currentT = target.value;
+    target.textContent = '';
+    identities.forEach(ci => {
+      const opt = document.createElement('option');
+      opt.value = ci.cookieStoreId;
+      opt.textContent = ci.name;
+      target.appendChild(opt);
+    });
+    target.value = containerMap.has(currentT) ? currentT : (identities[0]?.cookieStoreId || 'firefox-default');
+  }
+}
+
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const row = document.createElement('div');
   const isFull = document.body.classList.contains('full');
@@ -1064,13 +1097,14 @@ async function bulkMove() {
 async function bulkAssignToContainer(containerId) {
   const errorEl = document.getElementById('error');
   if (errorEl) errorEl.textContent = '';
-  if (browser.contextualIdentities) {
+  if (browser.contextualIdentities && containerId !== 'firefox-default') {
     try {
       let identities = await browser.contextualIdentities.query({});
       let exists = identities.some(ci => ci.cookieStoreId === containerId);
       if (!exists) {
         containerCache = null;
         identities = await getContainerIdentities();
+        refreshContainerDropdowns(identities);
         exists = identities.some(ci => ci.cookieStoreId === containerId);
       }
       if (!exists) {
