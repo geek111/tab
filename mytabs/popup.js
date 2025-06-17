@@ -1064,7 +1064,7 @@ async function bulkMove() {
 async function bulkAssignToContainer(containerId) {
   const errorEl = document.getElementById('error');
   if (errorEl) errorEl.textContent = '';
-  if (browser.contextualIdentities) {
+  if (browser.contextualIdentities && containerId !== 'firefox-default') {
     try {
       let identities = await browser.contextualIdentities.query({});
       let exists = identities.some(ci => ci.cookieStoreId === containerId);
@@ -1096,14 +1096,17 @@ async function bulkAssignToContainer(containerId) {
         failed.push(tab.title || tab.url);
         continue;
       }
-      const newTab = await browser.tabs.create({
+      const createProps = {
         url: tab.url,
-        cookieStoreId: containerId,
         index: tab.index,
         windowId: tab.windowId,
         pinned: tab.pinned,
         active: tab.active
-      });
+      };
+      if (browser.contextualIdentities && containerId !== 'firefox-default') {
+        createProps.cookieStoreId = containerId;
+      }
+      const newTab = await browser.tabs.create(createProps);
       try {
         await browser.tabs.remove(tab.id);
       } catch (e) {
