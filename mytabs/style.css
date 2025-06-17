@@ -156,6 +156,16 @@ body.popup .tab {
   width: calc(10px * var(--font-scale));
   height: calc(10px * var(--font-scale));
   border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.25em;
+}
+.container-name {
+  margin-left: 0.25em;
+  font-size: 0.8em;
+  white-space: nowrap;
+}
+body.popup .container-name {
+  display: none;
 }
 .tab:hover {
   background: var(--color-hover);
