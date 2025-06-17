@@ -196,6 +196,12 @@ button:hover {
   pointer-events: none;
   z-index: 1000;
 }
+.tab-tooltip em {
+  display: block;
+  font-style: normal;
+  color: var(--color-muted);
+  font-size: 0.85em;
+}
 
 body[data-theme="dark"] .tab-tooltip {
   background: var(--color-hover);
