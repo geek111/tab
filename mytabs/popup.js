@@ -557,8 +557,25 @@ document.getElementById('search').addEventListener('input', scheduleUpdate);
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
-  if (!tabItems.length) return;
+  const searchInput = document.getElementById('search');
+  if (e.key === 'Escape') {
+    if (searchInput.value) {
+      searchInput.value = '';
+      scheduleUpdate();
+    }
+    return;
+  }
+
+  if (document.activeElement === searchInput) return;
   if (document.activeElement.tagName === 'INPUT') return;
+
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
+    searchInput.value += e.key;
+    scheduleUpdate();
+    return;
+  }
+
+  if (!tabItems.length) return;
   const focused = document.activeElement;
   const isTab = focused.classList.contains('tab');
   let idx = isTab ? idIndexMap.get(parseInt(focused.dataset.tab, 10)) : -1;
