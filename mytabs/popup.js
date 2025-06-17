@@ -26,6 +26,7 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+let searchInputEl = null;
 
 function resetTabState() {
   if (virtualList) {
@@ -553,10 +554,28 @@ browser.runtime.onMessage.addListener((msg) => {
   }
 });
 
-document.getElementById('search').addEventListener('input', scheduleUpdate);
+if (!searchInputEl) searchInputEl = document.getElementById('search');
+searchInputEl.addEventListener('input', scheduleUpdate);
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
+document.addEventListener('keypress', (e) => {
+  if (!searchInputEl) return;
+  if (document.activeElement.tagName === 'INPUT') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key.length === 1) {
+    searchInputEl.value += e.key;
+    scheduleUpdate();
+  }
+});
+
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (searchInputEl && searchInputEl.value) {
+      searchInputEl.value = '';
+      scheduleUpdate();
+    }
+    return;
+  }
   if (!tabItems.length) return;
   if (document.activeElement.tagName === 'INPUT') return;
   const focused = document.activeElement;
@@ -641,6 +660,7 @@ document.addEventListener('keydown', (e) => {
 
 async function init() {
   container = document.getElementById('tabs');
+  searchInputEl = document.getElementById('search');
   scrollContainer = document.body.classList.contains('full')
     ? document.getElementById('tabs-wrapper')
     : container;
