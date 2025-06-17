@@ -363,6 +363,11 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   closeCell.appendChild(closeBtn);
   row.appendChild(closeCell);
 
+  // ensure dragging works from any cell in popup mode
+  row.querySelectorAll('*').forEach(el => {
+    el.draggable = true;
+  });
+
   // click and drag events handled via delegation
 
   return row;
