@@ -271,7 +271,11 @@ button:hover {
   padding: 0.3em 0.6em;
   font-size: 0.85em;
   border-radius: 4px;
+
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+=======
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+
   pointer-events: none;
   z-index: 1000;
   opacity: 0;
@@ -292,6 +296,7 @@ body[data-theme="dark"] .tab-tooltip {
   background: rgba(40, 40, 40, 0.95);
   color: #eee;
   border-color: #555;
+
 }
 
 body[data-theme="dark"] .tab-tooltip::after {
@@ -307,6 +312,8 @@ body[data-theme="dark"] .tab-tooltip::after {
     opacity: 1;
     transform: translateY(0);
   }
+=======
+
 }
 
 #bulk-actions {
