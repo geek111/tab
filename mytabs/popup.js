@@ -16,6 +16,7 @@ let filterContainerId = '';
 let containerCache;
 let targetSelect;
 let visitedIds = new Set();
+let containersAvailable = false;
 
 let virtualList = null;
 let tabItems = [];
@@ -788,7 +789,7 @@ async function init() {
   registerTabEvents();
   const select = document.getElementById('container-filter');
   let containerIdents = [];
-  let containersAvailable = !!browser.contextualIdentities;
+  containersAvailable = !!browser.contextualIdentities;
   if (browser.contextualIdentities) {
     try {
       containerIdents = await getContainerIdentities();
@@ -995,6 +996,13 @@ function showContextMenu(e) {
         scheduleUpdate();
       });
     }
+    if (containersAvailable) {
+      addItem('Add to Container', () => {
+        const cid = targetSelect ? targetSelect.value : 'firefox-default';
+        return bulkAssignToContainer(cid, [id]);
+      });
+      addItem('Remove from Container', () => bulkAssignToContainer('firefox-default', [id]));
+    }
   }
 
   if (!tabEl && !selected.length) {
@@ -1061,7 +1069,7 @@ async function bulkMove() {
   scheduleUpdate();
 }
 
-async function bulkAssignToContainer(containerId) {
+async function bulkAssignToContainer(containerId, ids) {
   const errorEl = document.getElementById('error');
   if (errorEl) errorEl.textContent = '';
   if (browser.contextualIdentities) {
@@ -1084,10 +1092,10 @@ async function bulkAssignToContainer(containerId) {
       return;
     }
   }
-  const ids = getSelectedTabIds();
-  if (!ids.length) return;
-  if (ids.length > 10 && !confirm(`Move ${ids.length} tabs to the selected container?`)) return;
-  let tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
+  const tabIds = Array.isArray(ids) ? ids : getSelectedTabIds();
+  if (!tabIds.length) return;
+  if (tabIds.length > 10 && !confirm(`Move ${tabIds.length} tabs to the selected container?`)) return;
+  let tabs = await Promise.all(tabIds.map(id => browser.tabs.get(id)));
   tabs.sort((a, b) => a.windowId === b.windowId ? a.index - b.index : a.windowId - b.windowId);
   const failed = [];
   for (const tab of tabs) {
