@@ -1064,25 +1064,10 @@ async function bulkMove() {
 async function bulkAssignToContainer(containerId) {
   const errorEl = document.getElementById('error');
   if (errorEl) errorEl.textContent = '';
-  if (browser.contextualIdentities) {
-    try {
-      let identities = await browser.contextualIdentities.query({});
-      let exists = identities.some(ci => ci.cookieStoreId === containerId);
-      if (!exists) {
-        containerCache = null;
-        identities = await getContainerIdentities();
-        exists = identities.some(ci => ci.cookieStoreId === containerId);
-      }
-      if (!exists) {
-        if (errorEl) errorEl.textContent = 'Selected container does not exist';
-        return;
-      }
-    } catch (e) {
-      console.error('Contextual identities unavailable', e);
-      if (errorEl) errorEl.textContent =
-        'Container actions disabled: ' + (e.message || e);
-      return;
-    }
+  if (!browser.contextualIdentities) {
+    if (errorEl) errorEl.textContent =
+      'Container actions disabled: container feature not available';
+    return;
   }
   const ids = getSelectedTabIds();
   if (!ids.length) return;
