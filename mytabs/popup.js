@@ -351,6 +351,12 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     indicator.style.backgroundColor = ctx.colorCode;
     indicator.title = ctx.name;
     indicatorCell.appendChild(indicator);
+    if (document.body.classList.contains('full')) {
+      const label = document.createElement('span');
+      label.className = 'container-name';
+      label.textContent = ctx.name;
+      indicatorCell.appendChild(label);
+    }
   }
   row.appendChild(indicatorCell);
 
@@ -786,6 +792,9 @@ async function init() {
   if (browser.contextualIdentities) {
     try {
       containerIdents = await getContainerIdentities();
+      containerIdents.forEach(ci => {
+        containerMap.set(ci.cookieStoreId, ci);
+      });
     } catch (e) {
       containersAvailable = false;
       console.error('Contextual identities unavailable', e);
@@ -797,30 +806,17 @@ async function init() {
       'Container actions disabled: container feature not available';
   }
   if (select) {
-    if (browser.contextualIdentities) {
-      try {
-        const identities = await getContainerIdentities();
-        identities.forEach(ci => {
-          containerMap.set(ci.cookieStoreId, ci);
-          const opt = document.createElement('option');
-          opt.value = ci.cookieStoreId;
-          opt.textContent = ci.name;
-          select.appendChild(opt);
-        });
-        select.addEventListener('change', () => {
-          filterContainerId = select.value;
-          scheduleUpdate();
-        });
-      } catch (e) {
-        console.error('Contextual identities unavailable', e);
-        document.getElementById('error').textContent =
-          'Container actions disabled: ' + (e.message || e);
-        select.disabled = true;
-        containersAvailable = false;
-        document.getElementById('container-target')?.setAttribute('disabled', 'true');
-        document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
-        document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
-      }
+    if (containersAvailable) {
+      containerIdents.forEach(ci => {
+        const opt = document.createElement('option');
+        opt.value = ci.cookieStoreId;
+        opt.textContent = ci.name;
+        select.appendChild(opt);
+      });
+      select.addEventListener('change', () => {
+        filterContainerId = select.value;
+        scheduleUpdate();
+      });
     } else {
       select.disabled = true;
       document.getElementById('container-target')?.setAttribute('disabled', 'true');
@@ -830,25 +826,13 @@ async function init() {
   }
   targetSelect = document.getElementById('container-target');
   if (targetSelect) {
-    if (browser.contextualIdentities) {
-      try {
-        const identities = await getContainerIdentities();
-        identities.forEach(ci => {
-          const opt = document.createElement('option');
-          opt.value = ci.cookieStoreId;
-          opt.textContent = ci.name;
-          targetSelect.appendChild(opt);
-        });
-      } catch (e) {
-        console.error('Contextual identities unavailable', e);
-        document.getElementById('error').textContent =
-          'Container actions disabled: ' + (e.message || e);
-        targetSelect.disabled = true;
-        containersAvailable = false;
-        document.getElementById('container-filter')?.setAttribute('disabled', 'true');
-        document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
-        document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
-      }
+    if (containersAvailable) {
+      containerIdents.forEach(ci => {
+        const opt = document.createElement('option');
+        opt.value = ci.cookieStoreId;
+        opt.textContent = ci.name;
+        targetSelect.appendChild(opt);
+      });
     } else {
       targetSelect.disabled = true;
       document.getElementById('container-filter')?.setAttribute('disabled', 'true');
