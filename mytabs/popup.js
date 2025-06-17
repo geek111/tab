@@ -557,6 +557,25 @@ document.getElementById('search').addEventListener('input', scheduleUpdate);
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
+  const searchInput = document.getElementById('search');
+
+  if (e.key === 'Escape') {
+    if (searchInput.value) {
+      searchInput.value = '';
+      scheduleUpdate();
+    }
+    return;
+  }
+
+  if (document.activeElement.tagName !== 'INPUT' &&
+      e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    searchInput.value += e.key;
+    searchInput.focus();
+    scheduleUpdate();
+    e.preventDefault();
+    return;
+  }
+
   if (!tabItems.length) return;
   if (document.activeElement.tagName === 'INPUT') return;
   const focused = document.activeElement;
