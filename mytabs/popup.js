@@ -305,8 +305,17 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       tooltip.innerHTML = `${safeTitle}<br>${safeUrl}`;
       document.body.appendChild(tooltip);
       const rect = icon.getBoundingClientRect();
-      tooltip.style.left = `${rect.right + window.scrollX + 5}px`;
-      tooltip.style.top = `${rect.top + window.scrollY}px`;
+      let left = rect.right + window.scrollX + 5;
+      const top = rect.top + window.scrollY;
+      const width = tooltip.offsetWidth;
+      if (left + width > window.innerWidth - 5) {
+        left = rect.left + window.scrollX - width - 5;
+        tooltip.classList.add('left');
+      } else {
+        tooltip.classList.remove('left');
+      }
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
       requestAnimationFrame(() => {
         tooltip.classList.add('visible');
       });
@@ -316,7 +325,10 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
         tooltip.classList.remove('visible');
         const el = tooltip;
         tooltip = null;
-        setTimeout(() => el.remove(), 150);
+        setTimeout(() => {
+          el.classList.remove('left');
+          el.remove();
+        }, 150);
       }
     };
     icon.addEventListener('mouseenter', showTooltip);
