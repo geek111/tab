@@ -308,12 +308,17 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       tooltip.style.left = `${rect.right + window.scrollX + 5}px`;
       tooltip.style.top = `${rect.top + window.scrollY}px`;
       requestAnimationFrame(() => {
+        const tipRect = tooltip.getBoundingClientRect();
+        if (tipRect.right > window.innerWidth) {
+          tooltip.classList.add('left');
+          tooltip.style.left = `${rect.left + window.scrollX - tipRect.width - 5}px`;
+        }
         tooltip.classList.add('visible');
       });
     };
     const hideTooltip = () => {
       if (tooltip) {
-        tooltip.classList.remove('visible');
+        tooltip.classList.remove('visible', 'left');
         const el = tooltip;
         tooltip = null;
         setTimeout(() => el.remove(), 150);
