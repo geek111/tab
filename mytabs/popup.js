@@ -307,6 +307,10 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       const rect = icon.getBoundingClientRect();
       tooltip.style.left = `${rect.right + window.scrollX + 5}px`;
       tooltip.style.top = `${rect.top + window.scrollY}px`;
+      if (rect.right + tooltip.offsetWidth + 5 > window.innerWidth) {
+        tooltip.classList.add('left');
+        tooltip.style.left = `${rect.left + window.scrollX - tooltip.offsetWidth - 5}px`;
+      }
       requestAnimationFrame(() => {
         tooltip.classList.add('visible');
       });
