@@ -792,6 +792,7 @@ function registerTabEvents() {
   browser.tabs.onUpdated.addListener(updateListener);
   browser.tabs.onActivated.addListener(updateListener);
   browser.tabs.onDetached.addListener(updateListener);
+  browser.tabs.onMoved.addListener(updateListener);
   browser.tabs.onAttached.addListener(updateListener);
 }
 
@@ -801,6 +802,7 @@ function unregisterTabEvents() {
   browser.tabs.onUpdated.removeListener(updateListener);
   browser.tabs.onActivated.removeListener(updateListener);
   browser.tabs.onDetached.removeListener(updateListener);
+  browser.tabs.onMoved.removeListener(updateListener);
   browser.tabs.onAttached.removeListener(updateListener);
 }
 
