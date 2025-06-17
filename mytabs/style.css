@@ -272,6 +272,8 @@ button:hover {
   font-size: 0.85em;
   border-radius: 4px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+=======
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   pointer-events: none;
   z-index: 1000;
   opacity: 0;
@@ -303,6 +305,7 @@ body[data-theme="dark"] .tab-tooltip {
 
 body[data-theme="dark"] .tab-tooltip::after {
   border-color: transparent rgba(40, 40, 40, 0.95) transparent transparent;
+=======
 }
 
 #bulk-actions {
