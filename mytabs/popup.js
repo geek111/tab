@@ -58,6 +58,10 @@ function clearPlaceholder() {
   }
 }
 
+function hideAllTooltips() {
+  document.querySelectorAll('.tab-tooltip').forEach(t => t.remove());
+}
+
 function showPlaceholder(target, before) {
   if (dropTarget === target &&
       target.classList.contains(before ? 'drop-before' : 'drop-after')) {
@@ -293,6 +297,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     let tooltip;
     const showTooltip = () => {
       if (!document.body.classList.contains('full')) return;
+      hideAllTooltips();
       tooltip = document.createElement('div');
       tooltip.className = 'tab-tooltip';
       const safeTitle = escapeHtml(tab.title || tab.url);
@@ -550,6 +555,7 @@ function findDuplicates(tabs) {
 }
 
 async function update() {
+  hideAllTooltips();
   const isFull = document.body.classList.contains('full');
   const prevScroll = scrollContainer
     ? isFull
@@ -718,6 +724,7 @@ async function init() {
     ? document.getElementById('tabs-wrapper')
     : container;
   scrollContainer.addEventListener('scroll', saveScroll);
+  scrollContainer.addEventListener('scroll', hideAllTooltips);
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);
@@ -906,6 +913,7 @@ window.addEventListener('resize', () => {
 const context = document.getElementById('context');
 function showContextMenu(e) {
   e.preventDefault();
+  hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   context.innerHTML = '';
 
@@ -1085,6 +1093,7 @@ async function bulkRemoveFromContainer() {
 }
 
 function onContainerClick(e) {
+  hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   if (!tabEl || !container.contains(tabEl)) return;
   if (e.target.classList.contains('close-btn')) {
@@ -1117,6 +1126,7 @@ function onContainerClick(e) {
 }
 
 function onContainerDragStart(e) {
+  hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   if (!tabEl) return;
   const selected = getSelectedTabIds();
@@ -1129,6 +1139,7 @@ function onContainerDragStart(e) {
 }
 
 function onContainerDragOver(e) {
+  hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   if (!tabEl) return;
   e.preventDefault();
@@ -1138,6 +1149,7 @@ function onContainerDragOver(e) {
 }
 
 async function onContainerDrop(e) {
+  hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   if (!tabEl) return;
   e.preventDefault();
