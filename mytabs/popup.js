@@ -245,14 +245,6 @@ async function activateTab(id, winId) {
 }
 
 async function getContainerIdentities() {
-  if (containerCache) {
-    return containerCache;
-  }
-  const stored = await browser.storage.local.get('containerIdentities');
-  if (stored.containerIdentities) {
-    containerCache = stored.containerIdentities;
-    return containerCache;
-  }
   if (!browser.contextualIdentities) {
     containerCache = [];
     return containerCache;
@@ -262,9 +254,51 @@ async function getContainerIdentities() {
     await browser.storage.local.set({ containerIdentities: containerCache });
   } catch (e) {
     console.error('Contextual identities unavailable', e);
-    containerCache = [];
+    if (!containerCache) {
+      const stored = await browser.storage.local.get('containerIdentities');
+      containerCache = stored.containerIdentities || [];
+    }
   }
   return containerCache;
+}
+
+function refreshContainerDropdowns(identities) {
+  const filter = document.getElementById('container-filter');
+  const target = document.getElementById('container-target');
+  containerMap.clear();
+  identities.forEach(ci => containerMap.set(ci.cookieStoreId, ci));
+  if (filter) {
+    const current = filter.value;
+    filter.textContent = '';
+    const optAll = document.createElement('option');
+    optAll.value = '';
+    optAll.textContent = 'All Containers';
+    filter.appendChild(optAll);
+    identities.forEach(ci => {
+      const opt = document.createElement('option');
+      opt.value = ci.cookieStoreId;
+      opt.textContent = ci.name;
+      filter.appendChild(opt);
+    });
+    filter.value = containerMap.has(current) ? current : '';
+  }
+  if (target) {
+    const currentT = target.value;
+    target.textContent = '';
+    const defOpt = document.createElement('option');
+    defOpt.value = 'firefox-default';
+    defOpt.textContent = 'No Container';
+    target.appendChild(defOpt);
+    identities.forEach(ci => {
+      const opt = document.createElement('option');
+      opt.value = ci.cookieStoreId;
+      opt.textContent = ci.name;
+      target.appendChild(opt);
+    });
+    target.value = containerMap.has(currentT) || currentT === 'firefox-default'
+      ? currentT
+      : 'firefox-default';
+  }
 }
 
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
@@ -802,62 +836,34 @@ async function init() {
     document.getElementById('error').textContent =
       'Container actions disabled: container feature not available';
   }
-  if (select) {
-    if (browser.contextualIdentities) {
+  targetSelect = document.getElementById('container-target');
+  if (select || targetSelect) {
+    if (containersAvailable) {
       try {
-        const identities = await getContainerIdentities();
-        identities.forEach(ci => {
-          containerMap.set(ci.cookieStoreId, ci);
-          const opt = document.createElement('option');
-          opt.value = ci.cookieStoreId;
-          opt.textContent = ci.name;
-          select.appendChild(opt);
-        });
-        select.addEventListener('change', () => {
-          filterContainerId = select.value;
-          scheduleUpdate();
-        });
+        refreshContainerDropdowns(containerIdents);
+        if (select) {
+          select.addEventListener('change', () => {
+            filterContainerId = select.value;
+            scheduleUpdate();
+          });
+        }
       } catch (e) {
         console.error('Contextual identities unavailable', e);
         document.getElementById('error').textContent =
           'Container actions disabled: ' + (e.message || e);
-        select.disabled = true;
+        if (select) select.disabled = true;
+        if (targetSelect) targetSelect.disabled = true;
         containersAvailable = false;
+        document.getElementById('container-filter')?.setAttribute('disabled', 'true');
         document.getElementById('container-target')?.setAttribute('disabled', 'true');
         document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
         document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
       }
     } else {
-      select.disabled = true;
-      document.getElementById('container-target')?.setAttribute('disabled', 'true');
-      document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
-      document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
-    }
-  }
-  targetSelect = document.getElementById('container-target');
-  if (targetSelect) {
-    if (browser.contextualIdentities) {
-      try {
-        const identities = await getContainerIdentities();
-        identities.forEach(ci => {
-          const opt = document.createElement('option');
-          opt.value = ci.cookieStoreId;
-          opt.textContent = ci.name;
-          targetSelect.appendChild(opt);
-        });
-      } catch (e) {
-        console.error('Contextual identities unavailable', e);
-        document.getElementById('error').textContent =
-          'Container actions disabled: ' + (e.message || e);
-        targetSelect.disabled = true;
-        containersAvailable = false;
-        document.getElementById('container-filter')?.setAttribute('disabled', 'true');
-        document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
-        document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
-      }
-    } else {
-      targetSelect.disabled = true;
+      if (select) select.disabled = true;
+      if (targetSelect) targetSelect.disabled = true;
       document.getElementById('container-filter')?.setAttribute('disabled', 'true');
+      document.getElementById('container-target')?.setAttribute('disabled', 'true');
       document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
       document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
     }
@@ -1064,23 +1070,23 @@ async function bulkMove() {
 async function bulkAssignToContainer(containerId) {
   const errorEl = document.getElementById('error');
   if (errorEl) errorEl.textContent = '';
+  let identities = [];
   if (browser.contextualIdentities) {
     try {
-      let identities = await browser.contextualIdentities.query({});
-      let exists = identities.some(ci => ci.cookieStoreId === containerId);
-      if (!exists) {
-        containerCache = null;
-        identities = await getContainerIdentities();
-        exists = identities.some(ci => ci.cookieStoreId === containerId);
-      }
-      if (!exists) {
-        if (errorEl) errorEl.textContent = 'Selected container does not exist';
-        return;
+      identities = await getContainerIdentities();
+      refreshContainerDropdowns(identities);
+      if (containerId !== 'firefox-default') {
+        const exists = identities.some(ci => ci.cookieStoreId === containerId);
+        if (!exists) {
+          if (errorEl) errorEl.textContent = 'Selected container does not exist';
+          return;
+        }
       }
     } catch (e) {
       console.error('Contextual identities unavailable', e);
-      if (errorEl) errorEl.textContent =
-        'Container actions disabled: ' + (e.message || e);
+      if (errorEl) {
+        errorEl.textContent = 'Container actions disabled: ' + (e.message || e);
+      }
       return;
     }
   }
