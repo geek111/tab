@@ -268,17 +268,32 @@ button:hover {
   background: var(--color-bg);
   color: var(--color-text);
   border: 1px solid var(--color-border);
-  padding: 0.2em 0.4em;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  padding: 0.3em 0.6em;
+  border-radius: 6px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   pointer-events: none;
   z-index: 1000;
+  font-size: 0.875em;
+}
+
+.tab-tooltip::after {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: calc(50% - 6px);
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent var(--color-bg) transparent transparent;
 }
 
 body[data-theme="dark"] .tab-tooltip {
   background: var(--color-hover);
   color: var(--color-text);
   border-color: var(--color-border);
+}
+
+body[data-theme="dark"] .tab-tooltip::after {
+  border-color: transparent var(--color-hover) transparent transparent;
 }
 
 #bulk-actions {
