@@ -269,8 +269,10 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   }
 
 
+  const ctx = containerMap.get(tab.cookieStoreId);
+
   if (tab.favIconUrl) {
-    icon = document.createElement('img');
+    const icon = document.createElement('img');
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
@@ -279,12 +281,15 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
 
     let tooltip;
     const showTooltip = () => {
-      if (!document.body.classList.contains('full')) return;
       tooltip = document.createElement('div');
       tooltip.className = 'tab-tooltip';
       const safeTitle = escapeHtml(tab.title || tab.url);
       const safeUrl = escapeHtml(tab.url);
       tooltip.innerHTML = `${safeTitle}<br>${safeUrl}`;
+      if (ctx) {
+        const safeCtx = escapeHtml(ctx.name);
+        tooltip.innerHTML += `<br>Container: ${safeCtx}`;
+      }
       document.body.appendChild(tooltip);
       const rect = icon.getBoundingClientRect();
       tooltip.style.left = `${rect.right + window.scrollX + 5}px`;
@@ -300,7 +305,6 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     icon.addEventListener('mouseleave', hideTooltip);
   }
 
-  const ctx = containerMap.get(tab.cookieStoreId);
   if (ctx) {
     const indicator = document.createElement('span');
     indicator.className = 'container-indicator';
