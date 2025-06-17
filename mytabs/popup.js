@@ -309,7 +309,15 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       const truncatedUrl = truncateText(tab.url);
       const safeTitle = escapeHtml(truncatedTitle);
       const safeUrl = escapeHtml(truncatedUrl);
-      tooltip.innerHTML = `${safeTitle}<br>${safeUrl}`;
+      let lines = `${safeTitle}<br>${safeUrl}`;
+      if (isFull) {
+        const ctx = containerMap.get(tab.cookieStoreId);
+        if (ctx) {
+          const safeCtx = escapeHtml(ctx.name);
+          lines += `<br>${safeCtx}`;
+        }
+      }
+      tooltip.innerHTML = lines;
       document.body.appendChild(tooltip);
       const rect = icon.getBoundingClientRect();
       let left = rect.right + window.scrollX + 5;
