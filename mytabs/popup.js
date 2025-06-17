@@ -307,11 +307,16 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       const rect = icon.getBoundingClientRect();
       tooltip.style.left = `${rect.right + window.scrollX + 5}px`;
       tooltip.style.top = `${rect.top + window.scrollY}px`;
+      requestAnimationFrame(() => {
+        tooltip.classList.add('visible');
+      });
     };
     const hideTooltip = () => {
       if (tooltip) {
-        tooltip.remove();
+        tooltip.classList.remove('visible');
+        const el = tooltip;
         tooltip = null;
+        setTimeout(() => el.remove(), 150);
       }
     };
     icon.addEventListener('mouseenter', showTooltip);
