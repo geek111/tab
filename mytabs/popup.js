@@ -688,6 +688,22 @@ document.getElementById('search').addEventListener('input', scheduleUpdate);
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
+  const searchField = document.getElementById('search');
+  if (document.activeElement.tagName !== 'INPUT' && !e.ctrlKey && !e.metaKey) {
+    if (e.key === 'Escape') {
+      if (searchField.value) {
+        searchField.value = '';
+        scheduleUpdate();
+      }
+      return;
+    }
+    if (!e.altKey && e.key.length === 1) {
+      searchField.focus();
+      searchField.value += e.key;
+      scheduleUpdate();
+      return;
+    }
+  }
   if (!tabItems.length) return;
   if (document.activeElement.tagName === 'INPUT') return;
   const focused = document.activeElement;
