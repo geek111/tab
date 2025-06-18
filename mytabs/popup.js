@@ -218,9 +218,7 @@ async function getTabs(allTabs) {
     return result;
   }
   if (view === 'dups') {
-    const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
-    const dupSet = new Set(duplicates);
-    return allTabs.filter(t => dupSet.has(t.id));
+    return allTabs.filter(t => currentDupIds.has(t.id));
   }
   return allTabs;
 }
@@ -649,8 +647,7 @@ async function update() {
     document.getElementById('active-count').textContent = activeCount;
     let tabs = await getTabs(allTabs);
     const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
-    const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
-    const dupIds = new Set(duplicates);
+    const dupIds = currentDupIds;
     const activeId = allTabs.find(t => t.active)?.id ?? -1;
     const searchInput = document.getElementById('search');
     const query = searchInput.value.trim();
@@ -680,6 +677,9 @@ const scheduleUpdate = debounce(update, 200);
 browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'visitedUpdated') {
     visitedIds = new Set(msg.visited || []);
+    scheduleUpdate();
+  } else if (msg && msg.type === 'duplicatesUpdated') {
+    currentDupIds = new Set(msg.duplicates || []);
     scheduleUpdate();
   }
 });
@@ -833,6 +833,8 @@ async function init() {
   container.addEventListener('dragend', clearPlaceholder);
   const { visited = [] } = await browser.storage.local.get('visited');
   visitedIds = new Set(visited);
+  const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
+  currentDupIds = new Set(duplicates);
   await loadOptions();
   registerTabEvents();
   const select = document.getElementById('container-filter');

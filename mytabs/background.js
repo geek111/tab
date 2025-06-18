@@ -9,6 +9,21 @@ let visitedTimer = null;
 // Track duplicate tabs by URL
 const dupMap = new Map();
 const dupIds = new Set();
+let dupUpdateTimer = null;
+
+function sendDuplicateUpdate() {
+  browser.runtime.sendMessage({ type: 'duplicatesUpdated', duplicates: Array.from(dupIds) })
+    .catch(() => {});
+}
+
+function scheduleDuplicateUpdate() {
+  if (!dupUpdateTimer) {
+    dupUpdateTimer = setTimeout(() => {
+      dupUpdateTimer = null;
+      sendDuplicateUpdate();
+    }, 200);
+  }
+}
 
 function addDuplicate(tabId, url) {
   let ids = dupMap.get(url);
@@ -21,6 +36,7 @@ function addDuplicate(tabId, url) {
       for (const id of ids) dupIds.add(id);
     }
   }
+  scheduleDuplicateUpdate();
 }
 
 function removeDuplicate(tabId) {
@@ -31,6 +47,7 @@ function removeDuplicate(tabId) {
       }
       if (ids.size === 0) dupMap.delete(url);
       dupIds.delete(tabId);
+      scheduleDuplicateUpdate();
       break;
     }
   }
