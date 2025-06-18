@@ -2,13 +2,14 @@ const MAX_RECENT = 30;
 const action = browser.browserAction || browser.action;
 
 let recent = [];
-let visited = [];
+let visited = new Set();
 let recentTimer = null;
 let visitedTimer = null;
 
 // Track duplicate tabs by URL
 const dupMap = new Map();
 const dupIds = new Set();
+const tabUrlMap = new Map();
 let dupUpdateTimer = null;
 
 function sendDuplicateUpdate() {
@@ -26,6 +27,7 @@ function scheduleDuplicateUpdate() {
 }
 
 function addDuplicate(tabId, url) {
+  tabUrlMap.set(tabId, url);
   let ids = dupMap.get(url);
   if (!ids) {
     ids = new Set([tabId]);
@@ -40,27 +42,29 @@ function addDuplicate(tabId, url) {
 }
 
 function removeDuplicate(tabId) {
-  for (const [url, ids] of dupMap.entries()) {
-    if (ids.delete(tabId)) {
-      if (ids.size <= 1) {
-        for (const id of ids) dupIds.delete(id);
-      }
-      if (ids.size === 0) dupMap.delete(url);
-      dupIds.delete(tabId);
-      scheduleDuplicateUpdate();
-      break;
+  const url = tabUrlMap.get(tabId);
+  if (!url) return;
+  tabUrlMap.delete(tabId);
+  const ids = dupMap.get(url);
+  if (!ids) return;
+  if (ids.delete(tabId)) {
+    if (ids.size <= 1) {
+      for (const id of ids) dupIds.delete(id);
     }
+    if (ids.size === 0) dupMap.delete(url);
+    dupIds.delete(tabId);
+    scheduleDuplicateUpdate();
   }
 }
 
 function sendVisitedUpdate() {
-  browser.runtime.sendMessage({ type: 'visitedUpdated', visited })
+  browser.runtime.sendMessage({ type: 'visitedUpdated', visited: Array.from(visited) })
     .catch(() => {});
 }
 
 browser.storage.local.get(['recent', 'visited']).then(data => {
   recent = data.recent || [];
-  visited = data.visited || [];
+  visited = new Set(data.visited || []);
 });
 
 // Initialize duplicate tracking
@@ -94,9 +98,7 @@ browser.tabs.query({}).then(tabs => {
 })();
 
 function unmarkVisited(tabId) {
-  const idx = visited.indexOf(tabId);
-  if (idx !== -1) {
-    visited.splice(idx, 1);
+  if (visited.delete(tabId)) {
     scheduleVisitedSave();
     sendVisitedUpdate();
   }
@@ -134,14 +136,14 @@ function scheduleVisitedSave() {
   if (!visitedTimer) {
     visitedTimer = setTimeout(() => {
       visitedTimer = null;
-      browser.storage.local.set({ visited });
+      browser.storage.local.set({ visited: Array.from(visited) });
     }, 500);
   }
 }
 
 function markVisited(tabId) {
-  if (!visited.includes(tabId)) {
-    visited.push(tabId);
+  if (!visited.has(tabId)) {
+    visited.add(tabId);
     scheduleVisitedSave();
     sendVisitedUpdate();
   }
@@ -163,9 +165,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
     recent.splice(ridx, 1);
     scheduleRecentSave();
   }
-  const vidx = visited.indexOf(tabId);
-  if (vidx !== -1) {
-    visited.splice(vidx, 1);
+  if (visited.delete(tabId)) {
     scheduleVisitedSave();
     sendVisitedUpdate();
   }
@@ -188,7 +188,7 @@ browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'getRecent') {
     return Promise.resolve({ recent });
   } else if (msg && msg.type === 'getVisited') {
-    return Promise.resolve({ visited });
+    return Promise.resolve({ visited: Array.from(visited) });
   } else if (msg && msg.type === 'getDuplicates') {
     return Promise.resolve({ duplicates: Array.from(dupIds) });
   } else if (msg && msg.type === 'unmarkVisited') {
