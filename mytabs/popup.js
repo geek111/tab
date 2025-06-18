@@ -1236,6 +1236,14 @@ async function onContainerDrop(e) {
       index++;
     }
   }
+  if (view === 'recent') {
+    await browser.runtime.sendMessage({
+      type: 'reorderRecent',
+      ids,
+      toId,
+      before
+    }).catch(() => {});
+  }
   scheduleUpdate();
 }
 

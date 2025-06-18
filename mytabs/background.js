@@ -119,6 +119,17 @@ function pushRecent(tabId) {
   scheduleRecentSave();
 }
 
+function reorderRecent(ids, toId, before) {
+  ids = ids.filter(id => id !== toId);
+  if (!ids.length) return;
+  recent = recent.filter(id => !ids.includes(id));
+  let idx = recent.indexOf(toId);
+  if (idx === -1) idx = recent.length;
+  if (!before) idx += 1;
+  recent.splice(idx, 0, ...ids);
+  scheduleRecentSave();
+}
+
 function scheduleVisitedSave() {
   if (!visitedTimer) {
     visitedTimer = setTimeout(() => {
@@ -181,6 +192,8 @@ browser.runtime.onMessage.addListener((msg) => {
     return Promise.resolve({ duplicates: Array.from(dupIds) });
   } else if (msg && msg.type === 'unmarkVisited') {
     unmarkVisited(msg.tabId);
+  } else if (msg && msg.type === 'reorderRecent') {
+    reorderRecent(msg.ids || [], msg.toId, msg.before);
   }
 });
 
