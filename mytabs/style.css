@@ -1,20 +1,21 @@
 :root {
-  --color-bg: #fff;
-  --color-text: #333;
-  --color-border: #ccc;
-  --color-hover: #f5f5f5;
-  --color-active: #eef5ff;
-  --color-selected: #dceaff;
-  --color-muted: #888;
-  --color-visited: #f0fff0;
+  --color-bg: #fafafa;
+  --color-text: #202124;
+  --color-border: #ddd;
+  --color-hover: #f0f0f0;
+  --color-active: #e6f0ff;
+  --color-selected: #cce0ff;
+  --color-muted: #666;
+  --color-visited: #f6fff6;
   --tile-width: 150px;
   --tile-height: 32px;
   --tile-scale: 0.9;
   --tile-height: calc(32px * var(--tile-scale));
-  --font-scale: 0.8125;
+  --font-scale: 0.9;
   --close-scale: 0.5;
-  --color-close: #888;
-  --color-close-hover: #f33;
+  --color-close: #666;
+  --color-close-hover: #d33;
+  --font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 *, *::before, *::after {
@@ -26,26 +27,27 @@ html, body {
 }
 
 body {
-  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-family);
   font-size: calc(16px * var(--font-scale));
+  line-height: 1.4;
   margin: 0;
   padding: 0.5em;
   width: 100%;
-  max-width: 450px;
+  max-width: 500px;
   box-sizing: border-box;
   background: var(--color-bg);
   color: var(--color-text);
 }
 
 body[data-theme="dark"] {
-  --color-bg: #222;
+  --color-bg: #1e1e1e;
   --color-text: #eee;
   --color-border: #555;
-  --color-hover: #333;
-  --color-active: #335577;
-  --color-selected: #224466;
-  --color-muted: #aaa;
-  --color-visited: #304030;
+  --color-hover: #2c2c2c;
+  --color-active: #3a475e;
+  --color-selected: #2f3d55;
+  --color-muted: #bbb;
+  --color-visited: #2a3a2a;
   --color-close: #ccc;
   --color-close-hover: #f66;
   background: var(--color-bg);
@@ -414,4 +416,29 @@ body.full #menu {
 }
 body.full #menu button {
   flex: 1 1 auto;
+}
+
+/* Options page */
+body.options {
+  max-width: 600px;
+  margin: auto;
+}
+
+body.options label {
+  display: flex;
+  align-items: center;
+  margin: 0.4em 0;
+}
+
+body.options label > input,
+body.options label > select {
+  margin-left: auto;
+  padding: 0.25em;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+body.options button#save {
+  margin-top: 1em;
+  padding: 0.4em 1em;
 }
