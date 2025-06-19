@@ -687,7 +687,38 @@ browser.runtime.onMessage.addListener((msg) => {
 });
 
 const searchBox = document.getElementById('search');
-searchBox.addEventListener('input', scheduleUpdate);
+const clearBtn = document.getElementById('search-clear');
+
+function adjustSearchWidth() {
+  if (searchBox) {
+    const len = Math.max(searchBox.value.length, 1);
+    searchBox.style.width = `${len}ch`;
+  }
+}
+
+function updateClearButton() {
+  if (clearBtn) {
+    clearBtn.classList.toggle('hidden', !searchBox.value);
+  }
+}
+
+searchBox.addEventListener('input', () => {
+  adjustSearchWidth();
+  updateClearButton();
+  scheduleUpdate();
+});
+
+clearBtn?.addEventListener('click', () => {
+  if (searchBox.value) {
+    searchBox.value = '';
+    adjustSearchWidth();
+    updateClearButton();
+    scheduleUpdate();
+  }
+});
+
+adjustSearchWidth();
+updateClearButton();
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
