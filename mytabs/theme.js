@@ -1,6 +1,6 @@
 (async function(){
-  let { theme = 'light', tileWidth = 150, tileScale = 0.9, fontScale = 0.8125, closeScale = 0.5 } =
-    await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale']);
+  let { theme = 'light', tileWidth = 150, tileScale = 0.9, fontScale = 0.8125, closeScale = 0.5, uiZoom = 1 } =
+    await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale','uiZoom']);
   if (closeScale === undefined) {
     closeScale = 0.5;
     browser.storage.local.set({ closeScale });
@@ -16,6 +16,7 @@
     document.documentElement.style.setProperty('--tile-scale', scale);
     document.documentElement.style.setProperty('--font-scale', font);
     document.documentElement.style.setProperty('--close-scale', closeScale);
+    document.documentElement.style.setProperty('--ui-zoom', uiZoom);
     if (document.body.classList.contains('full')) {
       document.body.style.removeProperty('width');
     }
@@ -31,7 +32,22 @@
       if (changes.tileScale) tileScale = changes.tileScale.newValue;
       if (changes.fontScale) fontScale = changes.fontScale.newValue;
       if (changes.closeScale) closeScale = changes.closeScale.newValue;
+      if (changes.uiZoom) uiZoom = changes.uiZoom.newValue;
       apply();
     }
   });
+
+  function onZoomWheel(e){
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const delta = e.deltaY || e.deltaX;
+    const step = delta < 0 ? 0.1 : -0.1;
+    const newZoom = Math.min(2, Math.max(0.5, uiZoom + step));
+    if (newZoom === uiZoom) return;
+    uiZoom = newZoom;
+    browser.storage.local.set({ uiZoom });
+    apply();
+  }
+
+  document.addEventListener('wheel', onZoomWheel, { passive: false });
 })();

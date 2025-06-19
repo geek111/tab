@@ -13,6 +13,7 @@
   --tile-height: calc(32px * var(--tile-scale));
   --font-scale: 0.8125;
   --close-scale: 0.5;
+  --ui-zoom: 1;
   --color-close: #888;
   --color-close-hover: #f33;
 }
@@ -30,8 +31,10 @@ body {
   font-size: calc(16px * var(--font-scale));
   margin: 0;
   padding: 0.5em;
-  width: 100%;
-  max-width: 450px;
+  transform-origin: top left;
+  transform: scale(var(--ui-zoom));
+  width: calc(100% / var(--ui-zoom));
+  max-width: calc(450px / var(--ui-zoom));
   box-sizing: border-box;
   background: var(--color-bg);
   color: var(--color-text);
