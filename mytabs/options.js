@@ -101,6 +101,14 @@ const elFontScale = document.getElementById('fontScale');
 const elCloseScale = document.getElementById('closeScale');
 const elScrollSpeed = document.getElementById('scrollSpeed');
 
+async function refreshScaleInputs() {
+  const { tileScale = 0.9, fontScale = 0.8125, closeScale = 0.5 } =
+    await browser.storage.local.get(['tileScale', 'fontScale', 'closeScale']);
+  elTileScale.value = tileScale;
+  elFontScale.value = fontScale;
+  elCloseScale.value = closeScale;
+}
+
 elTileWidth.addEventListener('input', updateWidth);
 elTileWidth.addEventListener('change', updateWidth);
 
@@ -116,4 +124,5 @@ elCloseScale.addEventListener('change', updateCloseScale);
 elScrollSpeed.addEventListener('input', updateScroll);
 elScrollSpeed.addEventListener('change', updateScroll);
 document.getElementById('save').addEventListener('click', save);
+window.addEventListener('theme-applied', refreshScaleInputs);
 load();
