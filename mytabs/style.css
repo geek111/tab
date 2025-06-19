@@ -226,7 +226,7 @@ body.popup .tab > div {
   border: 2px solid var(--color-border);
   border-radius: 6px;
   height: calc(var(--tile-height) * 0.9);
-  margin: 0.5em 0;
+  margin: 0.25em 0;
   box-sizing: border-box;
 }
 button {
@@ -385,7 +385,7 @@ body.full #tabs,
   grid-template-rows: repeat(auto-fill, var(--tile-height));
   grid-auto-columns: var(--tile-width);
   grid-auto-flow: column;
-  row-gap: 0.25em;
+  row-gap: 0.15em;
   width: fit-content;
   min-width: 100%;
   height: 100%;
