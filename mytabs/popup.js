@@ -1002,13 +1002,17 @@ function showContextMenu(e) {
   if (tabEl && (!selected.length || !tabEl.classList.contains('selected'))) {
     const id = parseInt(tabEl.dataset.tab, 10);
     const win = parseInt(tabEl.dataset.windowId, 10);
+    // Place Close as the first entry for single-tab actions
+    addItem('Close', async () => {
+      await browser.tabs.remove(id);
+      scheduleUpdate();
+    });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       await browser.tabs.discard(id);
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
       scheduleUpdate();
     });
-    addItem('Close', async () => { await browser.tabs.remove(id); scheduleUpdate(); });
     if (MOVE_ENABLED) {
       addItem('Move', async () => {
         const t = await browser.tabs.get(id);
