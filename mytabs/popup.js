@@ -687,7 +687,27 @@ browser.runtime.onMessage.addListener((msg) => {
 });
 
 const searchBox = document.getElementById('search');
-searchBox.addEventListener('input', scheduleUpdate);
+const clearBtn = document.getElementById('clear-search');
+if (searchBox) {
+  const toggleClear = () => {
+    if (clearBtn) clearBtn.classList.toggle('hidden', !searchBox.value);
+  };
+  searchBox.addEventListener('input', () => {
+    toggleClear();
+    scheduleUpdate();
+  });
+  toggleClear();
+}
+if (clearBtn) {
+  clearBtn.addEventListener('click', () => {
+    if (searchBox) {
+      searchBox.value = '';
+      searchBox.focus();
+    }
+    clearBtn.classList.add('hidden');
+    scheduleUpdate();
+  });
+}
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
