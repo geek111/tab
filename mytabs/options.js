@@ -1,3 +1,7 @@
+const DEFAULT_TILE_SCALE = 0.9;
+const DEFAULT_FONT_SCALE = 0.8125;
+const DEFAULT_CLOSE_SCALE = 0.5;
+
 async function load(){
   const data = await browser.storage.local.get([
     'theme','tileWidth','tileScale','fontScale','closeScale','scrollSpeed',
@@ -19,7 +23,7 @@ async function load(){
   } = data;
   let closeScale = data.closeScale;
   if (closeScale === undefined) {
-    closeScale = 0.5;
+    closeScale = DEFAULT_CLOSE_SCALE;
     browser.storage.local.set({ closeScale });
   }
   document.getElementById('theme').value = theme;
@@ -27,6 +31,8 @@ async function load(){
   document.getElementById('tileScale').value = tileScale;
   document.getElementById('fontScale').value = fontScale;
   document.getElementById('closeScale').value = closeScale;
+  const uiScale = +(tileScale / DEFAULT_TILE_SCALE).toFixed(2);
+  document.getElementById('uiScale').value = uiScale;
   document.getElementById('scrollSpeed').value = scrollSpeed;
   document.getElementById('scrollSpeedValue').textContent = scrollSpeed;
   document.getElementById('opt-show-recent').checked = showRecent;
@@ -88,6 +94,26 @@ function updateCloseScale(){
   document.documentElement.style.setProperty('--close-scale', closeScale);
 }
 
+function updateUIScale(){
+  const scale=parseFloat(document.getElementById('uiScale').value);
+  const tileScale=(DEFAULT_TILE_SCALE*scale).toFixed(2);
+  const fontScale=(DEFAULT_FONT_SCALE*scale).toFixed(2);
+  const closeScale=(DEFAULT_CLOSE_SCALE*scale).toFixed(2);
+  document.getElementById('tileScale').value=tileScale;
+  document.getElementById('fontScale').value=fontScale;
+  document.getElementById('closeScale').value=closeScale;
+  browser.storage.local.set({
+    tileScale:parseFloat(tileScale),
+    fontScale:parseFloat(fontScale),
+    closeScale:parseFloat(closeScale)
+  });
+  document.documentElement.style.setProperty('--tile-scale', tileScale);
+  const tileWidth=parseInt(document.getElementById('tileWidth').value,10);
+  document.documentElement.style.setProperty('--tile-width', (tileWidth * tileScale) + 'px');
+  document.documentElement.style.setProperty('--font-scale', fontScale);
+  document.documentElement.style.setProperty('--close-scale', closeScale);
+}
+
 function updateScroll(){
   const el = document.getElementById('scrollSpeed');
   const scrollSpeed = parseFloat(el.value);
@@ -95,10 +121,28 @@ function updateScroll(){
   document.getElementById('scrollSpeedValue').textContent = scrollSpeed.toFixed(1);
 }
 
+function resetScale(){
+  document.getElementById('uiScale').value = 1;
+  document.getElementById('tileScale').value = DEFAULT_TILE_SCALE;
+  document.getElementById('fontScale').value = DEFAULT_FONT_SCALE;
+  document.getElementById('closeScale').value = DEFAULT_CLOSE_SCALE;
+  browser.storage.local.set({
+    tileScale: DEFAULT_TILE_SCALE,
+    fontScale: DEFAULT_FONT_SCALE,
+    closeScale: DEFAULT_CLOSE_SCALE
+  });
+  document.documentElement.style.setProperty('--tile-scale', DEFAULT_TILE_SCALE);
+  const tileWidth = parseInt(document.getElementById('tileWidth').value,10);
+  document.documentElement.style.setProperty('--tile-width', (tileWidth * DEFAULT_TILE_SCALE) + 'px');
+  document.documentElement.style.setProperty('--font-scale', DEFAULT_FONT_SCALE);
+  document.documentElement.style.setProperty('--close-scale', DEFAULT_CLOSE_SCALE);
+}
+
 const elTileWidth = document.getElementById('tileWidth');
 const elTileScale = document.getElementById('tileScale');
 const elFontScale = document.getElementById('fontScale');
 const elCloseScale = document.getElementById('closeScale');
+const elUIScale = document.getElementById('uiScale');
 const elScrollSpeed = document.getElementById('scrollSpeed');
 
 elTileWidth.addEventListener('input', updateWidth);
@@ -115,5 +159,9 @@ elCloseScale.addEventListener('change', updateCloseScale);
 
 elScrollSpeed.addEventListener('input', updateScroll);
 elScrollSpeed.addEventListener('change', updateScroll);
+
+elUIScale.addEventListener('input', updateUIScale);
+elUIScale.addEventListener('change', updateUIScale);
 document.getElementById('save').addEventListener('click', save);
+document.getElementById('reset-scale').addEventListener('click', resetScale);
 load();
