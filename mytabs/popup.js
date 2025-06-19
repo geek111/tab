@@ -26,6 +26,8 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+let movePending = false;
+let moveIds = [];
 
 function adjustGridWidth() {
   if (!document.body.classList.contains('full')) return;
@@ -60,6 +62,55 @@ function clearPlaceholder() {
 
 function hideAllTooltips() {
   document.querySelectorAll('.tab-tooltip').forEach(t => t.remove());
+}
+
+function startMoveFlag() {
+  moveIds = getSelectedTabIds();
+  if (!moveIds.length) return;
+  movePending = true;
+  moveIds.forEach(id => {
+    const el = container.querySelector(`.tab[data-tab="${id}"]`);
+    if (el) el.classList.add('move-flag');
+  });
+}
+
+function clearMoveFlag() {
+  movePending = false;
+  moveIds = [];
+  document.querySelectorAll('.tab.move-flag').forEach(el =>
+    el.classList.remove('move-flag'));
+}
+
+async function completeMoveFlag(toEl, y) {
+  if (!movePending || !toEl) return;
+  const toId = parseInt(toEl.dataset.tab, 10);
+  const toTab = await browser.tabs.get(toId);
+  const rect = toEl.getBoundingClientRect();
+  const before = y < rect.top + rect.height / 2;
+  let index = before ? toTab.index : toTab.index + 1;
+  const ids = moveIds.filter(id => id !== toId);
+  for (const id of ids) {
+    const fromTab = await browser.tabs.get(id);
+    let idx = index;
+    if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
+      idx--;
+    }
+    if (idx < 0) idx = 0;
+    await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
+    if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
+      index++;
+    }
+  }
+  if (view === 'recent') {
+    await browser.runtime.sendMessage({
+      type: 'reorderRecent',
+      ids,
+      toId,
+      before
+    }).catch(() => {});
+  }
+  clearMoveFlag();
+  scheduleUpdate();
 }
 
 function showPlaceholder(target, before) {
@@ -971,6 +1022,21 @@ window.addEventListener('resize', () => {
 // custom context menu
 const context = document.getElementById('context');
 function showContextMenu(e) {
+  if (MOVE_ENABLED && movePending) {
+    e.preventDefault();
+    hideAllTooltips();
+    context.classList.add('hidden');
+    const tabEl = e.target.closest('.tab');
+    completeMoveFlag(tabEl, e.clientY);
+    return;
+  }
+  if (MOVE_ENABLED && !movePending && getSelectedTabIds().length) {
+    e.preventDefault();
+    hideAllTooltips();
+    context.classList.add('hidden');
+    startMoveFlag();
+    return;
+  }
   e.preventDefault();
   hideAllTooltips();
   const tabEl = e.target.closest('.tab');

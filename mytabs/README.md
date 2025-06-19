@@ -11,6 +11,8 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - Perform bulk operations (close, reload, unload, move) on selected tabs, and a
   command to unload all tabs at once. The keyboard shortcut for this command can
   be configured on the Options page.
+- Right-click once to mark selected tabs for moving, then right-click another
+  tab to drop them at that position.
 - Each tab row includes a button to quickly close that tab.
 - Tabs can be reordered via drag and drop, including moving multiple selected tabs at once.
 - Bulk assign selected tabs to any Firefox container or move them back to the default container.
