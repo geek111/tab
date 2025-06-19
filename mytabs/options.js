@@ -1,3 +1,7 @@
+const BASE_TILE_SCALE = 0.9;
+const BASE_FONT_SCALE = 0.8125;
+const BASE_CLOSE_SCALE = 0.5;
+
 async function load(){
   const data = await browser.storage.local.get([
     'theme','tileWidth','tileScale','fontScale','closeScale','scrollSpeed',
@@ -27,6 +31,8 @@ async function load(){
   document.getElementById('tileScale').value = tileScale;
   document.getElementById('fontScale').value = fontScale;
   document.getElementById('closeScale').value = closeScale;
+  const uiScale = 1 + (tileScale - BASE_TILE_SCALE);
+  document.getElementById('uiScale').value = uiScale.toFixed(1);
   document.getElementById('scrollSpeed').value = scrollSpeed;
   document.getElementById('scrollSpeedValue').textContent = scrollSpeed;
   document.getElementById('opt-show-recent').checked = showRecent;
@@ -88,6 +94,21 @@ function updateCloseScale(){
   document.documentElement.style.setProperty('--close-scale', closeScale);
 }
 
+function updateUIScale(){
+  const uiScale = parseFloat(document.getElementById('uiScale').value);
+  const diff = uiScale - 1;
+  const tileScale = Math.min(2, Math.max(0.5, BASE_TILE_SCALE + diff));
+  const fontScale = Math.min(2, Math.max(0.5, BASE_FONT_SCALE + diff));
+  const closeScale = Math.min(2, Math.max(0.25, BASE_CLOSE_SCALE + diff));
+  browser.storage.local.set({tileScale, fontScale, closeScale});
+  document.getElementById('tileScale').value = tileScale;
+  document.getElementById('fontScale').value = fontScale;
+  document.getElementById('closeScale').value = closeScale;
+  document.documentElement.style.setProperty('--tile-scale', tileScale);
+  document.documentElement.style.setProperty('--font-scale', fontScale);
+  document.documentElement.style.setProperty('--close-scale', closeScale);
+}
+
 function updateScroll(){
   const el = document.getElementById('scrollSpeed');
   const scrollSpeed = parseFloat(el.value);
@@ -99,6 +120,7 @@ const elTileWidth = document.getElementById('tileWidth');
 const elTileScale = document.getElementById('tileScale');
 const elFontScale = document.getElementById('fontScale');
 const elCloseScale = document.getElementById('closeScale');
+const elUIScale = document.getElementById('uiScale');
 const elScrollSpeed = document.getElementById('scrollSpeed');
 
 elTileWidth.addEventListener('input', updateWidth);
@@ -113,7 +135,27 @@ elFontScale.addEventListener('change', updateFont);
 elCloseScale.addEventListener('input', updateCloseScale);
 elCloseScale.addEventListener('change', updateCloseScale);
 
+elUIScale.addEventListener('input', updateUIScale);
+elUIScale.addEventListener('change', updateUIScale);
+
 elScrollSpeed.addEventListener('input', updateScroll);
 elScrollSpeed.addEventListener('change', updateScroll);
 document.getElementById('save').addEventListener('click', save);
+
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && (changes.tileScale || changes.fontScale || changes.closeScale)) {
+    const tileScale = changes.tileScale ? changes.tileScale.newValue : parseFloat(document.getElementById('tileScale').value);
+    const fontScale = changes.fontScale ? changes.fontScale.newValue : parseFloat(document.getElementById('fontScale').value);
+    const closeScale = changes.closeScale ? changes.closeScale.newValue : parseFloat(document.getElementById('closeScale').value);
+    document.getElementById('tileScale').value = tileScale;
+    document.getElementById('fontScale').value = fontScale;
+    document.getElementById('closeScale').value = closeScale;
+    document.documentElement.style.setProperty('--tile-scale', tileScale);
+    document.documentElement.style.setProperty('--font-scale', fontScale);
+    document.documentElement.style.setProperty('--close-scale', closeScale);
+    const uiScale = 1 + (tileScale - BASE_TILE_SCALE);
+    document.getElementById('uiScale').value = uiScale.toFixed(1);
+  }
+});
+
 load();
