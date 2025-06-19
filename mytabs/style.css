@@ -95,10 +95,30 @@ body[data-theme="dark"] #context div:hover {
   margin-left: 0.2em;
 }
 
+#search-wrapper {
+  position: relative;
+}
+
 #search {
   width: 100%;
-  padding: 0.2em;
+  padding: 0.2em 1.4em 0.2em 0.2em;
   box-sizing: border-box;
+}
+
+#clear-search {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1.4em;
+  height: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: none;
+}
+
+#clear-search.visible {
+  display: block;
 }
 
 #tabs {

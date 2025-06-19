@@ -687,7 +687,27 @@ browser.runtime.onMessage.addListener((msg) => {
 });
 
 const searchBox = document.getElementById('search');
-searchBox.addEventListener('input', scheduleUpdate);
+const clearBtn = document.getElementById('clear-search');
+
+function toggleClear() {
+  if (clearBtn) {
+    clearBtn.classList.toggle('visible', !!searchBox.value);
+  }
+}
+
+searchBox.addEventListener('input', () => {
+  scheduleUpdate();
+  toggleClear();
+});
+
+if (clearBtn) {
+  clearBtn.addEventListener('click', () => {
+    searchBox.value = '';
+    toggleClear();
+    scheduleUpdate();
+    searchBox.focus();
+  });
+}
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
@@ -695,6 +715,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (searchBox.value) {
       searchBox.value = '';
+      toggleClear();
       scheduleUpdate();
     }
     return;
@@ -704,6 +725,7 @@ document.addEventListener('keydown', (e) => {
       !e.ctrlKey && !e.metaKey && !e.altKey) {
     searchBox.focus();
     searchBox.value += e.key;
+    toggleClear();
     scheduleUpdate();
     e.preventDefault();
     e.stopPropagation();
@@ -924,6 +946,7 @@ async function init() {
   if (MOVE_ENABLED && moveBtn) moveBtn.addEventListener('click', bulkMove);
   else if (moveBtn) moveBtn.style.display = 'none';
   await update();
+  toggleClear();
   restoreScroll();
 }
 
