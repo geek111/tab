@@ -1,9 +1,13 @@
 (async function(){
-  let { theme = 'light', tileWidth = 150, tileScale = 0.9, fontScale = 0.8125, closeScale = 0.5 } =
-    await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale']);
+  let { theme = 'light', tileWidth = 150, tileScale = 0.9, fontScale = 0.8125, closeScale = 0.5, zoom = 1 } =
+    await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale','zoom']);
   if (closeScale === undefined) {
     closeScale = 0.5;
     browser.storage.local.set({ closeScale });
+  }
+  if (zoom === undefined) {
+    zoom = 1;
+    browser.storage.local.set({ zoom });
   }
 
   function apply(){
@@ -16,6 +20,7 @@
     document.documentElement.style.setProperty('--tile-scale', scale);
     document.documentElement.style.setProperty('--font-scale', font);
     document.documentElement.style.setProperty('--close-scale', closeScale);
+    document.documentElement.style.setProperty('--zoom', zoom);
     if (document.body.classList.contains('full')) {
       document.body.style.removeProperty('width');
     }
@@ -24,6 +29,19 @@
 
   apply();
 
+  function updateZoom(value) {
+    zoom = Math.min(3, Math.max(0.5, value));
+    browser.storage.local.set({ zoom });
+    document.documentElement.style.setProperty('--zoom', zoom);
+  }
+
+  window.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.1 : -0.1;
+    updateZoom(zoom + delta);
+  }, { passive: false });
+
   browser.storage.onChanged.addListener((changes, area) => {
     if (area === 'local') {
       if (changes.theme) theme = changes.theme.newValue;
@@ -31,6 +49,7 @@
       if (changes.tileScale) tileScale = changes.tileScale.newValue;
       if (changes.fontScale) fontScale = changes.fontScale.newValue;
       if (changes.closeScale) closeScale = changes.closeScale.newValue;
+      if (changes.zoom) zoom = changes.zoom.newValue;
       apply();
     }
   });
