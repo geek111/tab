@@ -24,12 +24,12 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   - In Full View, overflowing columns can be scrolled horizontally with the mouse wheel.
     Trackpad gestures and horizontal wheels are supported.
   - Scroll speed can be adjusted from the Options page to make scrolling more aggressive.
-  - Hold **Ctrl** and use the mouse wheel to change the interface scale. The selected scale is saved.
+  - Hold **Ctrl** and use the mouse wheel to change the interface scale. The selected scale is saved and reflected in the Options page.
   - Hovering a tab's icon in the popup or Full View shows a custom tooltip with the tab title and URL, truncated for brevity. If the tab belongs to a container, the tooltip also displays the container name.
   - The columns can extend wider than the window and a horizontal scrollbar appears when needed.
   - Tabs from each window are separated by labeled dividers with extra spacing for clarity.
   - A colored dot indicates the tab's container.
-  - Options page lets you choose theme, tile width, tile scale, font scale and close button scale and toggle features such as
+  - Options page lets you choose theme, tile width, tile scale, font scale, close button scale and the overall UI scale and toggle features such as
   the Recent and Duplicates panels or the Move command.
 - The Close Button Scale adjusts the “×” size independent of the font scale.
 - A dark theme can also be enabled from the options page.
