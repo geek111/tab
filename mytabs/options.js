@@ -176,4 +176,47 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+let groupData = [];
+
+async function loadGroups() {
+  try {
+    groupData = await browser.tabGroups.query({});
+  } catch (e) {
+    console.error('Failed to load groups', e);
+    groupData = [];
+  }
+  renderGroups();
+}
+
+function renderGroups() {
+  const container = document.getElementById('groups');
+  if (!container) return;
+  container.innerHTML = '';
+  for (const g of groupData) {
+    const row = document.createElement('div');
+    const input = document.createElement('input');
+    input.value = g.title || `Group ${g.id}`;
+    input.addEventListener('change', async () => {
+      await browser.tabGroups.update(g.id, { title: input.value });
+      loadGroups();
+    });
+    const del = document.createElement('button');
+    del.textContent = 'Delete';
+    del.addEventListener('click', async () => {
+      if (confirm('Delete this group?')) {
+        const tabs = await browser.tabs.query({ groupId: g.id });
+        if (tabs.length) await browser.tabs.ungroup(tabs.map(t => t.id));
+        loadGroups();
+      }
+    });
+    row.appendChild(input);
+    row.appendChild(del);
+    container.appendChild(row);
+  }
+}
+
+
+
+loadGroups();
+
 load();

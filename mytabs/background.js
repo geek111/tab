@@ -6,6 +6,7 @@ let visited = new Set();
 let recentTimer = null;
 let visitedTimer = null;
 
+
 // Track duplicate tabs by URL
 const dupMap = new Map();
 const dupIds = new Set();
@@ -66,6 +67,7 @@ browser.storage.local.get(['recent', 'visited']).then(data => {
   recent = data.recent || [];
   visited = new Set(data.visited || []);
 });
+
 
 // Initialize duplicate tracking
 browser.tabs.query({}).then(tabs => {
