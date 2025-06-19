@@ -6,6 +6,34 @@ let visited = new Set();
 let recentTimer = null;
 let visitedTimer = null;
 
+const USE_NATIVE_GROUPS = !!(browser.tabGroups && browser.tabs.group && browser.tabs.ungroup);
+
+let groups = [];
+let tabGroups = new Map();
+let nextGroupId = 1;
+let groupsTimer = null;
+let tabGroupsTimer = null;
+
+function scheduleGroupsSave() {
+  if (USE_NATIVE_GROUPS) return;
+  if (!groupsTimer) {
+    groupsTimer = setTimeout(() => {
+      groupsTimer = null;
+      browser.storage.local.set({ groups, nextGroupId });
+    }, 500);
+  }
+}
+
+function scheduleTabGroupsSave() {
+  if (USE_NATIVE_GROUPS) return;
+  if (!tabGroupsTimer) {
+    tabGroupsTimer = setTimeout(() => {
+      tabGroupsTimer = null;
+      browser.storage.local.set({ tabGroups: Object.fromEntries(tabGroups) });
+    }, 500);
+  }
+}
+
 // Track duplicate tabs by URL
 const dupMap = new Map();
 const dupIds = new Set();
@@ -66,6 +94,15 @@ browser.storage.local.get(['recent', 'visited']).then(data => {
   recent = data.recent || [];
   visited = new Set(data.visited || []);
 });
+
+if (!USE_NATIVE_GROUPS) {
+  browser.storage.local.get(['groups', 'tabGroups', 'nextGroupId']).then(data => {
+    groups = data.groups || [];
+    nextGroupId = data.nextGroupId || 1;
+    const tg = data.tabGroups || {};
+    tabGroups = new Map(Object.entries(tg).map(([k, v]) => [parseInt(k, 10), v]));
+  });
+}
 
 // Initialize duplicate tracking
 browser.tabs.query({}).then(tabs => {
@@ -169,6 +206,9 @@ browser.tabs.onRemoved.addListener((tabId) => {
     scheduleVisitedSave();
     sendVisitedUpdate();
   }
+  if (!USE_NATIVE_GROUPS && tabGroups.delete(tabId)) {
+    scheduleTabGroupsSave();
+  }
   removeDuplicate(tabId);
 });
 
@@ -184,7 +224,7 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   }
 });
 
-browser.runtime.onMessage.addListener((msg) => {
+browser.runtime.onMessage.addListener(async (msg) => {
   if (msg && msg.type === 'getRecent') {
     return Promise.resolve({ recent });
   } else if (msg && msg.type === 'getVisited') {
@@ -195,6 +235,71 @@ browser.runtime.onMessage.addListener((msg) => {
     unmarkVisited(msg.tabId);
   } else if (msg && msg.type === 'reorderRecent') {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
+  } else if (msg && msg.type === 'getGroups') {
+    if (USE_NATIVE_GROUPS) {
+      const groups = await browser.tabGroups.query({});
+      const tabs = await browser.tabs.query({});
+      const tg = {};
+      for (const t of tabs) tg[t.id] = t.groupId;
+      return { groups: groups.map(g => ({ id: g.id, name: g.title })), tabGroups: tg };
+    }
+    return { groups, tabGroups: Object.fromEntries(tabGroups) };
+  } else if (msg && msg.type === 'createGroup') {
+    if (USE_NATIVE_GROUPS) {
+      const ids = msg.ids || [];
+      let gid;
+      if (ids.length) {
+        gid = await browser.tabs.group({ tabIds: ids });
+      } else {
+        const t = await browser.tabs.create({});
+        gid = await browser.tabs.group({ tabIds: [t.id] });
+      }
+      if (msg.name) {
+        try { await browser.tabGroups.update(gid, { title: msg.name }); } catch (_) {}
+      }
+      return {};
+    }
+    const id = nextGroupId++;
+    groups.push({ id, name: msg.name || 'Group' });
+    scheduleGroupsSave();
+    return { groups };
+  } else if (msg && msg.type === 'deleteGroup') {
+    if (USE_NATIVE_GROUPS) {
+      const tabs = await browser.tabs.query({ groupId: msg.id });
+      if (tabs.length) await browser.tabs.ungroup(tabs.map(t => t.id));
+      return {};
+    }
+    groups = groups.filter(g => g.id !== msg.id);
+    for (const [k, v] of Array.from(tabGroups)) {
+      if (v === msg.id) tabGroups.delete(parseInt(k, 10));
+    }
+    scheduleGroupsSave();
+    scheduleTabGroupsSave();
+    return { groups };
+  } else if (msg && msg.type === 'renameGroup') {
+    if (USE_NATIVE_GROUPS) {
+      try { await browser.tabGroups.update(msg.id, { title: msg.name }); } catch (_) {}
+      return {};
+    }
+    const g = groups.find(g => g.id === msg.id);
+    if (g) {
+      g.name = msg.name || g.name;
+      scheduleGroupsSave();
+    }
+    return { groups };
+  } else if (msg && msg.type === 'assignGroups') {
+    if (USE_NATIVE_GROUPS) {
+      const ids = msg.ids || [];
+      if (msg.groupId) await browser.tabs.group({ groupId: msg.groupId, tabIds: ids });
+      else await browser.tabs.ungroup(ids);
+      return {};
+    }
+    (msg.ids || []).forEach(id => {
+      if (msg.groupId) tabGroups.set(id, msg.groupId);
+      else tabGroups.delete(id);
+    });
+    scheduleTabGroupsSave();
+    return {};
   }
 });
 
