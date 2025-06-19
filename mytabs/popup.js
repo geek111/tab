@@ -687,7 +687,38 @@ browser.runtime.onMessage.addListener((msg) => {
 });
 
 const searchBox = document.getElementById('search');
-searchBox.addEventListener('input', scheduleUpdate);
+const clearBtn = document.getElementById('search-clear');
+
+function adjustSearchWidth() {
+  if (!searchBox) return;
+  const minLen = searchBox.placeholder?.length || 1;
+  const len = Math.max(searchBox.value.length, minLen);
+  searchBox.style.width = `${len}ch`;
+}
+
+function updateClearButton() {
+  if (clearBtn) {
+    clearBtn.classList.toggle('hidden', !searchBox.value);
+  }
+}
+
+searchBox.addEventListener('input', () => {
+  updateClearButton();
+  adjustSearchWidth();
+  scheduleUpdate();
+});
+
+clearBtn?.addEventListener('click', () => {
+  if (searchBox.value) {
+    searchBox.value = '';
+    updateClearButton();
+    adjustSearchWidth();
+    scheduleUpdate();
+  }
+});
+
+updateClearButton();
+adjustSearchWidth();
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {

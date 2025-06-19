@@ -95,8 +95,29 @@ body[data-theme="dark"] #context div:hover {
   margin-left: 0.2em;
 }
 
+.search-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.clear-btn {
+  margin-left: 0.2em;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.clear-btn.hidden {
+  display: none;
+}
+
 #search {
-  width: 100%;
+  flex: 0 1 auto;
+  width: auto;
+  max-width: 100%;
   padding: 0.2em;
   box-sizing: border-box;
 }
