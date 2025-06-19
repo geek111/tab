@@ -34,4 +34,26 @@
       apply();
     }
   });
+
+  function onZoomWheel(e){
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const delta = e.deltaY || e.deltaX;
+    const step = delta < 0 ? 0.1 : -0.1;
+    const newTile = Math.min(2, Math.max(0.5, tileScale + step));
+    const newFont = Math.min(2, Math.max(0.5, fontScale + step));
+    const newClose = Math.min(2, Math.max(0.25, closeScale + step));
+    if (
+      newTile === tileScale &&
+      newFont === fontScale &&
+      newClose === closeScale
+    ) return;
+    tileScale = newTile;
+    fontScale = newFont;
+    closeScale = newClose;
+    browser.storage.local.set({ tileScale, fontScale, closeScale });
+    apply();
+  }
+
+  document.addEventListener('wheel', onZoomWheel, { passive: false });
 })();
