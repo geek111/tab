@@ -7,6 +7,7 @@
   --color-selected: #dceaff;
   --color-muted: #888;
   --color-visited: #f0fff0;
+  --ui-scale: 1;
   --tile-width: 150px;
   --tile-height: 32px;
   --tile-scale: 0.9;
@@ -23,6 +24,11 @@
 
 html, body {
   height: 100%;
+}
+
+html {
+  transform-origin: top left;
+  transform: scale(var(--ui-scale));
 }
 
 body {

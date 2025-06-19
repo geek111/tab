@@ -13,6 +13,7 @@
     const isPopup = document.body.classList.contains('popup');
     const scale = isPopup ? tileScale * 0.8 : tileScale;
     const font = isPopup ? fontScale * 0.85 : fontScale;
+    document.documentElement.style.setProperty('--ui-scale', scale);
     document.documentElement.style.setProperty('--tile-scale', scale);
     document.documentElement.style.setProperty('--font-scale', font);
     document.documentElement.style.setProperty('--close-scale', closeScale);
@@ -34,4 +35,20 @@
       apply();
     }
   });
+
+  function onZoomWheel(e){
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const delta = e.deltaY || e.deltaX;
+    const step = delta < 0 ? 0.1 : -0.1;
+    const newTile = Math.min(2, Math.max(0.5, tileScale + step));
+    const newFont = Math.min(2, Math.max(0.5, fontScale + step));
+    if (newTile === tileScale && newFont === fontScale) return;
+    tileScale = newTile;
+    fontScale = newFont;
+    browser.storage.local.set({ tileScale, fontScale });
+    apply();
+  }
+
+  document.addEventListener('wheel', onZoomWheel, { passive: false });
 })();
