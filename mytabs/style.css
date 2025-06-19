@@ -95,9 +95,33 @@ body[data-theme="dark"] #context div:hover {
   margin-left: 0.2em;
 }
 
+.search-wrapper {
+  position: relative;
+}
+
+.clear-btn {
+  position: absolute;
+  right: 0.2em;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 0;
+  width: 1em;
+  height: 1em;
+  line-height: 1;
+}
+
+.clear-btn.hidden {
+  display: none;
+}
+
 #search {
   width: 100%;
   padding: 0.2em;
+  padding-right: 1.4em;
   box-sizing: border-box;
 }
 
