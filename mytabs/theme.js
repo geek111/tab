@@ -1,6 +1,6 @@
 (async function(){
-  let { theme = 'light', tileWidth = 150, tileScale = 0.9, fontScale = 0.8125, closeScale = 0.5 } =
-    await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale']);
+  let { theme = 'light', tileWidth = 150, tileScale = 0.9, fontScale = 0.8125, closeScale = 0.5, rowGap = 0.1 } =
+    await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale','rowGap']);
   if (closeScale === undefined) {
     closeScale = 0.5;
     browser.storage.local.set({ closeScale });
@@ -16,6 +16,7 @@
     document.documentElement.style.setProperty('--tile-scale', scale);
     document.documentElement.style.setProperty('--font-scale', font);
     document.documentElement.style.setProperty('--close-scale', closeScale);
+    document.documentElement.style.setProperty('--row-gap', rowGap + 'em');
     if (document.body.classList.contains('full')) {
       document.body.style.removeProperty('width');
     }
@@ -31,6 +32,7 @@
       if (changes.tileScale) tileScale = changes.tileScale.newValue;
       if (changes.fontScale) fontScale = changes.fontScale.newValue;
       if (changes.closeScale) closeScale = changes.closeScale.newValue;
+      if (changes.rowGap) rowGap = changes.rowGap.newValue;
       apply();
     }
   });

@@ -4,7 +4,7 @@ const BASE_CLOSE_SCALE = 0.5;
 
 async function load(){
   const data = await browser.storage.local.get([
-    'theme','tileWidth','tileScale','fontScale','closeScale','scrollSpeed',
+    'theme','tileWidth','tileScale','fontScale','closeScale','rowGap','scrollSpeed',
     'showRecent','showDuplicates','enableMove',
     'keyOpenPopup','keyOpenFull','keyUnloadAll'
   ]);
@@ -14,6 +14,7 @@ async function load(){
     tileScale=0.9,
     fontScale=0.8125,
     scrollSpeed=1,
+    rowGap=0.1,
     showRecent=true,
     showDuplicates=true,
     enableMove=true,
@@ -31,6 +32,7 @@ async function load(){
   document.getElementById('tileScale').value = tileScale;
   document.getElementById('fontScale').value = fontScale;
   document.getElementById('closeScale').value = closeScale;
+  document.getElementById('rowGap').value = rowGap;
   const uiScale = 1 + (tileScale - BASE_TILE_SCALE);
   document.getElementById('uiScale').value = uiScale.toFixed(1);
   document.getElementById('scrollSpeed').value = scrollSpeed;
@@ -45,6 +47,7 @@ async function load(){
   document.documentElement.style.setProperty('--tile-scale', tileScale);
   document.documentElement.style.setProperty('--font-scale', fontScale);
   document.documentElement.style.setProperty('--close-scale', closeScale);
+  document.documentElement.style.setProperty('--row-gap', rowGap + 'em');
 }
 async function save(){
   const theme=document.getElementById('theme').value;
@@ -59,8 +62,9 @@ async function save(){
   const keyOpenPopup=document.getElementById('key-open-popup').value.trim();
   const keyOpenFull=document.getElementById('key-open-full').value.trim();
   const keyUnloadAll=document.getElementById('key-unload-all').value.trim();
+  const rowGap=parseFloat(document.getElementById('rowGap').value);
   await browser.storage.local.set({
-    theme, tileWidth, tileScale, fontScale, closeScale, scrollSpeed,
+    theme, tileWidth, tileScale, fontScale, closeScale, rowGap, scrollSpeed,
     showRecent, showDuplicates, enableMove,
     keyOpenPopup, keyOpenFull, keyUnloadAll
   });
@@ -94,6 +98,12 @@ function updateCloseScale(){
   document.documentElement.style.setProperty('--close-scale', closeScale);
 }
 
+function updateRowGap(){
+  const rowGap=parseFloat(document.getElementById('rowGap').value);
+  browser.storage.local.set({rowGap});
+  document.documentElement.style.setProperty('--row-gap', rowGap + 'em');
+}
+
 function updateUIScale(){
   const uiScale = parseFloat(document.getElementById('uiScale').value);
   const diff = uiScale - 1;
@@ -122,6 +132,7 @@ const elFontScale = document.getElementById('fontScale');
 const elCloseScale = document.getElementById('closeScale');
 const elUIScale = document.getElementById('uiScale');
 const elScrollSpeed = document.getElementById('scrollSpeed');
+const elRowGap = document.getElementById('rowGap');
 
 elTileWidth.addEventListener('input', updateWidth);
 elTileWidth.addEventListener('change', updateWidth);
@@ -135,6 +146,9 @@ elFontScale.addEventListener('change', updateFont);
 elCloseScale.addEventListener('input', updateCloseScale);
 elCloseScale.addEventListener('change', updateCloseScale);
 
+elRowGap.addEventListener('input', updateRowGap);
+elRowGap.addEventListener('change', updateRowGap);
+
 elUIScale.addEventListener('input', updateUIScale);
 elUIScale.addEventListener('change', updateUIScale);
 
@@ -143,7 +157,7 @@ elScrollSpeed.addEventListener('change', updateScroll);
 document.getElementById('save').addEventListener('click', save);
 
 browser.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && (changes.tileScale || changes.fontScale || changes.closeScale)) {
+  if (area === 'local' && (changes.tileScale || changes.fontScale || changes.closeScale || changes.rowGap)) {
     const tileScale = changes.tileScale ? changes.tileScale.newValue : parseFloat(document.getElementById('tileScale').value);
     const fontScale = changes.fontScale ? changes.fontScale.newValue : parseFloat(document.getElementById('fontScale').value);
     const closeScale = changes.closeScale ? changes.closeScale.newValue : parseFloat(document.getElementById('closeScale').value);
@@ -153,6 +167,10 @@ browser.storage.onChanged.addListener((changes, area) => {
     document.documentElement.style.setProperty('--tile-scale', tileScale);
     document.documentElement.style.setProperty('--font-scale', fontScale);
     document.documentElement.style.setProperty('--close-scale', closeScale);
+    if (changes.rowGap) {
+      document.getElementById('rowGap').value = changes.rowGap.newValue;
+      document.documentElement.style.setProperty('--row-gap', changes.rowGap.newValue + 'em');
+    }
     const uiScale = 1 + (tileScale - BASE_TILE_SCALE);
     document.getElementById('uiScale').value = uiScale.toFixed(1);
   }
