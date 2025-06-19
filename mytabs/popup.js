@@ -687,7 +687,38 @@ browser.runtime.onMessage.addListener((msg) => {
 });
 
 const searchBox = document.getElementById('search');
-searchBox.addEventListener('input', scheduleUpdate);
+const clearBtn = document.getElementById('search-clear');
+const measureCtx = document.createElement('canvas').getContext('2d');
+
+function updateClearButton() {
+  if (!clearBtn) return;
+  const style = window.getComputedStyle(searchBox);
+  measureCtx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  const textWidth = measureCtx.measureText(searchBox.value).width;
+  const paddingLeft = parseFloat(style.paddingLeft) || 0;
+  const paddingRight = parseFloat(style.paddingRight) || 0;
+  const maxLeft = searchBox.offsetWidth - clearBtn.offsetWidth - paddingRight;
+  const left = Math.min(paddingLeft + textWidth + 4, maxLeft);
+  clearBtn.style.left = `${left}px`;
+  clearBtn.classList.toggle('hidden', !searchBox.value);
+}
+
+searchBox.addEventListener('input', () => {
+  updateClearButton();
+  scheduleUpdate();
+});
+
+window.addEventListener('resize', updateClearButton);
+
+clearBtn?.addEventListener('click', () => {
+  if (searchBox.value) {
+    searchBox.value = '';
+    updateClearButton();
+    scheduleUpdate();
+  }
+});
+
+updateClearButton();
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
