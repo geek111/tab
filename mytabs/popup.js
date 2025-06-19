@@ -1074,7 +1074,6 @@ function showContextMenu(e) {
     addItem('Reload Selected', bulkReload);
     addItem('Unload Selected', bulkDiscard);
     if (MOVE_ENABLED) {
-      addItem('Move Selected', bulkMove);
       if (!movePending) addItem('Flag for Move', flagTabsForMove);
       else addItem('Clear Move Flag', clearMovePending);
     }
@@ -1103,15 +1102,7 @@ function showContextMenu(e) {
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
       scheduleUpdate();
     });
-    if (MOVE_ENABLED) {
-      addItem('Move', async () => {
-        const t = await browser.tabs.get(id);
-        const wins = await browser.windows.getAll({populate: false});
-        const other = wins.find(w => w.id !== t.windowId);
-        if (other) await browser.tabs.move(id, {windowId: other.id, index: -1});
-        scheduleUpdate();
-      });
-    }
+    // Direct move option removed in favor of flagged move workflow
   }
 
   if (!tabEl && !selected.length) {
