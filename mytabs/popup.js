@@ -837,7 +837,6 @@ function showContextMenu(e) {
     addItem('Close Selected', bulkClose);
     addItem('Reload Selected', bulkReload);
     addItem('Unload Selected', bulkDiscard);
-    if (MOVE_ENABLED) addItem('Move Selected', bulkMove);
     addItem('Add Selected to Container', () => {
       const id = targetSelect ? targetSelect.value : 'firefox-default';
       return bulkAssignToContainer(id);
@@ -855,15 +854,6 @@ function showContextMenu(e) {
       scheduleUpdate();
     });
     addItem('Close', async () => { await browser.tabs.remove(id); scheduleUpdate(); });
-    if (MOVE_ENABLED) {
-      addItem('Move', async () => {
-        const t = await browser.tabs.get(id);
-        const wins = await browser.windows.getAll({populate: false});
-        const other = wins.find(w => w.id !== t.windowId);
-        if (other) await browser.tabs.move(id, {windowId: other.id, index: -1});
-        scheduleUpdate();
-      });
-    }
   }
 
   if (!tabEl && !selected.length) {
