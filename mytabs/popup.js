@@ -26,6 +26,7 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+let pendingMoveIds = null;
 
 function adjustGridWidth() {
   if (!document.body.classList.contains('full')) return;
@@ -60,6 +61,13 @@ function clearPlaceholder() {
 
 function hideAllTooltips() {
   document.querySelectorAll('.tab-tooltip').forEach(t => t.remove());
+}
+
+function clearPendingMove() {
+  pendingMoveIds = null;
+  document.querySelectorAll('.tab.move-flag').forEach(el => {
+    el.classList.remove('move-flag');
+  });
 }
 
 function showPlaceholder(target, before) {
@@ -829,7 +837,7 @@ async function init() {
       scrollContainer.scrollLeft += delta * SCROLL_SPEED;
     }, { passive: false });
   }
-  document.addEventListener('contextmenu', showContextMenu);
+  document.addEventListener('contextmenu', onContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
   const { visited = [] } = await browser.storage.local.get('visited');
   visitedIds = new Set(visited);
@@ -970,6 +978,26 @@ window.addEventListener('resize', () => {
 
 // custom context menu
 const context = document.getElementById('context');
+
+function onContextMenu(e) {
+  const tabEl = e.target.closest('.tab');
+  if (pendingMoveIds && tabEl) {
+    e.preventDefault();
+    movePendingTabs(tabEl, e.clientY);
+    return;
+  }
+  if (MOVE_ENABLED && !pendingMoveIds && tabEl && getSelectedTabIds().length) {
+    e.preventDefault();
+    pendingMoveIds = getSelectedTabIds();
+    pendingMoveIds.forEach(id => {
+      const el = document.querySelector(`.tab[data-tab="${id}"]`);
+      if (el) el.classList.add('move-flag');
+    });
+    return;
+  }
+  showContextMenu(e);
+}
+
 function showContextMenu(e) {
   e.preventDefault();
   hideAllTooltips();
@@ -1038,7 +1066,10 @@ function showContextMenu(e) {
   context.classList.remove('hidden');
 }
 
-document.addEventListener('click', () => context.classList.add('hidden'));
+document.addEventListener('click', () => {
+  context.classList.add('hidden');
+  if (pendingMoveIds) clearPendingMove();
+});
 
 function getSelectedTabIds() {
   return tabItems.filter(it => !it.separator && it.selected).map(it => it.tab.id);
@@ -1248,6 +1279,37 @@ async function onContainerDrop(e) {
       before
     }).catch(() => {});
   }
+  scheduleUpdate();
+}
+
+async function movePendingTabs(tabEl, clientY) {
+  const toId = parseInt(tabEl.dataset.tab, 10);
+  const toTab = await browser.tabs.get(toId);
+  const rect = tabEl.getBoundingClientRect();
+  const before = clientY < rect.top + rect.height / 2;
+  let index = before ? toTab.index : toTab.index + 1;
+  for (const id of pendingMoveIds) {
+    if (id === toId) continue;
+    const fromTab = await browser.tabs.get(id);
+    let idx = index;
+    if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
+      idx--;
+    }
+    if (idx < 0) idx = 0;
+    await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
+    if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
+      index++;
+    }
+  }
+  if (view === 'recent') {
+    await browser.runtime.sendMessage({
+      type: 'reorderRecent',
+      ids: pendingMoveIds,
+      toId,
+      before
+    }).catch(() => {});
+  }
+  clearPendingMove();
   scheduleUpdate();
 }
 

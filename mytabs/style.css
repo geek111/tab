@@ -169,6 +169,9 @@ body.popup .tab {
 .tab.selected {
   background: var(--color-selected);
 }
+.tab.move-flag {
+  outline: 1px dashed #f90;
+}
 .tab:focus {
   outline: 1px solid #888;
 }
