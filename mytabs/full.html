@@ -14,7 +14,10 @@
         <option value="">All Containers</option>
       </select>
     </div>
-    <input type="text" id="search" placeholder="Search tabs" />
+    <div class="search-container">
+      <input type="text" id="search" placeholder="Search tabs" />
+      <button id="clear-search" class="hidden" aria-label="Clear search">&times;</button>
+    </div>
     <div id="error"></div>
     <div id="tabs-wrapper" class="tab-grid-wrapper">
       <div id="tabs" class="tab-grid"></div>

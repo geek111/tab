@@ -95,10 +95,32 @@ body[data-theme="dark"] #context div:hover {
   margin-left: 0.2em;
 }
 
+.search-container {
+  position: relative;
+}
+
 #search {
   width: 100%;
   padding: 0.2em;
   box-sizing: border-box;
+  padding-right: 1.6em;
+}
+
+#clear-search {
+  position: absolute;
+  right: 0.4em;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--color-close);
+  font-size: 1em;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#clear-search:hover {
+  color: var(--color-close-hover);
 }
 
 #tabs {

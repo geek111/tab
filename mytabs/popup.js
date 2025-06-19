@@ -687,7 +687,26 @@ browser.runtime.onMessage.addListener((msg) => {
 });
 
 const searchBox = document.getElementById('search');
-searchBox.addEventListener('input', scheduleUpdate);
+const clearSearchBtn = document.getElementById('clear-search');
+function updateClearButton() {
+  if (clearSearchBtn) {
+    clearSearchBtn.classList.toggle('hidden', !searchBox.value);
+  }
+}
+if (searchBox) {
+  searchBox.addEventListener('input', () => {
+    updateClearButton();
+    scheduleUpdate();
+  });
+  updateClearButton();
+}
+if (clearSearchBtn) {
+  clearSearchBtn.addEventListener('click', () => {
+    searchBox.value = '';
+    updateClearButton();
+    scheduleUpdate();
+  });
+}
 document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
 
 document.addEventListener('keydown', (e) => {
@@ -695,6 +714,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (searchBox.value) {
       searchBox.value = '';
+      updateClearButton();
       scheduleUpdate();
     }
     return;
