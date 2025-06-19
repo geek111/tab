@@ -185,6 +185,12 @@ body[data-theme="dark"] .tab.drop-before {
 body[data-theme="dark"] .tab.drop-after {
   box-shadow: inset 0 -2px 0 #9af;
 }
+.tab.move-pending {
+  outline: 2px dashed #39f;
+}
+body[data-theme="dark"] .tab.move-pending {
+  outline: 2px dashed #9af;
+}
 .tab-title {
   display: block;
   white-space: nowrap;

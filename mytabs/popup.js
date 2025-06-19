@@ -16,6 +16,7 @@ let filterContainerId = '';
 let containerCache;
 let targetSelect;
 let visitedIds = new Set();
+let movePending = null;
 
 let virtualList = null;
 let tabItems = [];
@@ -50,6 +51,7 @@ function resetTabState() {
   currentVisited = new Set();
   currentWinMap = null;
   currentQuery = '';
+  movePending = null;
 }
 function clearPlaceholder() {
   if (dropTarget) {
@@ -970,6 +972,55 @@ window.addEventListener('resize', () => {
 
 // custom context menu
 const context = document.getElementById('context');
+async function movePendingTo(targetEl, evt) {
+  const ids = movePending;
+  if (!ids || !ids.length) return;
+  const toId = parseInt(targetEl.dataset.tab, 10);
+  const toTab = await browser.tabs.get(toId);
+  const rect = targetEl.getBoundingClientRect();
+  const before = evt.clientY < rect.top + rect.height / 2;
+  let index = before ? toTab.index : toTab.index + 1;
+  for (const id of ids) {
+    if (id === toId) continue;
+    const fromTab = await browser.tabs.get(id);
+    let idx = index;
+    if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
+      idx--;
+    }
+    if (idx < 0) idx = 0;
+    await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
+    if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
+      index++;
+    }
+  }
+  if (view === 'recent') {
+    await browser.runtime.sendMessage({
+      type: 'reorderRecent',
+      ids,
+      toId,
+      before
+    }).catch(() => {});
+  }
+  movePending = null;
+  tabItems.forEach(it => it.el?.classList.remove('move-pending'));
+  scheduleUpdate();
+}
+
+function flagTabsForMove() {
+  movePending = getSelectedTabIds().slice();
+  tabItems.forEach(it => {
+    if (!it.separator && it.selected && it.el) {
+      it.el.classList.add('move-pending');
+    }
+  });
+}
+
+function clearMovePending() {
+  movePending = null;
+  tabItems.forEach(it => it.el?.classList.remove('move-pending'));
+}
+
+
 function showContextMenu(e) {
   e.preventDefault();
   hideAllTooltips();
@@ -991,12 +1042,20 @@ function showContextMenu(e) {
     addItem('Close Selected', bulkClose);
     addItem('Reload Selected', bulkReload);
     addItem('Unload Selected', bulkDiscard);
-    if (MOVE_ENABLED) addItem('Move Selected', bulkMove);
+    if (MOVE_ENABLED) {
+      addItem('Move Selected', bulkMove);
+      if (!movePending) addItem('Flag for Move', flagTabsForMove);
+      else addItem('Clear Move Flag', clearMovePending);
+    }
     addItem('Add Selected to Container', () => {
       const id = targetSelect ? targetSelect.value : 'firefox-default';
       return bulkAssignToContainer(id);
     });
     addItem('Remove Selected from Container', bulkRemoveFromContainer);
+  }
+
+  if (MOVE_ENABLED && movePending && tabEl) {
+    addItem('Move Flagged Tabs Here', () => movePendingTo(tabEl, e));
   }
 
   if (tabEl && (!selected.length || !tabEl.classList.contains('selected'))) {
