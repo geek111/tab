@@ -6,7 +6,8 @@ async function load(){
   const data = await browser.storage.local.get([
     'theme','tileWidth','tileScale','fontScale','closeScale','rowGap','scrollSpeed',
     'showRecent','showDuplicates','enableMove',
-    'keyOpenPopup','keyOpenFull','keyUnloadAll'
+    'keyOpenPopup','keyOpenFull','keyUnloadAll',
+    'keyViewAll','keyViewRecent','keyViewDups'
   ]);
   const {
     theme='light',
@@ -20,7 +21,10 @@ async function load(){
     enableMove=true,
     keyOpenPopup='Alt+Shift+H',
     keyOpenFull='Alt+Shift+F',
-    keyUnloadAll='Alt+Shift+U'
+    keyUnloadAll='Alt+Shift+U',
+    keyViewAll='Shift+A',
+    keyViewRecent='Shift+R',
+    keyViewDups='Shift+D'
   } = data;
   let closeScale = data.closeScale;
   if (closeScale === undefined) {
@@ -43,6 +47,9 @@ async function load(){
   document.getElementById('key-open-popup').value = keyOpenPopup;
   document.getElementById('key-open-full').value = keyOpenFull;
   document.getElementById('key-unload-all').value = keyUnloadAll;
+  document.getElementById('key-view-all').value = keyViewAll;
+  document.getElementById('key-view-recent').value = keyViewRecent;
+  document.getElementById('key-view-dups').value = keyViewDups;
   document.documentElement.style.setProperty('--tile-width', (tileWidth * tileScale) + 'px');
   document.documentElement.style.setProperty('--tile-scale', tileScale);
   document.documentElement.style.setProperty('--font-scale', fontScale);
@@ -62,11 +69,15 @@ async function save(){
   const keyOpenPopup=document.getElementById('key-open-popup').value.trim();
   const keyOpenFull=document.getElementById('key-open-full').value.trim();
   const keyUnloadAll=document.getElementById('key-unload-all').value.trim();
+  const keyViewAll=document.getElementById('key-view-all').value.trim();
+  const keyViewRecent=document.getElementById('key-view-recent').value.trim();
+  const keyViewDups=document.getElementById('key-view-dups').value.trim();
   const rowGap=parseFloat(document.getElementById('rowGap').value);
   await browser.storage.local.set({
     theme, tileWidth, tileScale, fontScale, closeScale, rowGap, scrollSpeed,
     showRecent, showDuplicates, enableMove,
-    keyOpenPopup, keyOpenFull, keyUnloadAll
+    keyOpenPopup, keyOpenFull, keyUnloadAll,
+    keyViewAll, keyViewRecent, keyViewDups
   });
 }
 
@@ -126,6 +137,26 @@ function updateScroll(){
   document.getElementById('scrollSpeedValue').textContent = scrollSpeed.toFixed(1);
 }
 
+function formatShortcut(evt){
+  const mods=[];
+  if(evt.ctrlKey) mods.push('Ctrl');
+  if(evt.altKey) mods.push('Alt');
+  if(evt.metaKey) mods.push('Meta');
+  if(evt.shiftKey) mods.push('Shift');
+  let key=evt.key;
+  if(key.length===1) key=key.toUpperCase();
+  return [...mods, key].join('+');
+}
+
+function handleShortcutInput(e){
+  if(['Shift','Control','Alt','Meta'].includes(e.key)){
+    e.preventDefault();
+    return;
+  }
+  e.preventDefault();
+  e.target.value=formatShortcut(e);
+}
+
 const elTileWidth = document.getElementById('tileWidth');
 const elTileScale = document.getElementById('tileScale');
 const elFontScale = document.getElementById('fontScale');
@@ -155,6 +186,11 @@ elUIScale.addEventListener('change', updateUIScale);
 elScrollSpeed.addEventListener('input', updateScroll);
 elScrollSpeed.addEventListener('change', updateScroll);
 document.getElementById('save').addEventListener('click', save);
+
+document.querySelectorAll('input[id^="key-"]').forEach(el => {
+  el.addEventListener('keydown', handleShortcutInput);
+  el.addEventListener('focus', () => el.select());
+});
 
 browser.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && (changes.tileScale || changes.fontScale || changes.closeScale || changes.rowGap)) {
