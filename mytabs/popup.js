@@ -6,6 +6,9 @@ let SHOW_RECENT = true;
 let SHOW_DUPLICATES = true;
 let MOVE_ENABLED = true;
 let SCROLL_SPEED = 1;
+let KEY_VIEW_ALL = 'Shift+A';
+let KEY_VIEW_RECENT = 'Shift+R';
+let KEY_VIEW_DUPS = 'Shift+D';
 
 let lastSelectedIndex = -1;
 let container; // tab list element
@@ -95,6 +98,21 @@ function debounce(fn, delay) {
   };
 }
 
+function matchesShortcut(evt, shortcut) {
+  if (!shortcut) return false;
+  const parts = shortcut.toLowerCase().split('+');
+  const key = parts.pop();
+  const need = { ctrl: false, alt: false, shift: false, meta: false };
+  for (const p of parts) {
+    if (need.hasOwnProperty(p)) need[p] = true;
+  }
+  return evt.key.toLowerCase() === key &&
+    evt.ctrlKey === need.ctrl &&
+    evt.altKey === need.alt &&
+    evt.shiftKey === need.shift &&
+    evt.metaKey === need.meta;
+}
+
 function escapeHtml(str) {
   return str.replace(/[&<>"']/g, c => ({
     '&': '&amp;',
@@ -115,18 +133,27 @@ async function loadOptions() {
     showDuplicates = true,
     enableMove = true,
     scrollSpeed = 1,
-    keyUnloadAll = 'Alt+Shift+U'
+    keyUnloadAll = 'Alt+Shift+U',
+    keyViewAll = 'Shift+A',
+    keyViewRecent = 'Shift+R',
+    keyViewDups = 'Shift+D'
   } = await browser.storage.local.get([
     'showRecent',
     'showDuplicates',
     'enableMove',
     'scrollSpeed',
-    'keyUnloadAll'
+    'keyUnloadAll',
+    'keyViewAll',
+    'keyViewRecent',
+    'keyViewDups'
   ]);
   SHOW_RECENT = showRecent !== false;
   SHOW_DUPLICATES = showDuplicates !== false;
   MOVE_ENABLED = enableMove !== false;
   SCROLL_SPEED = parseFloat(scrollSpeed) || 1;
+  KEY_VIEW_ALL = keyViewAll || '';
+  KEY_VIEW_RECENT = keyViewRecent || '';
+  KEY_VIEW_DUPS = keyViewDups || '';
   const btnRecent = document.getElementById('btn-recent');
   const btnDups = document.getElementById('btn-dups');
   if (btnRecent) {
@@ -761,6 +788,25 @@ document.addEventListener('keydown', (e) => {
     });
     return newIdx;
   };
+
+  if (matchesShortcut(e, KEY_VIEW_ALL)) {
+    e.preventDefault();
+    view = 'all';
+    scheduleUpdate();
+    return;
+  }
+  if (matchesShortcut(e, KEY_VIEW_RECENT)) {
+    e.preventDefault();
+    view = 'recent';
+    scheduleUpdate();
+    return;
+  }
+  if (matchesShortcut(e, KEY_VIEW_DUPS)) {
+    e.preventDefault();
+    view = 'dups';
+    scheduleUpdate();
+    return;
+  }
 
   if (e.key === 'Alt' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
     e.preventDefault();
