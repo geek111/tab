@@ -7,6 +7,10 @@ let SHOW_DUPLICATES = true;
 let MOVE_ENABLED = true;
 let SCROLL_SPEED = 1;
 
+let VIEW_KEY_ALL = parseShortcut('Shift+A');
+let VIEW_KEY_RECENT = parseShortcut('Shift+R');
+let VIEW_KEY_DUPS = parseShortcut('Shift+D');
+
 let lastSelectedIndex = -1;
 let container; // tab list element
 let scrollContainer; // scrolling element (wrapper in full view)
@@ -95,6 +99,29 @@ function debounce(fn, delay) {
   };
 }
 
+function parseShortcut(str) {
+  if (!str) return null;
+  const parts = str.toLowerCase().split('+').map(p => p.trim()).filter(Boolean);
+  const key = parts.pop();
+  const mods = { key, shift: false, ctrl: false, alt: false, meta: false };
+  for (const p of parts) {
+    if (p === 'shift') mods.shift = true;
+    else if (p === 'ctrl' || p === 'control') mods.ctrl = true;
+    else if (p === 'alt') mods.alt = true;
+    else if (p === 'meta' || p === 'cmd' || p === 'command') mods.meta = true;
+  }
+  return mods;
+}
+
+function matchShortcut(e, sc) {
+  if (!sc) return false;
+  return sc.key === e.key.toLowerCase() &&
+         sc.shift === !!e.shiftKey &&
+         sc.ctrl === !!e.ctrlKey &&
+         sc.alt === !!e.altKey &&
+         sc.meta === !!e.metaKey;
+}
+
 function escapeHtml(str) {
   return str.replace(/[&<>"']/g, c => ({
     '&': '&amp;',
@@ -115,18 +142,27 @@ async function loadOptions() {
     showDuplicates = true,
     enableMove = true,
     scrollSpeed = 1,
-    keyUnloadAll = 'Alt+Shift+U'
+    keyUnloadAll = 'Alt+Shift+U',
+    keyViewAll = 'Shift+A',
+    keyViewRecent = 'Shift+R',
+    keyViewDups = 'Shift+D'
   } = await browser.storage.local.get([
     'showRecent',
     'showDuplicates',
     'enableMove',
     'scrollSpeed',
-    'keyUnloadAll'
+    'keyUnloadAll',
+    'keyViewAll',
+    'keyViewRecent',
+    'keyViewDups'
   ]);
   SHOW_RECENT = showRecent !== false;
   SHOW_DUPLICATES = showDuplicates !== false;
   MOVE_ENABLED = enableMove !== false;
   SCROLL_SPEED = parseFloat(scrollSpeed) || 1;
+  VIEW_KEY_ALL = parseShortcut(keyViewAll);
+  VIEW_KEY_RECENT = parseShortcut(keyViewRecent);
+  VIEW_KEY_DUPS = parseShortcut(keyViewDups);
   const btnRecent = document.getElementById('btn-recent');
   const btnDups = document.getElementById('btn-dups');
   if (btnRecent) {
@@ -761,6 +797,22 @@ document.addEventListener('keydown', (e) => {
     });
     return newIdx;
   };
+
+  if (matchShortcut(e, VIEW_KEY_ALL)) {
+    view = 'all';
+    scheduleUpdate();
+    return;
+  }
+  if (SHOW_RECENT && matchShortcut(e, VIEW_KEY_RECENT)) {
+    view = 'recent';
+    scheduleUpdate();
+    return;
+  }
+  if (SHOW_DUPLICATES && matchShortcut(e, VIEW_KEY_DUPS)) {
+    view = 'dups';
+    scheduleUpdate();
+    return;
+  }
 
   if (e.key === 'Alt' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
     e.preventDefault();
