@@ -34,6 +34,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - The Close Button Scale adjusts the “×” size independent of the font scale.
 - A dark theme can also be enabled from the options page.
 - Keyboard shortcuts open the popup, sidebar and full view and can be changed from the Options page.
+  The view-switch shortcuts default to **Shift+A**, **Shift+R** and **Shift+D** but can be changed or disabled. When editing these shortcuts the input fields display the pressed keys.
 - Default shortcuts:
   - **Alt+Shift+H** opens the popup.
   - **Alt+Shift+F** opens the Full View window.
