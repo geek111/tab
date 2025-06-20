@@ -6,6 +6,9 @@ let SHOW_RECENT = true;
 let SHOW_DUPLICATES = true;
 let MOVE_ENABLED = true;
 let SCROLL_SPEED = 1;
+let KEY_VIEW_ALL = 'Shift+A';
+let KEY_VIEW_RECENT = 'Shift+R';
+let KEY_VIEW_DUPS = 'Shift+D';
 
 let lastSelectedIndex = -1;
 let container; // tab list element
@@ -27,6 +30,23 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+
+function matchShortcut(def, e) {
+  if (!def) return false;
+  const parts = def.toUpperCase().split('+');
+  const key = parts.pop();
+  const req = {
+    CTRL: parts.includes('CTRL'),
+    ALT: parts.includes('ALT'),
+    META: parts.includes('META'),
+    SHIFT: parts.includes('SHIFT')
+  };
+  return key === e.key.toUpperCase() &&
+    e.ctrlKey === req.CTRL &&
+    e.altKey === req.ALT &&
+    e.metaKey === req.META &&
+    e.shiftKey === req.SHIFT;
+}
 
 function adjustGridWidth() {
   if (!document.body.classList.contains('full')) return;
@@ -115,13 +135,19 @@ async function loadOptions() {
     showDuplicates = true,
     enableMove = true,
     scrollSpeed = 1,
-    keyUnloadAll = 'Alt+Shift+U'
+    keyUnloadAll = 'Alt+Shift+U',
+    keyViewAll = 'Shift+A',
+    keyViewRecent = 'Shift+R',
+    keyViewDups = 'Shift+D'
   } = await browser.storage.local.get([
     'showRecent',
     'showDuplicates',
     'enableMove',
     'scrollSpeed',
-    'keyUnloadAll'
+    'keyUnloadAll',
+    'keyViewAll',
+    'keyViewRecent',
+    'keyViewDups'
   ]);
   SHOW_RECENT = showRecent !== false;
   SHOW_DUPLICATES = showDuplicates !== false;
@@ -153,6 +179,13 @@ async function loadOptions() {
       if (view === 'dups') view = 'all';
     }
   }
+  KEY_VIEW_ALL = keyViewAll || '';
+  KEY_VIEW_RECENT = keyViewRecent || '';
+  KEY_VIEW_DUPS = keyViewDups || '';
+  const btnAll = document.getElementById('btn-all');
+  if (btnAll) btnAll.title = KEY_VIEW_ALL ? `Shortcut: ${KEY_VIEW_ALL}` : '';
+  if (btnRecent) btnRecent.title = KEY_VIEW_RECENT ? `Shortcut: ${KEY_VIEW_RECENT}` : '';
+  if (btnDups) btnDups.title = KEY_VIEW_DUPS ? `Shortcut: ${KEY_VIEW_DUPS}` : '';
   const unloadBtn = document.getElementById('bulk-unload-all');
   if (unloadBtn) unloadBtn.title = `Shortcut: ${keyUnloadAll}`;
 }
@@ -723,6 +756,29 @@ document.getElementById('btn-all').addEventListener('click', () => { view = 'all
 
 document.addEventListener('keydown', (e) => {
   if (!searchBox) return;
+
+  if (matchShortcut(KEY_VIEW_ALL, e)) {
+    view = 'all';
+    scheduleUpdate();
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+  if (matchShortcut(KEY_VIEW_RECENT, e) && SHOW_RECENT) {
+    view = 'recent';
+    scheduleUpdate();
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+  if (matchShortcut(KEY_VIEW_DUPS, e) && SHOW_DUPLICATES) {
+    view = 'dups';
+    scheduleUpdate();
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+
   if (e.key === 'Escape') {
     if (searchBox.value) {
       searchBox.value = '';
@@ -730,9 +786,11 @@ document.addEventListener('keydown', (e) => {
     }
     return;
   }
+
   if (document.activeElement.tagName !== 'INPUT' &&
       e.key.length === 1 &&
-      !e.ctrlKey && !e.metaKey && !e.altKey) {
+      !e.ctrlKey && !e.metaKey && !e.altKey &&
+      !e.shiftKey) {
     searchBox.focus();
     searchBox.value += e.key;
     scheduleUpdate();
@@ -767,6 +825,7 @@ document.addEventListener('keydown', (e) => {
     clearSelection();
     return;
   }
+
 
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();
@@ -993,6 +1052,24 @@ window.addEventListener('unload', cleanup);
 window.addEventListener('theme-applied', () => {
   rowHeight = 0;
   scheduleUpdate();
+});
+
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if ('keyViewAll' in changes) {
+    KEY_VIEW_ALL = changes.keyViewAll.newValue || '';
+    document.getElementById('btn-all').title = KEY_VIEW_ALL ? `Shortcut: ${KEY_VIEW_ALL}` : '';
+  }
+  if ('keyViewRecent' in changes) {
+    KEY_VIEW_RECENT = changes.keyViewRecent.newValue || '';
+    const btn = document.getElementById('btn-recent');
+    if (btn) btn.title = KEY_VIEW_RECENT ? `Shortcut: ${KEY_VIEW_RECENT}` : '';
+  }
+  if ('keyViewDups' in changes) {
+    KEY_VIEW_DUPS = changes.keyViewDups.newValue || '';
+    const btn = document.getElementById('btn-dups');
+    if (btn) btn.title = KEY_VIEW_DUPS ? `Shortcut: ${KEY_VIEW_DUPS}` : '';
+  }
 });
 
 window.addEventListener('resize', () => {
