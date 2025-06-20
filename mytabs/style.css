@@ -251,6 +251,21 @@ body.popup .tab > div {
   margin: 0.5em 0;
   box-sizing: border-box;
 }
+
+.group-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.85em;
+  background: var(--color-hover);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  height: calc(var(--tile-height) * 0.8);
+  margin: 0.4em 0;
+  box-sizing: border-box;
+}
 button {
   padding: 0.3em 0.6em;
   margin-left: 0;
