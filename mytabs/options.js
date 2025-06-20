@@ -176,4 +176,57 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+let groupData = [];
+
+async function loadGroups() {
+  const { groups = [] } = await browser.runtime.sendMessage({ type: 'getGroups' });
+  groupData = groups;
+  renderGroups();
+}
+
+function renderGroups() {
+  const container = document.getElementById('groups');
+  if (!container) return;
+  container.innerHTML = '';
+  for (const g of groupData) {
+    const row = document.createElement('div');
+    const input = document.createElement('input');
+    input.value = g.name;
+    input.addEventListener('change', async () => {
+      const newName = input.value.trim();
+      if (!newName || groupData.some(gr => gr.id !== g.id && gr.name === newName)) {
+        alert('Invalid or duplicate name');
+        input.value = g.name;
+        return;
+      }
+      await browser.runtime.sendMessage({ type: 'renameGroup', id: g.id, name: newName });
+      loadGroups();
+    });
+    const del = document.createElement('button');
+    del.textContent = 'Delete';
+    del.addEventListener('click', async () => {
+      if (confirm('Delete this group?')) {
+        await browser.runtime.sendMessage({ type: 'deleteGroup', id: g.id });
+        loadGroups();
+      }
+    });
+    row.appendChild(input);
+    row.appendChild(del);
+    container.appendChild(row);
+  }
+}
+
+document.getElementById('add-group').addEventListener('click', async () => {
+  const name = document.getElementById('new-group').value.trim();
+  if (!name || groupData.some(g => g.name === name)) {
+    alert('Invalid or duplicate name');
+    return;
+  }
+  await browser.runtime.sendMessage({ type: 'createGroup', name });
+  document.getElementById('new-group').value = '';
+  loadGroups();
+});
+
+loadGroups();
+
 load();

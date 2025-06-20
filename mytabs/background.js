@@ -6,6 +6,34 @@ let visited = new Set();
 let recentTimer = null;
 let visitedTimer = null;
 
+let groups = [];
+let tabGroups = new Map();
+let nextGroupId = 1;
+let groupsTimer = null;
+let tabGroupsTimer = null;
+
+function scheduleGroupsSave() {
+  if (!groupsTimer) {
+    groupsTimer = setTimeout(() => {
+      groupsTimer = null;
+      browser.storage.local.set({ groups, nextGroupId });
+    }, 500);
+  }
+}
+
+function scheduleTabGroupsSave() {
+  if (!tabGroupsTimer) {
+    tabGroupsTimer = setTimeout(() => {
+      tabGroupsTimer = null;
+      browser.storage.local.set({ tabGroups: Object.fromEntries(tabGroups) });
+    }, 500);
+  }
+}
+
+function sortGroups() {
+  groups.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // Track duplicate tabs by URL
 const dupMap = new Map();
 const dupIds = new Set();
@@ -65,6 +93,14 @@ function sendVisitedUpdate() {
 browser.storage.local.get(['recent', 'visited']).then(data => {
   recent = data.recent || [];
   visited = new Set(data.visited || []);
+});
+
+browser.storage.local.get(['groups', 'tabGroups', 'nextGroupId']).then(data => {
+  groups = data.groups || [];
+  sortGroups();
+  nextGroupId = data.nextGroupId || 1;
+  const tg = data.tabGroups || {};
+  tabGroups = new Map(Object.entries(tg).map(([k, v]) => [parseInt(k, 10), v]));
 });
 
 // Initialize duplicate tracking
@@ -169,6 +205,9 @@ browser.tabs.onRemoved.addListener((tabId) => {
     scheduleVisitedSave();
     sendVisitedUpdate();
   }
+  if (tabGroups.delete(tabId)) {
+    scheduleTabGroupsSave();
+  }
   removeDuplicate(tabId);
 });
 
@@ -195,6 +234,45 @@ browser.runtime.onMessage.addListener((msg) => {
     unmarkVisited(msg.tabId);
   } else if (msg && msg.type === 'reorderRecent') {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
+  } else if (msg && msg.type === 'getGroups') {
+    return Promise.resolve({
+      groups,
+      tabGroups: Object.fromEntries(tabGroups)
+    });
+  } else if (msg && msg.type === 'createGroup') {
+    const name = (msg.name || 'Group').trim();
+    if (!name || groups.some(g => g.name === name)) {
+      return Promise.resolve({ groups });
+    }
+    const id = nextGroupId++;
+    groups.push({ id, name });
+    sortGroups();
+    scheduleGroupsSave();
+    return Promise.resolve({ groups });
+  } else if (msg && msg.type === 'deleteGroup') {
+    groups = groups.filter(g => g.id !== msg.id);
+    for (const [k, v] of Array.from(tabGroups)) {
+      if (v === msg.id) tabGroups.delete(parseInt(k, 10));
+    }
+    scheduleGroupsSave();
+    scheduleTabGroupsSave();
+    return Promise.resolve({ groups });
+  } else if (msg && msg.type === 'renameGroup') {
+    const g = groups.find(g => g.id === msg.id);
+    const name = (msg.name || '').trim();
+    if (g && name && !groups.some(gr => gr.id !== g.id && gr.name === name)) {
+      g.name = name;
+      sortGroups();
+      scheduleGroupsSave();
+    }
+    return Promise.resolve({ groups });
+  } else if (msg && msg.type === 'assignGroups') {
+    (msg.ids || []).forEach(id => {
+      if (msg.groupId) tabGroups.set(id, msg.groupId);
+      else tabGroups.delete(id);
+    });
+    scheduleTabGroupsSave();
+    return Promise.resolve({});
   }
 });
 
