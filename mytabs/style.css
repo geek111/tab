@@ -251,6 +251,21 @@ body.popup .tab > div {
   margin: 0.5em 0;
   box-sizing: border-box;
 }
+
+.group-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.85em;
+  background: var(--color-hover);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  height: calc(var(--tile-height) * 0.8);
+  margin: 0.4em 0;
+  box-sizing: border-box;
+}
 button {
   padding: 0.3em 0.6em;
   margin-left: 0;
@@ -297,6 +312,24 @@ button:hover {
 }
 
 #context div:hover {
+  background: var(--color-hover);
+}
+
+#group-menu {
+  position: absolute;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  padding: 0.2em;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 1001;
+}
+
+#group-menu div {
+  padding: 0.2em 0.5em;
+  cursor: pointer;
+}
+
+#group-menu div:hover {
   background: var(--color-hover);
 }
 
