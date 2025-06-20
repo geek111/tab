@@ -6,7 +6,8 @@ async function load(){
   const data = await browser.storage.local.get([
     'theme','tileWidth','tileScale','fontScale','closeScale','rowGap','scrollSpeed',
     'showRecent','showDuplicates','enableMove',
-    'keyOpenPopup','keyOpenFull','keyUnloadAll'
+    'keyOpenPopup','keyOpenFull','keyUnloadAll',
+    'keyViewAll','keyViewRecent','keyViewDups'
   ]);
   const {
     theme='light',
@@ -20,7 +21,10 @@ async function load(){
     enableMove=true,
     keyOpenPopup='Alt+Shift+H',
     keyOpenFull='Alt+Shift+F',
-    keyUnloadAll='Alt+Shift+U'
+    keyUnloadAll='Alt+Shift+U',
+    keyViewAll='A',
+    keyViewRecent='R',
+    keyViewDups='D'
   } = data;
   let closeScale = data.closeScale;
   if (closeScale === undefined) {
@@ -43,6 +47,9 @@ async function load(){
   document.getElementById('key-open-popup').value = keyOpenPopup;
   document.getElementById('key-open-full').value = keyOpenFull;
   document.getElementById('key-unload-all').value = keyUnloadAll;
+  document.getElementById('key-view-all').value = keyViewAll;
+  document.getElementById('key-view-recent').value = keyViewRecent;
+  document.getElementById('key-view-dups').value = keyViewDups;
   document.documentElement.style.setProperty('--tile-width', (tileWidth * tileScale) + 'px');
   document.documentElement.style.setProperty('--tile-scale', tileScale);
   document.documentElement.style.setProperty('--font-scale', fontScale);
@@ -62,11 +69,15 @@ async function save(){
   const keyOpenPopup=document.getElementById('key-open-popup').value.trim();
   const keyOpenFull=document.getElementById('key-open-full').value.trim();
   const keyUnloadAll=document.getElementById('key-unload-all').value.trim();
+  const keyViewAll=document.getElementById('key-view-all').value.trim();
+  const keyViewRecent=document.getElementById('key-view-recent').value.trim();
+  const keyViewDups=document.getElementById('key-view-dups').value.trim();
   const rowGap=parseFloat(document.getElementById('rowGap').value);
   await browser.storage.local.set({
     theme, tileWidth, tileScale, fontScale, closeScale, rowGap, scrollSpeed,
     showRecent, showDuplicates, enableMove,
-    keyOpenPopup, keyOpenFull, keyUnloadAll
+    keyOpenPopup, keyOpenFull, keyUnloadAll,
+    keyViewAll, keyViewRecent, keyViewDups
   });
 }
 
@@ -176,4 +187,38 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+function registerShortcutInput(id) {
+  const el = document.getElementById(id);
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') return;
+    e.preventDefault();
+    const parts = [];
+    if (e.ctrlKey) parts.push('Ctrl');
+    if (e.altKey) parts.push('Alt');
+    if (e.metaKey) parts.push('Meta');
+    if (e.shiftKey && e.key.toLowerCase() !== 'shift') parts.push('Shift');
+
+    let key;
+    if (e.code.startsWith('Key')) {
+      key = e.code.slice(3).toUpperCase();
+    } else if (e.code.startsWith('Digit')) {
+      key = e.code.slice(5);
+    } else if (e.code.startsWith('Numpad')) {
+      key = e.code.slice(6);
+    } else if (e.code === 'Space') {
+      key = 'Space';
+    } else {
+      key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    }
+    parts.push(key);
+    el.value = parts.join('+');
+  });
+}
+
 load();
+registerShortcutInput('key-open-popup');
+registerShortcutInput('key-open-full');
+registerShortcutInput('key-unload-all');
+registerShortcutInput('key-view-all');
+registerShortcutInput('key-view-recent');
+registerShortcutInput('key-view-dups');
