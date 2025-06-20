@@ -38,7 +38,10 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   - **Alt+Shift+H** opens the popup.
   - **Alt+Shift+F** opens the Full View window.
   - **Alt+Shift+U** unloads all tabs.
-- Middle-clicking the toolbar icon opens the Full View window.
+  - **Shift+A** switches to the All tab.
+  - **Shift+R** switches to the Recent tab.
+  - **Shift+D** switches to the Duplicates tab.
+  - Middle-clicking the toolbar icon opens the Full View window.
 
 ## Keyboard Shortcuts
 

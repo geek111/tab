@@ -6,6 +6,9 @@ let SHOW_RECENT = true;
 let SHOW_DUPLICATES = true;
 let MOVE_ENABLED = true;
 let SCROLL_SPEED = 1;
+let KEY_TAB_ALL = 'Shift+A';
+let KEY_TAB_RECENT = 'Shift+R';
+let KEY_TAB_DUPS = 'Shift+D';
 
 let lastSelectedIndex = -1;
 let container; // tab list element
@@ -95,6 +98,18 @@ function debounce(fn, delay) {
   };
 }
 
+function matchesShortcut(e, shortcut) {
+  if (!shortcut) return false;
+  const parts = shortcut.split('+');
+  const key = parts.pop().toLowerCase();
+  const mods = new Set(parts.map(p => p.toLowerCase()));
+  if ((mods.has('ctrl') || mods.has('control')) !== e.ctrlKey) return false;
+  if (mods.has('shift') !== e.shiftKey) return false;
+  if (mods.has('alt') !== e.altKey) return false;
+  if ((mods.has('meta') || mods.has('cmd') || mods.has('command')) !== e.metaKey) return false;
+  return e.key.toLowerCase() === key;
+}
+
 function escapeHtml(str) {
   return str.replace(/[&<>"']/g, c => ({
     '&': '&amp;',
@@ -115,13 +130,19 @@ async function loadOptions() {
     showDuplicates = true,
     enableMove = true,
     scrollSpeed = 1,
-    keyUnloadAll = 'Alt+Shift+U'
+    keyUnloadAll = 'Alt+Shift+U',
+    keyTabAll = 'Shift+A',
+    keyTabRecent = 'Shift+R',
+    keyTabDups = 'Shift+D'
   } = await browser.storage.local.get([
     'showRecent',
     'showDuplicates',
     'enableMove',
     'scrollSpeed',
-    'keyUnloadAll'
+    'keyUnloadAll',
+    'keyTabAll',
+    'keyTabRecent',
+    'keyTabDups'
   ]);
   SHOW_RECENT = showRecent !== false;
   SHOW_DUPLICATES = showDuplicates !== false;
@@ -155,6 +176,9 @@ async function loadOptions() {
   }
   const unloadBtn = document.getElementById('bulk-unload-all');
   if (unloadBtn) unloadBtn.title = `Shortcut: ${keyUnloadAll}`;
+  KEY_TAB_ALL = keyTabAll;
+  KEY_TAB_RECENT = keyTabRecent;
+  KEY_TAB_DUPS = keyTabDups;
 }
 
 function updateSelection(row, selected) {
@@ -814,7 +838,19 @@ document.addEventListener('keydown', (e) => {
     });
     lastSelectedIndex = last;
   } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-    switch (e.key.toLowerCase()) {
+    if (matchesShortcut(e, KEY_TAB_ALL)) {
+      e.preventDefault();
+      view = 'all';
+      scheduleUpdate();
+    } else if (matchesShortcut(e, KEY_TAB_RECENT) && SHOW_RECENT) {
+      e.preventDefault();
+      view = 'recent';
+      scheduleUpdate();
+    } else if (matchesShortcut(e, KEY_TAB_DUPS) && SHOW_DUPLICATES) {
+      e.preventDefault();
+      view = 'dups';
+      scheduleUpdate();
+    } else switch (e.key.toLowerCase()) {
       case 'c':
         bulkClose();
         break;

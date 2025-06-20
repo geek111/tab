@@ -6,7 +6,8 @@ async function load(){
   const data = await browser.storage.local.get([
     'theme','tileWidth','tileScale','fontScale','closeScale','rowGap','scrollSpeed',
     'showRecent','showDuplicates','enableMove',
-    'keyOpenPopup','keyOpenFull','keyUnloadAll'
+    'keyOpenPopup','keyOpenFull','keyUnloadAll',
+    'keyTabAll','keyTabRecent','keyTabDups'
   ]);
   const {
     theme='light',
@@ -20,7 +21,10 @@ async function load(){
     enableMove=true,
     keyOpenPopup='Alt+Shift+H',
     keyOpenFull='Alt+Shift+F',
-    keyUnloadAll='Alt+Shift+U'
+    keyUnloadAll='Alt+Shift+U',
+    keyTabAll='Shift+A',
+    keyTabRecent='Shift+R',
+    keyTabDups='Shift+D'
   } = data;
   let closeScale = data.closeScale;
   if (closeScale === undefined) {
@@ -43,6 +47,9 @@ async function load(){
   document.getElementById('key-open-popup').value = keyOpenPopup;
   document.getElementById('key-open-full').value = keyOpenFull;
   document.getElementById('key-unload-all').value = keyUnloadAll;
+  document.getElementById('key-tab-all').value = keyTabAll;
+  document.getElementById('key-tab-recent').value = keyTabRecent;
+  document.getElementById('key-tab-dups').value = keyTabDups;
   document.documentElement.style.setProperty('--tile-width', (tileWidth * tileScale) + 'px');
   document.documentElement.style.setProperty('--tile-scale', tileScale);
   document.documentElement.style.setProperty('--font-scale', fontScale);
@@ -62,11 +69,15 @@ async function save(){
   const keyOpenPopup=document.getElementById('key-open-popup').value.trim();
   const keyOpenFull=document.getElementById('key-open-full').value.trim();
   const keyUnloadAll=document.getElementById('key-unload-all').value.trim();
+  const keyTabAll=document.getElementById('key-tab-all').value.trim();
+  const keyTabRecent=document.getElementById('key-tab-recent').value.trim();
+  const keyTabDups=document.getElementById('key-tab-dups').value.trim();
   const rowGap=parseFloat(document.getElementById('rowGap').value);
   await browser.storage.local.set({
     theme, tileWidth, tileScale, fontScale, closeScale, rowGap, scrollSpeed,
     showRecent, showDuplicates, enableMove,
-    keyOpenPopup, keyOpenFull, keyUnloadAll
+    keyOpenPopup, keyOpenFull, keyUnloadAll,
+    keyTabAll, keyTabRecent, keyTabDups
   });
 }
 
