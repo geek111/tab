@@ -16,6 +16,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - Bulk assign selected tabs to any Firefox container or move them back to the default container.
 - Pinned and active tabs retain their state and original order when moved between windows or containers.
 - Container-related actions require Firefox's container feature and the `contextualIdentities` permission. If containers are disabled, the container filter and "Add to Container" buttons will not be shown.
+- New buttons in the bulk actions panel let you create or delete containers on the fly. Enter a group name and choose color and icon to create a container and move selected tabs into it.
 - A **Full View** window shows tabs in a responsive grid that fills the entire window.
   - The number of columns adapts to the window size.
   - Custom context menu reveals extension version and links to the Options page.

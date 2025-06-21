@@ -328,6 +328,28 @@ function refreshContainerDropdowns(identities) {
   }
 }
 
+async function createContainer(name) {
+  try {
+    const color = document.getElementById('new-container-color')?.value || 'blue';
+    const icon = document.getElementById('new-container-icon')?.value || 'fingerprint';
+    await browser.contextualIdentities.create({ name, color, icon });
+    const identities = await getContainerIdentities();
+    refreshContainerDropdowns(identities);
+  } catch (e) {
+    document.getElementById('error').textContent = 'Could not create container: ' + (e.message || e);
+  }
+}
+
+async function deleteContainer(id) {
+  try {
+    await browser.contextualIdentities.remove(id);
+    const identities = await getContainerIdentities();
+    refreshContainerDropdowns(identities);
+  } catch (e) {
+    document.getElementById('error').textContent = 'Could not remove container: ' + (e.message || e);
+  }
+}
+
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const row = document.createElement('div');
   const isFull = document.body.classList.contains('full');
@@ -993,11 +1015,45 @@ async function init() {
   if (addContainerBtn) {
     if (containersAvailable) {
       addContainerBtn.addEventListener('click', () => {
-        const id = targetSelect ? targetSelect.value : 'firefox-default';
-        bulkAssignToContainer(id);
+        const name = document.getElementById('new-container-name')?.value.trim();
+        if (name) {
+          document.getElementById('new-container-name').value = '';
+          bulkAssignToContainer(null, name);
+        } else {
+          const id = targetSelect ? targetSelect.value : 'firefox-default';
+          bulkAssignToContainer(id);
+        }
       });
     } else {
       addContainerBtn.disabled = true;
+    }
+  }
+
+  const createContainerBtn = document.getElementById('create-container');
+  if (createContainerBtn) {
+    if (containersAvailable) {
+      createContainerBtn.addEventListener('click', async () => {
+        const name = document.getElementById('new-container-name')?.value.trim();
+        if (!name) return;
+        document.getElementById('new-container-name').value = '';
+        await createContainer(name);
+      });
+    } else {
+      createContainerBtn.disabled = true;
+    }
+  }
+
+  const deleteContainerBtn = document.getElementById('delete-container');
+  if (deleteContainerBtn) {
+    if (containersAvailable) {
+      deleteContainerBtn.addEventListener('click', async () => {
+        const id = targetSelect ? targetSelect.value : '';
+        if (!id || id === 'firefox-default') return;
+        if (!confirm(`Delete container '${containerMap.get(id)?.name || id}'?`)) return;
+        await deleteContainer(id);
+      });
+    } else {
+      deleteContainerBtn.disabled = true;
     }
   }
 
@@ -1246,7 +1302,7 @@ async function bulkMove() {
   scheduleUpdate();
 }
 
-async function bulkAssignToContainer(containerId) {
+async function bulkAssignToContainer(containerId, createName) {
   const errorEl = document.getElementById('error');
   if (errorEl) errorEl.textContent = '';
   let identities = [];
@@ -1254,7 +1310,14 @@ async function bulkAssignToContainer(containerId) {
     try {
       identities = await getContainerIdentities();
       refreshContainerDropdowns(identities);
-      if (containerId !== 'firefox-default') {
+      if (createName) {
+        const color = document.getElementById('new-container-color')?.value || 'blue';
+        const icon = document.getElementById('new-container-icon')?.value || 'fingerprint';
+        const created = await browser.contextualIdentities.create({ name: createName, color, icon });
+        containerId = created.cookieStoreId;
+        identities = await getContainerIdentities();
+        refreshContainerDropdowns(identities);
+      } else if (containerId !== 'firefox-default') {
         const exists = identities.some(ci => ci.cookieStoreId === containerId);
         if (!exists) {
           if (errorEl) errorEl.textContent = 'Selected container does not exist';
