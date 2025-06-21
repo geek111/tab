@@ -443,3 +443,42 @@ body.full #menu {
 body.full #menu button {
   flex: 1 1 auto;
 }
+
+/* Modal for creating containers */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  padding: 1em;
+  width: 250px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.modal-content label {
+  display: block;
+  margin-bottom: 0.5em;
+}
+
+.modal-buttons {
+  text-align: right;
+}
+.modal-buttons button {
+  margin-left: 0.2em;
+}

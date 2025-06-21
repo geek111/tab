@@ -18,6 +18,7 @@ let containerMap = new Map();
 let filterContainerId = '';
 let containerCache;
 let targetSelect;
+let prevTargetValue = '';
 let visitedIds = new Set();
 let movePending = null;
 
@@ -295,6 +296,48 @@ async function getContainerIdentities() {
   return containerCache;
 }
 
+async function createContainer(name, color) {
+  if (!browser.contextualIdentities) return null;
+  try {
+    const identity = await browser.contextualIdentities.create({ name, color });
+    await getContainerIdentities();
+    return identity;
+  } catch (e) {
+    console.error('Failed to create container', e);
+    return null;
+  }
+}
+
+function showNewGroupModal() {
+  return new Promise(resolve => {
+    const modal = document.getElementById('new-group-modal');
+    const nameInput = document.getElementById('new-group-name');
+    const colorSelect = document.getElementById('new-group-color');
+    const btnCreate = document.getElementById('new-group-create');
+    const btnCancel = document.getElementById('new-group-cancel');
+    const cleanup = () => {
+      modal.classList.add('hidden');
+      btnCreate.removeEventListener('click', onCreate);
+      btnCancel.removeEventListener('click', onCancel);
+    };
+    const onCreate = () => {
+      const name = nameInput.value.trim();
+      const color = colorSelect.value;
+      cleanup();
+      resolve({ name, color });
+    };
+    const onCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+    btnCreate.addEventListener('click', onCreate);
+    btnCancel.addEventListener('click', onCancel);
+    nameInput.value = '';
+    modal.classList.remove('hidden');
+    nameInput.focus();
+  });
+}
+
 function refreshContainerDropdowns(identities) {
   const filter = document.getElementById('container-filter');
   const target = document.getElementById('container-target');
@@ -324,7 +367,12 @@ function refreshContainerDropdowns(identities) {
       opt.textContent = ci.name;
       target.appendChild(opt);
     });
+    const optNew = document.createElement('option');
+    optNew.value = '__new';
+    optNew.textContent = 'Create New Group…';
+    target.appendChild(optNew);
     target.value = containerMap.has(currentT) ? currentT : (identities[0]?.cookieStoreId || 'firefox-default');
+    prevTargetValue = target.value;
   }
 }
 
@@ -954,6 +1002,28 @@ async function init() {
           select.addEventListener('change', () => {
             filterContainerId = select.value;
             scheduleUpdate();
+          });
+        }
+        if (targetSelect) {
+          targetSelect.addEventListener('change', async () => {
+            if (targetSelect.value === '__new') {
+              const data = await showNewGroupModal();
+              if (data) {
+                const identity = await createContainer(data.name, data.color);
+                if (identity) {
+                  refreshContainerDropdowns(containerCache);
+                  targetSelect.value = identity.cookieStoreId;
+                  prevTargetValue = identity.cookieStoreId;
+                  await bulkAssignToContainer(identity.cookieStoreId);
+                } else {
+                  targetSelect.value = prevTargetValue;
+                }
+              } else {
+                targetSelect.value = prevTargetValue;
+              }
+            } else {
+              prevTargetValue = targetSelect.value;
+            }
           });
         }
       } catch (e) {

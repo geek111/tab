@@ -30,6 +30,31 @@
       <button id="bulk-unload-all">Unload All</button>
     </div>
   <div id="context" class="hidden"></div>
+  <div id="new-group-modal" class="modal hidden">
+    <div class="modal-content">
+      <label>
+        Name
+        <input type="text" id="new-group-name" />
+      </label>
+      <label>
+        Color
+        <select id="new-group-color">
+          <option value="blue">Blue</option>
+          <option value="turquoise">Turquoise</option>
+          <option value="green">Green</option>
+          <option value="yellow">Yellow</option>
+          <option value="orange">Orange</option>
+          <option value="red">Red</option>
+          <option value="pink">Pink</option>
+          <option value="purple">Purple</option>
+        </select>
+      </label>
+      <div class="modal-buttons">
+        <button id="new-group-create">Create</button>
+        <button id="new-group-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
   <script src="theme.js"></script>
   <script src="hyperlist.js"></script>
   <script src="popup.js"></script>
