@@ -15,8 +15,12 @@ let containerMap = new Map();
 let filterContainerId = '';
 let containerCache;
 let targetSelect;
+let groupTargetSelect;
 let visitedIds = new Set();
 let movePending = null;
+let groups = [];
+let tabGroupMap = new Map();
+let filterGroupId = '';
 
 let virtualList = null;
 let tabItems = [];
@@ -155,6 +159,45 @@ async function loadOptions() {
   }
   const unloadBtn = document.getElementById('bulk-unload-all');
   if (unloadBtn) unloadBtn.title = `Shortcut: ${keyUnloadAll}`;
+}
+
+async function loadGroups() {
+  const { groups: gs = [], tabGroups = {} } = await browser.runtime.sendMessage({ type: 'getGroups' });
+  groups = gs;
+  tabGroupMap = new Map(Object.entries(tabGroups).map(([k, v]) => [parseInt(k, 10), v]));
+  const sel = document.getElementById('group-filter');
+  const targetSel = document.getElementById('group-target');
+  if (sel) {
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">All Groups</option><option value="none">No Group</option>';
+    for (const g of groups) {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = g.name;
+      sel.appendChild(opt);
+    }
+    sel.value = prev;
+    if (prev && !groups.some(g => String(g.id) === prev)) {
+      filterGroupId = '';
+      sel.value = '';
+      scheduleUpdate();
+    }
+  }
+  if (targetSel) {
+    const current = targetSel.value;
+    targetSel.textContent = '';
+    const noneOpt = document.createElement('option');
+    noneOpt.value = '';
+    noneOpt.textContent = 'No Group';
+    targetSel.appendChild(noneOpt);
+    for (const g of groups) {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = g.name;
+      targetSel.appendChild(opt);
+    }
+    targetSel.value = groups.some(g => String(g.id) === current) ? current : '';
+  }
 }
 
 function updateSelection(row, selected) {
@@ -423,6 +466,14 @@ function createWindowSeparator(label) {
   return div;
 }
 
+function createGroupSeparator(label) {
+  const div = document.createElement('div');
+  div.className = 'group-separator';
+  div.textContent = label.toUpperCase();
+  div.tabIndex = -1;
+  return div;
+}
+
 function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   if (!container) return;
   currentDupIds = dupIds;
@@ -434,8 +485,17 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   tabItems = [];
   idIndexMap = new Map();
   let lastWin = -1;
+  let lastGroup = undefined;
+  const groupNames = new Map(groups.map(g => [g.id, g.name]));
   for (const entry of list) {
     const tab = entry.tab ?? entry;
+    const gId = tabGroupMap.get(tab.id) || null;
+    if (!filterGroupId && groups.length && gId !== lastGroup) {
+      const label = gId ? groupNames.get(gId) || 'GROUP' : 'NO GROUP';
+      tabItems.push({ separator: true, label, el: null, group: true });
+      lastGroup = gId;
+      lastWin = -1;
+    }
     if (full && tab.windowId !== lastWin) {
       tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
       lastWin = tab.windowId;
@@ -482,7 +542,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     for (const item of tabItems) {
       let el;
       if (item.separator) {
-        el = createWindowSeparator(item.label);
+        el = item.group ? createGroupSeparator(item.label) : createWindowSeparator(item.label);
       } else {
         el = createTabRow(
           item.tab,
@@ -547,22 +607,26 @@ function generateRow(index) {
   const item = tabItems[index];
   if (!item) return document.createElement('div');
   if (!item.el) {
-    item.el = createTabRow(item.tab, currentDupIds.has(item.tab.id), currentActiveId, currentVisited.has(item.tab.id), item);
-    if (currentQuery && item.match && item.tab.title) {
-      const span = item.el.querySelector('.tab-title');
-      if (span) {
-        let html = '';
-        let last = 0;
-        for (const idx of item.match) {
-          html += escapeHtml(span.textContent.slice(last, idx));
-          html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
-          last = idx + 1;
+    if (item.separator) {
+      item.el = item.group ? createGroupSeparator(item.label) : createWindowSeparator(item.label);
+    } else {
+      item.el = createTabRow(item.tab, currentDupIds.has(item.tab.id), currentActiveId, currentVisited.has(item.tab.id), item);
+      if (currentQuery && item.match && item.tab.title) {
+        const span = item.el.querySelector('.tab-title');
+        if (span) {
+          let html = '';
+          let last = 0;
+          for (const idx of item.match) {
+            html += escapeHtml(span.textContent.slice(last, idx));
+            html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
+            last = idx + 1;
+          }
+          html += escapeHtml(span.textContent.slice(last));
+          span.innerHTML = html;
         }
-        html += escapeHtml(span.textContent.slice(last));
-        span.innerHTML = html;
       }
+      if (item.selected) item.el.classList.add('selected');
     }
-    if (item.selected) item.el.classList.add('selected');
   }
   return item.el;
 }
@@ -627,22 +691,36 @@ async function update() {
       : scrollContainer.scrollTop
     : 0;
   try {
+    await loadGroups();
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? {} : { currentWindow: true };
     let allTabs = await browser.tabs.query(queryOpts);
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
+    if (filterGroupId === 'none') {
+      allTabs = allTabs.filter(t => !tabGroupMap.get(t.id));
+    } else if (filterGroupId) {
+      allTabs = allTabs.filter(t => String(tabGroupMap.get(t.id)) === filterGroupId);
+    }
+    const groupOrder = new Map(groups.map((g, i) => [g.id, i]));
     if (allWins) {
       const wins = await browser.windows.getAll({populate: false});
       const order = new Map(wins.map((w, i) => [w.id, i]));
       allTabs.sort((a, b) => {
+        const ga = groupOrder.get(tabGroupMap.get(a.id)) ?? groups.length;
+        const gb = groupOrder.get(tabGroupMap.get(b.id)) ?? groups.length;
+        if (ga !== gb) return ga - gb;
         const wa = order.get(a.windowId) ?? 0;
         const wb = order.get(b.windowId) ?? 0;
         return wa === wb ? a.index - b.index : wa - wb;
       });
     } else {
-      allTabs.sort((a, b) => a.index - b.index);
+      allTabs.sort((a, b) => {
+        const ga = groupOrder.get(tabGroupMap.get(a.id)) ?? groups.length;
+        const gb = groupOrder.get(tabGroupMap.get(b.id)) ?? groups.length;
+        return ga === gb ? a.index - b.index : ga - gb;
+      });
     }
     document.getElementById('total-count').textContent = allTabs.length;
     const activeCount = allTabs.filter(t => !t.discarded).length;
@@ -918,6 +996,14 @@ async function init() {
       document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
     }
   }
+  await loadGroups();
+  const groupSel = document.getElementById('group-filter');
+  if (groupSel) {
+    groupSel.addEventListener('change', () => {
+      filterGroupId = groupSel.value;
+      scheduleUpdate();
+    });
+  }
   const bulkCloseBtn = document.getElementById('bulk-close');
   if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
 
@@ -949,6 +1035,19 @@ async function init() {
     } else {
       removeContainerBtn.disabled = true;
     }
+  }
+
+  groupTargetSelect = document.getElementById('group-target');
+  const addGroupBtn = document.getElementById('bulk-add-group');
+  if (addGroupBtn) {
+    addGroupBtn.addEventListener('click', () => {
+      const gid = groupTargetSelect ? groupTargetSelect.value : '';
+      assignSelectedToGroup(gid ? parseInt(gid, 10) : null);
+    });
+  }
+  const removeGroupBtn = document.getElementById('bulk-remove-group');
+  if (removeGroupBtn) {
+    removeGroupBtn.addEventListener('click', () => assignSelectedToGroup(null));
   }
 
   const moveBtn = document.getElementById('bulk-move');
@@ -1059,14 +1158,34 @@ function showContextMenu(e) {
   context.innerHTML = '';
 
   const selected = getSelectedTabIds();
-  const addItem = (label, fn) => {
+  const addItem = (label, fn, parent = context) => {
     const item = document.createElement('div');
     item.textContent = label;
-    item.addEventListener('click', async () => {
+    item.addEventListener('click', async (evt) => {
+      evt.stopPropagation();
       context.classList.add('hidden');
       await fn();
     });
+    parent.appendChild(item);
+  };
+
+  const addSubMenu = (label, build) => {
+    const item = document.createElement('div');
+    item.textContent = label + ' \u25B6';
+    item.classList.add('submenu-parent');
+    const menu = document.createElement('div');
+    menu.className = 'submenu hidden';
+    item.appendChild(menu);
+    const hide = (evt) => {
+      if (!item.contains(evt.relatedTarget)) {
+        menu.classList.add('hidden');
+      }
+    };
+    item.addEventListener('mouseenter', () => menu.classList.remove('hidden'));
+    item.addEventListener('mouseleave', hide);
+    menu.addEventListener('mouseleave', hide);
     context.appendChild(item);
+    build(menu);
   };
 
   if (selected.length) {
@@ -1109,6 +1228,18 @@ function showContextMenu(e) {
     const info = document.createElement('div');
     info.textContent = `KepiTAB v${browser.runtime.getManifest().version}`;
     context.appendChild(info);
+  }
+
+  const clickedId = tabEl ? parseInt(tabEl.dataset.tab, 10) : null;
+  const idsForGroup = selected.length ? selected.slice() : (clickedId ? [clickedId] : []);
+  if (idsForGroup.length) {
+    addSubMenu('Group', menu => {
+      addItem('Remove from Group', () => assignSelectedToGroup(null, idsForGroup.slice()), menu);
+      for (const g of groups) {
+        addItem(`Assign to ${g.name}`, () => assignSelectedToGroup(g.id, idsForGroup.slice()), menu);
+      }
+      addItem('Create Group', createGroupPrompt, menu);
+    });
   }
 
   addItem('Unload All Tabs', bulkUnloadAll);
@@ -1234,6 +1365,29 @@ async function bulkAssignToContainer(containerId) {
 
 async function bulkRemoveFromContainer() {
   await bulkAssignToContainer('firefox-default');
+}
+
+async function assignSelectedToGroup(groupId, ids = null) {
+  if (!ids) ids = getSelectedTabIds();
+  if (!ids.length) return;
+  const gid = groupId != null ? parseInt(groupId, 10) : null;
+  try {
+    await browser.runtime.sendMessage({ type: 'assignGroups', groupId: gid, ids });
+  } catch (e) {
+    console.error('Failed to assign groups', e);
+    document.getElementById('error')?.textContent = 'Failed to assign group';
+    return;
+  }
+  await loadGroups();
+  scheduleUpdate();
+}
+
+async function createGroupPrompt() {
+  const name = prompt('Group name:');
+  if (!name) return;
+  await browser.runtime.sendMessage({ type: 'createGroup', name });
+  await loadGroups();
+  scheduleUpdate();
 }
 
 function onContainerClick(e) {
