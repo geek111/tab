@@ -5,6 +5,8 @@ let recent = [];
 let visited = new Set();
 let recentTimer = null;
 let visitedTimer = null;
+let groups = [];
+let groupsTimer = null;
 
 // Track duplicate tabs by URL
 const dupMap = new Map();
@@ -62,9 +64,10 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
-browser.storage.local.get(['recent', 'visited']).then(data => {
+browser.storage.local.get(['recent', 'visited', 'groups']).then(data => {
   recent = data.recent || [];
   visited = new Set(data.visited || []);
+  groups = data.groups || [];
 });
 
 // Initialize duplicate tracking
@@ -72,6 +75,7 @@ browser.tabs.query({}).then(tabs => {
   for (const t of tabs) {
     addDuplicate(t.id, t.url);
   }
+  cleanupGroups();
 });
 
 // Apply user-defined keyboard shortcuts if supported
@@ -141,6 +145,40 @@ function scheduleVisitedSave() {
   }
 }
 
+function scheduleGroupsSave() {
+  if (!groupsTimer) {
+    groupsTimer = setTimeout(() => {
+      groupsTimer = null;
+      browser.storage.local.set({ groups });
+    }, 500);
+  }
+}
+
+function removeTabFromAllGroups(tabId) {
+  let changed = false;
+  for (const g of groups) {
+    const idx = g.tabs.indexOf(tabId);
+    if (idx !== -1) {
+      g.tabs.splice(idx, 1);
+      changed = true;
+    }
+  }
+  if (changed) scheduleGroupsSave();
+}
+
+async function cleanupGroups() {
+  const tabs = await browser.tabs.query({});
+  const openIds = new Set(tabs.map(t => t.id));
+  let changed = false;
+  for (const g of groups) {
+    const before = g.tabs.length;
+    g.tabs = g.tabs.filter(id => openIds.has(id));
+    if (g.tabs.length !== before) changed = true;
+  }
+  groups = groups.filter(g => g.tabs.length > 0);
+  if (changed) scheduleGroupsSave();
+}
+
 function markVisited(tabId) {
   if (!visited.has(tabId)) {
     visited.add(tabId);
@@ -170,6 +208,15 @@ browser.tabs.onRemoved.addListener((tabId) => {
     sendVisitedUpdate();
   }
   removeDuplicate(tabId);
+  removeTabFromAllGroups(tabId);
+});
+
+browser.windows.onRemoved.addListener(() => {
+  const originalLength = groups.length;
+  groups = groups.filter(g => g.tabs.length > 0);
+  if (groups.length !== originalLength) {
+    scheduleGroupsSave();
+  }
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
@@ -195,6 +242,39 @@ browser.runtime.onMessage.addListener((msg) => {
     unmarkVisited(msg.tabId);
   } else if (msg && msg.type === 'reorderRecent') {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
+  } else if (msg && msg.type === 'getGroups') {
+    return Promise.resolve({ groups });
+  } else if (msg && msg.type === 'createGroup') {
+    const id = Date.now();
+    groups.push({ id, name: msg.name || 'Group', tabs: msg.tabs || [] });
+    scheduleGroupsSave();
+    return Promise.resolve({ id });
+  } else if (msg && msg.type === 'renameGroup') {
+    const g = groups.find(g => g.id === msg.id);
+    if (g) {
+      g.name = msg.name;
+      scheduleGroupsSave();
+    }
+  } else if (msg && msg.type === 'deleteGroup') {
+    const idx = groups.findIndex(g => g.id === msg.id);
+    if (idx !== -1) {
+      groups.splice(idx, 1);
+      scheduleGroupsSave();
+    }
+  } else if (msg && msg.type === 'addTabsToGroup') {
+    const g = groups.find(g => g.id === msg.id);
+    if (g) {
+      for (const t of msg.tabIds || []) {
+        if (!g.tabs.includes(t)) g.tabs.push(t);
+      }
+      scheduleGroupsSave();
+    }
+  } else if (msg && msg.type === 'removeTabsFromGroup') {
+    const g = groups.find(g => g.id === msg.id);
+    if (g) {
+      g.tabs = g.tabs.filter(id => !(msg.tabIds || []).includes(id));
+      scheduleGroupsSave();
+    }
   }
 });
 
