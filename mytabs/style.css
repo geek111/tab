@@ -3,7 +3,7 @@
   --color-text: #333;
   --color-border: #ccc;
   --color-hover: #f5f5f5;
-  --color-active: #eef5ff;
+  --color-active: #fff2b2;
   --color-selected: #dceaff;
   --color-muted: #888;
   --color-visited: #f0fff0;
@@ -43,7 +43,7 @@ body[data-theme="dark"] {
   --color-text: #eee;
   --color-border: #555;
   --color-hover: #333;
-  --color-active: #335577;
+  --color-active: #665500;
   --color-selected: #224466;
   --color-muted: #aaa;
   --color-visited: #304030;
@@ -72,7 +72,7 @@ body[data-theme="dark"] .window-separator {
   color: var(--color-bg);
 }
 body[data-theme="dark"] .selected {
-  background: var(--color-active);
+  background: var(--color-selected);
 }
 body[data-theme="dark"] #context {
   background: #444;
