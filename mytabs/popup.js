@@ -338,7 +338,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   row.draggable = true;
   row.setAttribute('draggable', 'true');
   if (item) row._item = item;
-  if (tab.id === activeId) {
+  if (tab.id === activeId || tab.active) {
     row.classList.add('active');
   }
   if (isDuplicate) {
