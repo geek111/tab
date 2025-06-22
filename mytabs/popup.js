@@ -18,6 +18,7 @@ let containerMap = new Map();
 let filterContainerId = '';
 let containerCache;
 let targetSelect;
+let groupSelect;
 let visitedIds = new Set();
 let movePending = null;
 
@@ -325,6 +326,22 @@ function refreshContainerDropdowns(identities) {
       target.appendChild(opt);
     });
     target.value = containerMap.has(currentT) ? currentT : (identities[0]?.cookieStoreId || 'firefox-default');
+  }
+}
+
+function refreshGroupDropdowns(groups) {
+  const select = document.getElementById('group-target');
+  if (!select) return;
+  const current = select.value;
+  select.textContent = '';
+  groups.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    select.appendChild(opt);
+  });
+  if (groups.length) {
+    select.value = groups.some(g => g.id === current) ? current : groups[0].id;
   }
 }
 
@@ -927,6 +944,7 @@ async function init() {
   visitedIds = new Set(visited);
   const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
   currentDupIds = new Set(duplicates);
+  await kepiGroups.loadGroups();
   await loadOptions();
   registerTabEvents();
   const select = document.getElementById('container-filter');
@@ -946,6 +964,7 @@ async function init() {
       'Container actions disabled: container feature not available';
   }
   targetSelect = document.getElementById('container-target');
+  groupSelect = document.getElementById('group-target');
   if (select || targetSelect) {
     if (containersAvailable) {
       try {
@@ -977,6 +996,9 @@ async function init() {
       document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
     }
   }
+  if (groupSelect) {
+    refreshGroupDropdowns(kepiGroups.groups);
+  }
   const bulkCloseBtn = document.getElementById('bulk-close');
   if (bulkCloseBtn) bulkCloseBtn.addEventListener('click', bulkClose);
 
@@ -999,6 +1021,22 @@ async function init() {
     } else {
       addContainerBtn.disabled = true;
     }
+  }
+
+  const addGroupBtn = document.getElementById('bulk-add-group');
+  if (addGroupBtn && groupSelect) {
+    addGroupBtn.addEventListener('click', () => {
+      const id = groupSelect.value;
+      bulkAssignToGroup(id);
+    });
+  }
+
+  const removeGroupBtn = document.getElementById('bulk-remove-group');
+  if (removeGroupBtn && groupSelect) {
+    removeGroupBtn.addEventListener('click', () => {
+      const id = groupSelect.value;
+      bulkRemoveFromGroup(id);
+    });
   }
 
   const removeContainerBtn = document.getElementById('bulk-remove-container');
@@ -1069,6 +1107,11 @@ browser.storage.onChanged.addListener((changes, area) => {
     KEY_VIEW_DUPS = changes.keyViewDups.newValue || '';
     const btn = document.getElementById('btn-dups');
     if (btn) btn.title = KEY_VIEW_DUPS ? `Shortcut: ${KEY_VIEW_DUPS}` : '';
+  }
+  if ('kepiGroups' in changes && groupSelect) {
+    kepiGroups.loadGroups().then(() => {
+      refreshGroupDropdowns(kepiGroups.groups);
+    });
   }
 });
 
@@ -1159,6 +1202,14 @@ function showContextMenu(e) {
       return bulkAssignToContainer(id);
     });
     addItem('Remove Selected from Container', bulkRemoveFromContainer);
+    addItem('Add Selected to Group', () => {
+      const gid = groupSelect ? groupSelect.value : '';
+      if (gid) return bulkAssignToGroup(gid);
+    });
+    addItem('Remove Selected from Group', () => {
+      const gid = groupSelect ? groupSelect.value : '';
+      if (gid) return bulkRemoveFromGroup(gid);
+    });
   }
 
   if (MOVE_ENABLED && movePending && tabEl) {
@@ -1178,6 +1229,17 @@ function showContextMenu(e) {
       await browser.tabs.discard(id);
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
       scheduleUpdate();
+    });
+    addItem('Add to Group', () => {
+      const gid = groupSelect ? groupSelect.value : '';
+      if (gid) kepiGroups.assignTabToGroup(id, gid);
+    });
+    addItem('Remove from Group', () => {
+      for (const g of kepiGroups.groups) {
+        if (g.tabs.includes(id)) {
+          kepiGroups.removeTabFromGroup(id, g.id);
+        }
+      }
     });
     // Direct move option removed in favor of flagged move workflow
   }
@@ -1311,6 +1373,24 @@ async function bulkAssignToContainer(containerId) {
 
 async function bulkRemoveFromContainer() {
   await bulkAssignToContainer('firefox-default');
+}
+
+async function bulkAssignToGroup(groupId) {
+  const ids = getSelectedTabIds();
+  if (!ids.length) return;
+  for (const id of ids) {
+    kepiGroups.assignTabToGroup(id, groupId);
+  }
+  kepiGroups.saveGroups();
+}
+
+async function bulkRemoveFromGroup(groupId) {
+  const ids = getSelectedTabIds();
+  if (!ids.length) return;
+  for (const id of ids) {
+    kepiGroups.removeTabFromGroup(id, groupId);
+  }
+  kepiGroups.saveGroups();
 }
 
 function onContainerClick(e) {

@@ -11,6 +11,7 @@ const dupMap = new Map();
 const dupIds = new Set();
 const tabUrlMap = new Map();
 let dupUpdateTimer = null;
+let groupMenuIds = [];
 
 function sendDuplicateUpdate() {
   browser.runtime.sendMessage({ type: 'duplicatesUpdated', duplicates: Array.from(dupIds) })
@@ -23,6 +24,43 @@ function scheduleDuplicateUpdate() {
       dupUpdateTimer = null;
       sendDuplicateUpdate();
     }, 200);
+  }
+}
+
+async function updateGroupMenus() {
+  for (const id of groupMenuIds) {
+    try { await browser.contextMenus.remove(id); } catch (_) {}
+  }
+  groupMenuIds = [];
+  try { await browser.contextMenus.remove('add-to-group'); } catch (_) {}
+  try { await browser.contextMenus.remove('remove-from-group'); } catch (_) {}
+  await browser.contextMenus.create({
+    id: 'add-to-group',
+    title: 'Add Tab to Group',
+    contexts: ['tab']
+  });
+  await browser.contextMenus.create({
+    id: 'remove-from-group',
+    title: 'Remove Tab from Group',
+    contexts: ['tab']
+  });
+  for (const g of kepiGroups.groups) {
+    const addId = `add-to-group-${g.id}`;
+    await browser.contextMenus.create({
+      id: addId,
+      parentId: 'add-to-group',
+      title: g.name,
+      contexts: ['tab']
+    });
+    groupMenuIds.push(addId);
+    const rmId = `remove-from-group-${g.id}`;
+    await browser.contextMenus.create({
+      id: rmId,
+      parentId: 'remove-from-group',
+      title: g.name,
+      contexts: ['tab']
+    });
+    groupMenuIds.push(rmId);
   }
 }
 
@@ -260,10 +298,42 @@ browser.runtime.onInstalled.addListener(async () => {
     title: 'Options',
     contexts: ['browser_action']
   });
+  await browser.contextMenus.create({
+    id: 'create-group-from-tab',
+    title: 'Create Group from Tab',
+    contexts: ['tab']
+  });
+  await updateGroupMenus();
 });
 
-browser.contextMenus.onClicked.addListener((info) => {
+browser.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'open-options') {
     browser.runtime.openOptionsPage();
+  } else if (info.menuItemId === 'create-group-from-tab') {
+    try {
+      const [name] = await browser.tabs.executeScript(tab.id, {
+        code: "prompt('Group name:')"
+      });
+      if (name) {
+        const group = kepiGroups.createGroup(name);
+        kepiGroups.assignTabToGroup(tab.id, group.id);
+      }
+    } catch (e) {
+      console.error('Failed to create group', e);
+    }
+  } else if (info.menuItemId.startsWith('add-to-group-')) {
+    const groupId = info.menuItemId.slice('add-to-group-'.length);
+    kepiGroups.assignTabToGroup(tab.id, groupId);
+  } else if (info.menuItemId.startsWith('remove-from-group-')) {
+    const groupId = info.menuItemId.slice('remove-from-group-'.length);
+    kepiGroups.removeTabFromGroup(tab.id, groupId);
   }
 });
+
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.kepiGroups) {
+    kepiGroups.loadGroups().then(updateGroupMenus);
+  }
+});
+
+kepiGroups.loadGroups().then(updateGroupMenus);
