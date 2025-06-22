@@ -360,6 +360,17 @@ body[data-theme="dark"] .tab-tooltip.left::after {
   margin-left: 0.2em;
 }
 
+.group-item {
+  margin-bottom: 0.4em;
+}
+.group-item input[type="text"] {
+  width: 10em;
+}
+.group-item input[type="color"],
+.group-item button {
+  margin-left: 0.4em;
+}
+
 
 .visited {
   background: var(--color-visited);

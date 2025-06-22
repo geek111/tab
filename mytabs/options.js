@@ -212,4 +212,35 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+async function renderGroups() {
+  await kepiGroups.loadGroups();
+  const container = document.getElementById('groups-container');
+  container.innerHTML = '';
+  for (const g of kepiGroups.groups) {
+    const row = document.createElement('div');
+    row.className = 'group-item';
+    const name = document.createElement('input');
+    name.type = 'text';
+    name.value = g.name;
+    name.addEventListener('change', () => kepiGroups.updateGroup(g.id, { name: name.value }));
+    const color = document.createElement('input');
+    color.type = 'color';
+    color.value = g.color;
+    color.addEventListener('change', () => kepiGroups.updateGroup(g.id, { color: color.value }));
+    const del = document.createElement('button');
+    del.textContent = 'Delete';
+    del.addEventListener('click', () => { kepiGroups.removeGroup(g.id); renderGroups(); });
+    row.appendChild(name);
+    row.appendChild(color);
+    row.appendChild(del);
+    container.appendChild(row);
+  }
+}
+
+document.getElementById('add-group').addEventListener('click', () => {
+  kepiGroups.createGroup('New Group');
+  renderGroups();
+});
+
 load();
+renderGroups();
