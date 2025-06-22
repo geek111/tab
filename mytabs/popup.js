@@ -20,6 +20,7 @@ let containerCache;
 let targetSelect;
 let visitedIds = new Set();
 let movePending = null;
+let groupsContainer;
 
 let virtualList = null;
 let tabItems = [];
@@ -155,6 +156,7 @@ async function loadOptions() {
   SCROLL_SPEED = parseFloat(scrollSpeed) || 1;
   const btnRecent = document.getElementById('btn-recent');
   const btnDups = document.getElementById('btn-dups');
+  const btnGroups = document.getElementById('btn-groups');
   if (btnRecent) {
     if (SHOW_RECENT) {
       btnRecent.style.display = '';
@@ -178,6 +180,12 @@ async function loadOptions() {
       btnDups.style.display = 'none';
       if (view === 'dups') view = 'all';
     }
+  }
+  if (btnGroups) {
+    btnGroups.addEventListener('click', () => {
+      view = 'groups';
+      scheduleUpdate();
+    });
   }
   KEY_VIEW_ALL = keyViewAll || '';
   KEY_VIEW_RECENT = keyViewRecent || '';
@@ -651,6 +659,69 @@ function findDuplicates(tabs) {
   return duplicates;
 }
 
+async function renderGroupsView(allTabs) {
+  if (!groupsContainer) return;
+  groupsContainer.innerHTML = '';
+  await kepiGroups.loadGroups();
+  for (const g of kepiGroups.groups) {
+    const groupTabs = allTabs.filter(t => g.tabs.includes(t.id));
+    if (!groupTabs.length) continue;
+    const section = document.createElement('div');
+    section.className = 'group-section';
+    const header = document.createElement('div');
+    header.className = 'group-header';
+    header.style.borderLeft = `4px solid ${g.color || '#888'}`;
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = `${g.name} (${groupTabs.length})`;
+    const toggleBtn = document.createElement('button');
+    toggleBtn.textContent = '\u25BC';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    const reloadBtn = document.createElement('button');
+    reloadBtn.textContent = 'Reload';
+    const discardBtn = document.createElement('button');
+    discardBtn.textContent = 'Unload';
+    const moveBtn = document.createElement('button');
+    moveBtn.textContent = 'Window';
+    header.appendChild(nameSpan);
+    header.appendChild(toggleBtn);
+    header.appendChild(closeBtn);
+    header.appendChild(reloadBtn);
+    header.appendChild(discardBtn);
+    header.appendChild(moveBtn);
+    const list = document.createElement('ul');
+    list.className = 'group-tabs';
+    for (const t of groupTabs) {
+      const li = document.createElement('li');
+      li.textContent = t.title || t.url;
+      list.appendChild(li);
+    }
+    toggleBtn.addEventListener('click', () => {
+      list.classList.toggle('hidden');
+    });
+    closeBtn.addEventListener('click', () => {
+      browser.tabs.remove(groupTabs.map(t => t.id));
+    });
+    reloadBtn.addEventListener('click', () => {
+      groupTabs.forEach(t => browser.tabs.reload(t.id));
+    });
+    discardBtn.addEventListener('click', () => {
+      groupTabs.forEach(t => browser.tabs.discard(t.id).catch(() => {}));
+    });
+    moveBtn.addEventListener('click', async () => {
+      if (!groupTabs.length) return;
+      const win = await browser.windows.create({ tabId: groupTabs[0].id });
+      if (groupTabs.length > 1) {
+        await browser.tabs.move(groupTabs.slice(1), { windowId: win.id, index: -1 });
+      }
+      browser.windows.update(win.id, { focused: true });
+    });
+    section.appendChild(header);
+    section.appendChild(list);
+    groupsContainer.appendChild(section);
+  }
+}
+
 async function update() {
   hideAllTooltips();
   const isFull = document.body.classList.contains('full');
@@ -686,13 +757,22 @@ async function update() {
     const activeId = allTabs.find(t => t.active)?.id ?? -1;
     const searchInput = document.getElementById('search');
     const query = searchInput.value.trim();
-    let list;
-    if (query) {
-      list = filterTabs(tabs, query);
+
+    if (view === 'groups') {
+      document.getElementById('tabs-wrapper').style.display = 'none';
+      groupsContainer.classList.remove('hidden');
+      await renderGroupsView(allTabs);
     } else {
-      list = tabs.map(t => ({ tab: t }));
+      document.getElementById('tabs-wrapper').style.display = '';
+      groupsContainer.classList.add('hidden');
+      let list;
+      if (query) {
+        list = filterTabs(tabs, query);
+      } else {
+        list = tabs.map(t => ({ tab: t }));
+      }
+      renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
     }
-    renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
   } catch (e) {
     console.error('Update failed', e);
     document.getElementById('error').textContent =
@@ -900,6 +980,7 @@ async function init() {
   scrollContainer = document.body.classList.contains('full')
     ? document.getElementById('tabs-wrapper')
     : container;
+  groupsContainer = document.getElementById('groups-wrapper');
   scrollContainer.addEventListener('scroll', saveScroll);
   scrollContainer.addEventListener('scroll', hideAllTooltips);
   container.addEventListener('click', onContainerClick);
@@ -1159,6 +1240,8 @@ function showContextMenu(e) {
       return bulkAssignToContainer(id);
     });
     addItem('Remove Selected from Container', bulkRemoveFromContainer);
+    addItem('Add Selected to Group', bulkAddToGroup);
+    addItem('Remove Selected from Group', bulkRemoveFromGroup);
   }
 
   if (MOVE_ENABLED && movePending && tabEl) {
@@ -1311,6 +1394,37 @@ async function bulkAssignToContainer(containerId) {
 
 async function bulkRemoveFromContainer() {
   await bulkAssignToContainer('firefox-default');
+}
+
+async function bulkAddToGroup() {
+  await kepiGroups.loadGroups();
+  const existing = kepiGroups.groups.map(g => g.name).join('\n');
+  let name = prompt('Group name:' + (existing ? '\n' + existing : ''));
+  if (!name) return;
+  name = name.trim();
+  if (!name) return;
+  let group = kepiGroups.groups.find(g => g.name === name);
+  if (!group) {
+    group = kepiGroups.createGroup(name);
+  }
+  const ids = getSelectedTabIds();
+  for (const id of ids) {
+    kepiGroups.assignTabToGroup(id, group.id);
+  }
+  scheduleUpdate();
+}
+
+async function bulkRemoveFromGroup() {
+  await kepiGroups.loadGroups();
+  const ids = getSelectedTabIds();
+  for (const g of kepiGroups.groups) {
+    for (const id of ids) {
+      if (g.tabs.includes(id)) {
+        kepiGroups.removeTabFromGroup(id, g.id);
+      }
+    }
+  }
+  scheduleUpdate();
 }
 
 function onContainerClick(e) {
