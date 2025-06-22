@@ -187,6 +187,50 @@ elScrollSpeed.addEventListener('input', updateScroll);
 elScrollSpeed.addEventListener('change', updateScroll);
 document.getElementById('save').addEventListener('click', save);
 
+function renderGroups() {
+  const list = document.getElementById('groups');
+  list.innerHTML = '';
+  for (const g of kepiGroups.groups) {
+    const row = document.createElement('div');
+    row.className = 'group-row';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = g.name;
+    nameInput.addEventListener('change', () => {
+      kepiGroups.updateGroup(g.id, { name: nameInput.value });
+    });
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = g.color || '#888888';
+    colorInput.addEventListener('change', () => {
+      kepiGroups.updateGroup(g.id, { color: colorInput.value });
+    });
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', () => {
+      if (confirm('Delete this group?')) {
+        kepiGroups.removeGroup(g.id);
+        renderGroups();
+      }
+    });
+    row.appendChild(nameInput);
+    row.appendChild(colorInput);
+    row.appendChild(delBtn);
+    list.appendChild(row);
+  }
+}
+
+document.getElementById('add-group').addEventListener('click', () => {
+  kepiGroups.createGroup('New Group');
+  renderGroups();
+});
+
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.kepiGroups) {
+    kepiGroups.loadGroups().then(renderGroups);
+  }
+});
+
 document.querySelectorAll('input[id^="key-"]').forEach(el => {
   el.addEventListener('keydown', handleShortcutInput);
   el.addEventListener('focus', () => el.select());
@@ -212,4 +256,5 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+kepiGroups.loadGroups().then(renderGroups);
 load();

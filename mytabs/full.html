@@ -10,6 +10,7 @@
       <button id="btn-all">All</button>
       <button id="btn-recent">Recent</button>
       <button id="btn-dups">Duplicates</button>
+      <button id="btn-groups">Groups</button>
       <select id="container-filter">
         <option value="">All Containers</option>
       </select>
@@ -22,10 +23,13 @@
     <div id="tabs-wrapper" class="tab-grid-wrapper">
       <div id="tabs" class="tab-grid"></div>
     </div>
+    <div id="groups-wrapper" class="group-grid hidden"></div>
     <div id="bulk-actions">
       <select id="container-target"></select>
       <button id="bulk-add-container">Add to Container</button>
       <button id="bulk-remove-container">Remove from Container</button>
+      <select id="group-target"></select>
+      <button id="bulk-add-group">Add to Group</button>
       <button id="bulk-close">Close</button>
       <button id="bulk-reload">Reload</button>
       <button id="bulk-discard">Unload</button>
@@ -34,6 +38,7 @@
     <div id="context" class="hidden"></div>
 
     <script src="theme.js"></script>
+    <script src="groups.js"></script>
     <script src="hyperlist.js"></script>
     <script src="popup.js"></script>
     <script src="fullwin.js"></script>

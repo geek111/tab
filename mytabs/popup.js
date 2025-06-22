@@ -18,8 +18,10 @@ let containerMap = new Map();
 let filterContainerId = '';
 let containerCache;
 let targetSelect;
+let groupSelect;
 let visitedIds = new Set();
 let movePending = null;
+let groupsContainer;
 
 let virtualList = null;
 let tabItems = [];
@@ -155,6 +157,7 @@ async function loadOptions() {
   SCROLL_SPEED = parseFloat(scrollSpeed) || 1;
   const btnRecent = document.getElementById('btn-recent');
   const btnDups = document.getElementById('btn-dups');
+  const btnGroups = document.getElementById('btn-groups');
   if (btnRecent) {
     if (SHOW_RECENT) {
       btnRecent.style.display = '';
@@ -178,6 +181,12 @@ async function loadOptions() {
       btnDups.style.display = 'none';
       if (view === 'dups') view = 'all';
     }
+  }
+  if (btnGroups) {
+    btnGroups.addEventListener('click', () => {
+      view = 'groups';
+      scheduleUpdate();
+    });
   }
   KEY_VIEW_ALL = keyViewAll || '';
   KEY_VIEW_RECENT = keyViewRecent || '';
@@ -325,6 +334,22 @@ function refreshContainerDropdowns(identities) {
       target.appendChild(opt);
     });
     target.value = containerMap.has(currentT) ? currentT : (identities[0]?.cookieStoreId || 'firefox-default');
+  }
+}
+
+function refreshGroupDropdown() {
+  const select = document.getElementById('group-target');
+  if (!select) return;
+  const current = select.value;
+  select.textContent = '';
+  for (const g of kepiGroups.groups) {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    select.appendChild(opt);
+  }
+  if (kepiGroups.groups.length) {
+    select.value = kepiGroups.groups.some(g => g.id === current) ? current : kepiGroups.groups[0].id;
   }
 }
 
@@ -651,6 +676,69 @@ function findDuplicates(tabs) {
   return duplicates;
 }
 
+async function renderGroupsView(allTabs) {
+  if (!groupsContainer) return;
+  groupsContainer.innerHTML = '';
+  await kepiGroups.loadGroups();
+  for (const g of kepiGroups.groups) {
+    const groupTabs = allTabs.filter(t => g.tabs.includes(t.id));
+    if (!groupTabs.length) continue;
+    const section = document.createElement('div');
+    section.className = 'group-section';
+    const header = document.createElement('div');
+    header.className = 'group-header';
+    header.style.borderLeft = `4px solid ${g.color || '#888'}`;
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = `${g.name} (${groupTabs.length})`;
+    const toggleBtn = document.createElement('button');
+    toggleBtn.textContent = '\u25BC';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    const reloadBtn = document.createElement('button');
+    reloadBtn.textContent = 'Reload';
+    const discardBtn = document.createElement('button');
+    discardBtn.textContent = 'Unload';
+    const moveBtn = document.createElement('button');
+    moveBtn.textContent = 'Window';
+    header.appendChild(nameSpan);
+    header.appendChild(toggleBtn);
+    header.appendChild(closeBtn);
+    header.appendChild(reloadBtn);
+    header.appendChild(discardBtn);
+    header.appendChild(moveBtn);
+    const list = document.createElement('ul');
+    list.className = 'group-tabs';
+    for (const t of groupTabs) {
+      const li = document.createElement('li');
+      li.textContent = t.title || t.url;
+      list.appendChild(li);
+    }
+    toggleBtn.addEventListener('click', () => {
+      list.classList.toggle('hidden');
+    });
+    closeBtn.addEventListener('click', () => {
+      browser.tabs.remove(groupTabs.map(t => t.id));
+    });
+    reloadBtn.addEventListener('click', () => {
+      groupTabs.forEach(t => browser.tabs.reload(t.id));
+    });
+    discardBtn.addEventListener('click', () => {
+      groupTabs.forEach(t => browser.tabs.discard(t.id).catch(() => {}));
+    });
+    moveBtn.addEventListener('click', async () => {
+      if (!groupTabs.length) return;
+      const win = await browser.windows.create({ tabId: groupTabs[0].id });
+      if (groupTabs.length > 1) {
+        await browser.tabs.move(groupTabs.slice(1), { windowId: win.id, index: -1 });
+      }
+      browser.windows.update(win.id, { focused: true });
+    });
+    section.appendChild(header);
+    section.appendChild(list);
+    groupsContainer.appendChild(section);
+  }
+}
+
 async function update() {
   hideAllTooltips();
   const isFull = document.body.classList.contains('full');
@@ -686,13 +774,22 @@ async function update() {
     const activeId = allTabs.find(t => t.active)?.id ?? -1;
     const searchInput = document.getElementById('search');
     const query = searchInput.value.trim();
-    let list;
-    if (query) {
-      list = filterTabs(tabs, query);
+
+    if (view === 'groups') {
+      document.getElementById('tabs-wrapper').style.display = 'none';
+      groupsContainer.classList.remove('hidden');
+      await renderGroupsView(allTabs);
     } else {
-      list = tabs.map(t => ({ tab: t }));
+      document.getElementById('tabs-wrapper').style.display = '';
+      groupsContainer.classList.add('hidden');
+      let list;
+      if (query) {
+        list = filterTabs(tabs, query);
+      } else {
+        list = tabs.map(t => ({ tab: t }));
+      }
+      renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
     }
-    renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
   } catch (e) {
     console.error('Update failed', e);
     document.getElementById('error').textContent =
@@ -900,6 +997,8 @@ async function init() {
   scrollContainer = document.body.classList.contains('full')
     ? document.getElementById('tabs-wrapper')
     : container;
+  groupsContainer = document.getElementById('groups-wrapper');
+  groupSelect = document.getElementById('group-target');
   scrollContainer.addEventListener('scroll', saveScroll);
   scrollContainer.addEventListener('scroll', hideAllTooltips);
   container.addEventListener('click', onContainerClick);
@@ -928,6 +1027,8 @@ async function init() {
   const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
   currentDupIds = new Set(duplicates);
   await loadOptions();
+  await kepiGroups.loadGroups();
+  refreshGroupDropdown();
   registerTabEvents();
   const select = document.getElementById('container-filter');
   let containerIdents = [];
@@ -1010,6 +1111,11 @@ async function init() {
     }
   }
 
+  const addGroupBtn = document.getElementById('bulk-add-group');
+  if (addGroupBtn) {
+    addGroupBtn.addEventListener('click', bulkAddGroup);
+  }
+
   const moveBtn = document.getElementById('bulk-move');
   if (MOVE_ENABLED && moveBtn) moveBtn.addEventListener('click', bulkMove);
   else if (moveBtn) moveBtn.style.display = 'none';
@@ -1069,6 +1175,12 @@ browser.storage.onChanged.addListener((changes, area) => {
     KEY_VIEW_DUPS = changes.keyViewDups.newValue || '';
     const btn = document.getElementById('btn-dups');
     if (btn) btn.title = KEY_VIEW_DUPS ? `Shortcut: ${KEY_VIEW_DUPS}` : '';
+  }
+  if ('kepiGroups' in changes) {
+    kepiGroups.loadGroups().then(() => {
+      refreshGroupDropdown();
+      if (view === 'groups') scheduleUpdate();
+    });
   }
 });
 
@@ -1311,6 +1423,17 @@ async function bulkAssignToContainer(containerId) {
 
 async function bulkRemoveFromContainer() {
   await bulkAssignToContainer('firefox-default');
+}
+
+async function bulkAddGroup() {
+  const groupId = groupSelect ? groupSelect.value : '';
+  if (!groupId) return;
+  const ids = getSelectedTabIds();
+  if (!ids.length) return;
+  for (const id of ids) {
+    kepiGroups.assignTabToGroup(id, groupId);
+  }
+  scheduleUpdate();
 }
 
 function onContainerClick(e) {
