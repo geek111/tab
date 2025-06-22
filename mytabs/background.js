@@ -5,6 +5,7 @@ let recent = [];
 let visited = new Set();
 let recentTimer = null;
 let visitedTimer = null;
+let groups = {};
 
 // Track duplicate tabs by URL
 const dupMap = new Map();
@@ -62,9 +63,10 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
-browser.storage.local.get(['recent', 'visited']).then(data => {
+browser.storage.local.get(['recent', 'visited', 'groups']).then(data => {
   recent = data.recent || [];
   visited = new Set(data.visited || []);
+  groups = data.groups || {};
 });
 
 // Initialize duplicate tracking
@@ -141,12 +143,42 @@ function scheduleVisitedSave() {
   }
 }
 
+function scheduleGroupSave() {
+  clearTimeout(scheduleGroupSave.timer);
+  scheduleGroupSave.timer = setTimeout(() => {
+    browser.storage.local.set({ groups });
+  }, 500);
+}
+
 function markVisited(tabId) {
   if (!visited.has(tabId)) {
     visited.add(tabId);
     scheduleVisitedSave();
     sendVisitedUpdate();
   }
+}
+
+function addToGroup(ids, name) {
+  if (!name) return;
+  groups[name] = groups[name] || [];
+  for (const id of ids) {
+    if (!groups[name].includes(id)) groups[name].push(id);
+  }
+  scheduleGroupSave();
+}
+
+function removeFromGroup(ids) {
+  for (const g of Object.keys(groups)) {
+    groups[g] = groups[g].filter(id => !ids.includes(id));
+    if (groups[g].length === 0) delete groups[g];
+  }
+  scheduleGroupSave();
+}
+
+function moveTabsToGroup(ids, name) {
+  if (!name) return;
+  removeFromGroup(ids);
+  addToGroup(ids, name);
 }
 
 browser.tabs.onActivated.addListener(info => {
@@ -169,6 +201,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
     scheduleVisitedSave();
     sendVisitedUpdate();
   }
+  removeFromGroup([tabId]);
   removeDuplicate(tabId);
 });
 
@@ -195,6 +228,14 @@ browser.runtime.onMessage.addListener((msg) => {
     unmarkVisited(msg.tabId);
   } else if (msg && msg.type === 'reorderRecent') {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
+  } else if (msg && msg.type === 'getGroups') {
+    return Promise.resolve({ groups });
+  } else if (msg && msg.type === 'addToGroup') {
+    addToGroup(msg.ids || [], msg.name);
+  } else if (msg && msg.type === 'removeFromGroup') {
+    removeFromGroup(msg.ids || []);
+  } else if (msg && msg.type === 'moveTabsToGroup') {
+    moveTabsToGroup(msg.ids || [], msg.name);
   }
 });
 

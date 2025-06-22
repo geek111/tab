@@ -30,6 +30,7 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+let groupMap = new Map();
 
 function matchShortcut(def, e) {
   if (!def) return false;
@@ -200,7 +201,7 @@ function updateSelection(row, selected) {
 
 function clearSelection() {
   for (const item of tabItems) {
-    if (item.separator) continue;
+    if (item.separator || item.group) continue;
     item.selected = false;
     if (item.el) updateSelection(item.el, false);
   }
@@ -456,6 +457,14 @@ function createWindowSeparator(label) {
   return div;
 }
 
+function createGroupSeparator(name) {
+  const div = document.createElement('div');
+  div.className = 'group-separator';
+  div.textContent = name.toUpperCase();
+  div.tabIndex = -1;
+  return div;
+}
+
 function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   if (!container) return;
   currentDupIds = dupIds;
@@ -467,11 +476,20 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   tabItems = [];
   idIndexMap = new Map();
   let lastWin = -1;
+  let lastGroup = null;
   for (const entry of list) {
     const tab = entry.tab ?? entry;
     if (full && tab.windowId !== lastWin) {
       tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
       lastWin = tab.windowId;
+      lastGroup = null;
+    }
+    const group = groupMap.get(tab.id) || null;
+    if (group && group !== lastGroup) {
+      tabItems.push({ group: true, label: group, el: null });
+      lastGroup = group;
+    } else if (!group) {
+      lastGroup = null;
     }
     const item = { tab, match: entry.match, selected: false, el: null };
     tabItems.push(item);
@@ -495,7 +513,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
 
   if (document.body.classList.contains('full')) {
     if (!rowHeight) {
-      const sampleItem = tabItems.find(it => !it.separator);
+      const sampleItem = tabItems.find(it => !it.separator && !it.group);
       if (sampleItem) {
         const sample = createTabRow(
           sampleItem.tab,
@@ -516,6 +534,8 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       let el;
       if (item.separator) {
         el = createWindowSeparator(item.label);
+      } else if (item.group) {
+        el = createGroupSeparator(item.label);
       } else {
         el = createTabRow(
           item.tab,
@@ -580,22 +600,34 @@ function generateRow(index) {
   const item = tabItems[index];
   if (!item) return document.createElement('div');
   if (!item.el) {
-    item.el = createTabRow(item.tab, currentDupIds.has(item.tab.id), currentActiveId, currentVisited.has(item.tab.id), item);
-    if (currentQuery && item.match && item.tab.title) {
-      const span = item.el.querySelector('.tab-title');
-      if (span) {
-        let html = '';
-        let last = 0;
-        for (const idx of item.match) {
-          html += escapeHtml(span.textContent.slice(last, idx));
-          html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
-          last = idx + 1;
+    if (item.separator) {
+      item.el = createWindowSeparator(item.label);
+    } else if (item.group) {
+      item.el = createGroupSeparator(item.label);
+    } else {
+      item.el = createTabRow(
+        item.tab,
+        currentDupIds.has(item.tab.id),
+        currentActiveId,
+        currentVisited.has(item.tab.id),
+        item
+      );
+      if (currentQuery && item.match && item.tab.title) {
+        const span = item.el.querySelector('.tab-title');
+        if (span) {
+          let html = '';
+          let last = 0;
+          for (const idx of item.match) {
+            html += escapeHtml(span.textContent.slice(last, idx));
+            html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
+            last = idx + 1;
+          }
+          html += escapeHtml(span.textContent.slice(last));
+          span.innerHTML = html;
         }
-        html += escapeHtml(span.textContent.slice(last));
-        span.innerHTML = html;
       }
+      if (item.selected) item.el.classList.add('selected');
     }
-    if (item.selected) item.el.classList.add('selected');
   }
   return item.el;
 }
@@ -810,7 +842,7 @@ document.addEventListener('keydown', (e) => {
     let newIdx = idx;
     do {
       newIdx = Math.min(Math.max(newIdx + delta, 0), tabItems.length - 1);
-    } while (tabItems[newIdx] && tabItems[newIdx].separator);
+    } while (tabItems[newIdx] && (tabItems[newIdx].separator || tabItems[newIdx].group));
     idx = newIdx;
     const el = tabItems[newIdx].el;
     requestAnimationFrame(() => {
@@ -836,14 +868,14 @@ document.addEventListener('keydown', (e) => {
       const start = Math.min(lastSelectedIndex, newIdx);
       const end = Math.max(lastSelectedIndex, newIdx);
       for (let i = 0; i < tabItems.length; i++) {
-        if (tabItems[i].separator) continue;
+        if (tabItems[i].separator || tabItems[i].group) continue;
         const sel = i >= start && i <= end;
         tabItems[i].selected = sel;
         if (tabItems[i].el) updateSelection(tabItems[i].el, sel);
       }
     } else if (!e.ctrlKey && !e.metaKey) {
       tabItems.forEach(it => {
-        if (it.separator) return;
+        if (it.separator || it.group) return;
         it.selected = false;
         if (it.el) updateSelection(it.el, false);
       });
@@ -866,7 +898,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     let last = -1;
     tabItems.forEach((it, i) => {
-      if (it.separator) return;
+      if (it.separator || it.group) return;
       it.selected = true;
       if (it.el) updateSelection(it.el, true);
       last = i;
@@ -927,6 +959,10 @@ async function init() {
   visitedIds = new Set(visited);
   const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
   currentDupIds = new Set(duplicates);
+  const { groups = {} } = await browser.runtime.sendMessage({ type: 'getGroups' });
+  groupMap = new Map(
+    Object.entries(groups).flatMap(([g, arr]) => arr.map(id => [parseInt(id, 10), g]))
+  );
   await loadOptions();
   registerTabEvents();
   const select = document.getElementById('container-filter');
@@ -1117,7 +1153,7 @@ async function movePendingTo(targetEl, evt) {
 function flagTabsForMove() {
   movePending = getSelectedTabIds().slice();
   tabItems.forEach(it => {
-    if (!it.separator && it.selected && it.el) {
+    if (!it.separator && !it.group && it.selected && it.el) {
       it.el.classList.add('move-pending');
     }
   });
@@ -1159,10 +1195,13 @@ function showContextMenu(e) {
       return bulkAssignToContainer(id);
     });
     addItem('Remove Selected from Container', bulkRemoveFromContainer);
+    addItem('Add to Group', bulkAddToGroup);
+    addItem('Remove from Group', bulkRemoveFromGroup);
   }
 
   if (MOVE_ENABLED && movePending && tabEl) {
     addItem('Move Flagged Tabs Here', () => movePendingTo(tabEl, e));
+    addItem('Move Flagged Tabs to Group', moveFlaggedTabsToGroup);
   }
 
   if (tabEl && (!selected.length || !tabEl.classList.contains('selected'))) {
@@ -1199,7 +1238,7 @@ function showContextMenu(e) {
 document.addEventListener('click', () => context.classList.add('hidden'));
 
 function getSelectedTabIds() {
-  return tabItems.filter(it => !it.separator && it.selected).map(it => it.tab.id);
+  return tabItems.filter(it => !it.separator && !it.group && it.selected).map(it => it.tab.id);
 }
 
 async function bulkClose() {
@@ -1311,6 +1350,45 @@ async function bulkAssignToContainer(containerId) {
 
 async function bulkRemoveFromContainer() {
   await bulkAssignToContainer('firefox-default');
+}
+
+async function bulkAddToGroup() {
+  const ids = getSelectedTabIds();
+  if (!ids.length) return;
+  const name = prompt('Group name');
+  if (!name) return;
+  await browser.runtime.sendMessage({ type: 'addToGroup', ids, name });
+  const { groups = {} } = await browser.runtime.sendMessage({ type: 'getGroups' });
+  groupMap = new Map(
+    Object.entries(groups).flatMap(([g, arr]) => arr.map(id => [parseInt(id, 10), g]))
+  );
+  scheduleUpdate();
+}
+
+async function bulkRemoveFromGroup() {
+  const ids = getSelectedTabIds();
+  if (!ids.length) return;
+  await browser.runtime.sendMessage({ type: 'removeFromGroup', ids });
+  const { groups = {} } = await browser.runtime.sendMessage({ type: 'getGroups' });
+  groupMap = new Map(
+    Object.entries(groups).flatMap(([g, arr]) => arr.map(id => [parseInt(id, 10), g]))
+  );
+  scheduleUpdate();
+}
+
+async function moveFlaggedTabsToGroup() {
+  const ids = movePending;
+  if (!ids || !ids.length) return;
+  const name = prompt('Group name');
+  if (!name) return;
+  await browser.runtime.sendMessage({ type: 'moveTabsToGroup', ids, name });
+  movePending = null;
+  tabItems.forEach(it => it.el?.classList.remove('move-pending'));
+  const { groups = {} } = await browser.runtime.sendMessage({ type: 'getGroups' });
+  groupMap = new Map(
+    Object.entries(groups).flatMap(([g, arr]) => arr.map(id => [parseInt(id, 10), g]))
+  );
+  scheduleUpdate();
 }
 
 function onContainerClick(e) {
