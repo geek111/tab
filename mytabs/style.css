@@ -443,3 +443,41 @@ body.full #menu {
 body.full #menu button {
   flex: 1 1 auto;
 }
+
+/* group management */
+.group-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  padding-top: 0.5em;
+}
+
+.group-section {
+  border: 1px solid var(--color-border);
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  padding: 0.2em;
+  cursor: pointer;
+  background: var(--color-hover);
+}
+
+.group-header span {
+  flex: 1 1 auto;
+}
+
+.group-header button {
+  margin-left: 0.2em;
+}
+
+.group-tabs {
+  list-style: none;
+  margin: 0;
+  padding: 0.2em 0.5em;
+}
+
+.group-tabs li {
+  padding: 0.1em 0;
+}
