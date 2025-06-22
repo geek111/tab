@@ -1001,6 +1001,15 @@ async function init() {
     }
   }
 
+  const addGroupBtn = document.getElementById('bulk-add-group');
+  if (addGroupBtn) {
+    if (browser.tabs.group) {
+      addGroupBtn.addEventListener('click', () => bulkAddToGroup());
+    } else {
+      addGroupBtn.disabled = true;
+    }
+  }
+
   const removeContainerBtn = document.getElementById('bulk-remove-container');
   if (removeContainerBtn) {
     if (containersAvailable) {
@@ -1026,6 +1035,12 @@ function registerTabEvents() {
   browser.tabs.onActivated.addListener(updateListener);
   browser.tabs.onDetached.addListener(updateListener);
   browser.tabs.onAttached.addListener(updateListener);
+  if (browser.tabGroups) {
+    browser.tabGroups.onCreated.addListener(updateListener);
+    browser.tabGroups.onRemoved.addListener(updateListener);
+    browser.tabGroups.onUpdated.addListener(updateListener);
+    browser.tabGroups.onMoved.addListener(updateListener);
+  }
 }
 
 function unregisterTabEvents() {
@@ -1035,6 +1050,12 @@ function unregisterTabEvents() {
   browser.tabs.onActivated.removeListener(updateListener);
   browser.tabs.onDetached.removeListener(updateListener);
   browser.tabs.onAttached.removeListener(updateListener);
+  if (browser.tabGroups) {
+    browser.tabGroups.onCreated.removeListener(updateListener);
+    browser.tabGroups.onRemoved.removeListener(updateListener);
+    browser.tabGroups.onUpdated.removeListener(updateListener);
+    browser.tabGroups.onMoved.removeListener(updateListener);
+  }
 }
 
 function cleanup() {
@@ -1242,6 +1263,33 @@ async function bulkMove() {
     for (const tab of tabs) {
       await browser.tabs.move(tab.id, { windowId: other.id, index: -1 });
     }
+  }
+  scheduleUpdate();
+}
+
+async function bulkAddToGroup(groupId) {
+  const ids = getSelectedTabIds();
+  if (!ids.length || !browser.tabs.group) return;
+  try {
+    const tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
+    const byWindow = new Map();
+    for (const tab of tabs) {
+      if (!byWindow.has(tab.windowId)) byWindow.set(tab.windowId, []);
+      byWindow.get(tab.windowId).push(tab);
+    }
+    for (const [winId, winTabs] of byWindow.entries()) {
+      winTabs.sort((a, b) => a.index - b.index);
+      const tabIds = winTabs.map(t => t.id);
+      const opts = { tabIds };
+      if (!groupId) {
+        opts.createProperties = { windowId: winId, index: winTabs[0].index };
+      } else {
+        opts.groupId = groupId;
+      }
+      await browser.tabs.group(opts);
+    }
+  } catch (e) {
+    console.error('Failed to group tabs', e);
   }
   scheduleUpdate();
 }
