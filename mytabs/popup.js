@@ -1001,6 +1001,11 @@ async function init() {
     }
   }
 
+  const addGroupBtn = document.getElementById('bulk-add-group');
+  if (addGroupBtn) {
+    addGroupBtn.addEventListener('click', () => bulkAddToGroup());
+  }
+
   const removeContainerBtn = document.getElementById('bulk-remove-container');
   if (removeContainerBtn) {
     if (containersAvailable) {
@@ -1026,6 +1031,12 @@ function registerTabEvents() {
   browser.tabs.onActivated.addListener(updateListener);
   browser.tabs.onDetached.addListener(updateListener);
   browser.tabs.onAttached.addListener(updateListener);
+  if (browser.tabGroups) {
+    browser.tabGroups.onCreated.addListener(updateListener);
+    browser.tabGroups.onRemoved.addListener(updateListener);
+    browser.tabGroups.onUpdated.addListener(updateListener);
+    browser.tabGroups.onMoved.addListener(updateListener);
+  }
 }
 
 function unregisterTabEvents() {
@@ -1035,6 +1046,12 @@ function unregisterTabEvents() {
   browser.tabs.onActivated.removeListener(updateListener);
   browser.tabs.onDetached.removeListener(updateListener);
   browser.tabs.onAttached.removeListener(updateListener);
+  if (browser.tabGroups) {
+    browser.tabGroups.onCreated.removeListener(updateListener);
+    browser.tabGroups.onRemoved.removeListener(updateListener);
+    browser.tabGroups.onUpdated.removeListener(updateListener);
+    browser.tabGroups.onMoved.removeListener(updateListener);
+  }
 }
 
 function cleanup() {
@@ -1242,6 +1259,19 @@ async function bulkMove() {
     for (const tab of tabs) {
       await browser.tabs.move(tab.id, { windowId: other.id, index: -1 });
     }
+  }
+  scheduleUpdate();
+}
+
+async function bulkAddToGroup(groupId) {
+  const ids = getSelectedTabIds();
+  if (!ids.length) return;
+  try {
+    await browser.tabs.group({ tabIds: ids, groupId });
+  } catch (e) {
+    console.error('Failed to group tabs', e);
+    const el = document.getElementById('error');
+    if (el) el.textContent = 'Failed to group tabs: ' + (e.message || e);
   }
   scheduleUpdate();
 }

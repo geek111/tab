@@ -14,6 +14,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 - Each tab row includes a button to quickly close that tab.
 - Tabs can be reordered via drag and drop, including moving multiple selected tabs at once.
 - Bulk assign selected tabs to any Firefox container or move them back to the default container.
+- Group selected tabs into a Chrome tab group.
 - Pinned and active tabs retain their state and original order when moved between windows or containers.
 - Container-related actions require Firefox's container feature and the `contextualIdentities` permission. If containers are disabled, the container filter and "Add to Container" buttons will not be shown.
 - A **Full View** window shows tabs in a responsive grid that fills the entire window.
@@ -55,3 +56,5 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 To install for development, load the directory as a temporary add-on in Firefox.
 
 See LICENSE for the current project license.
+
+Last updated: 2025-06-22
