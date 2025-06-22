@@ -260,10 +260,91 @@ browser.runtime.onInstalled.addListener(async () => {
     title: 'Options',
     contexts: ['browser_action']
   });
+  await browser.contextMenus.create({
+    id: 'create-group-from-tab',
+    title: 'Create Group from Tab',
+    contexts: ['tab']
+  });
+  await browser.contextMenus.create({
+    id: 'add-to-group',
+    title: 'Add Tab to Group',
+    contexts: ['tab']
+  });
+  await browser.contextMenus.create({
+    id: 'remove-from-group',
+    title: 'Remove Tab from Group',
+    contexts: ['tab']
+  });
+  await browser.contextMenus.create({
+    id: 'add-selection-to-group',
+    title: 'Add Selected Tabs to Group',
+    contexts: ['tab']
+  });
+  await browser.contextMenus.create({
+    id: 'remove-selection-from-group',
+    title: 'Remove Selected Tabs from Group',
+    contexts: ['tab']
+  });
 });
 
-browser.contextMenus.onClicked.addListener((info) => {
+browser.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'open-options') {
     browser.runtime.openOptionsPage();
+  } else if (info.menuItemId === 'create-group-from-tab') {
+    try {
+      const [name] = await browser.tabs.executeScript(tab.id, {
+        code: "prompt('Group name:')"
+      });
+      if (name) {
+        const group = kepiGroups.createGroup(name);
+        kepiGroups.assignTabToGroup(tab.id, group.id);
+      }
+    } catch (e) {
+      console.error('Failed to create group', e);
+    }
+  } else if (info.menuItemId === 'add-to-group') {
+    try {
+      const [name] = await browser.tabs.executeScript(tab.id, {
+        code: "prompt('Add to group (name):')"
+      });
+      if (name) {
+        let group = kepiGroups.groups.find(g => g.name === name);
+        if (!group) group = kepiGroups.createGroup(name);
+        kepiGroups.assignTabToGroup(tab.id, group.id);
+      }
+    } catch (e) {
+      console.error('Failed to add to group', e);
+    }
+  } else if (info.menuItemId === 'add-selection-to-group') {
+    const ids = info.tabIds && info.tabIds.length ? info.tabIds : [tab.id];
+    try {
+      const [name] = await browser.tabs.executeScript(tab.id, {
+        code: "prompt('Add to group (name):')"
+      });
+      if (name) {
+        let group = kepiGroups.groups.find(g => g.name === name);
+        if (!group) group = kepiGroups.createGroup(name);
+        for (const id of ids) {
+          kepiGroups.assignTabToGroup(id, group.id);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to add tabs to group', e);
+    }
+  } else if (info.menuItemId === 'remove-from-group') {
+    for (const g of kepiGroups.groups) {
+      if (g.tabs.includes(tab.id)) {
+        kepiGroups.removeTabFromGroup(tab.id, g.id);
+      }
+    }
+  } else if (info.menuItemId === 'remove-selection-from-group') {
+    const ids = info.tabIds && info.tabIds.length ? info.tabIds : [tab.id];
+    for (const id of ids) {
+      for (const g of kepiGroups.groups) {
+        if (g.tabs.includes(id)) {
+          kepiGroups.removeTabFromGroup(id, g.id);
+        }
+      }
+    }
   }
 });
