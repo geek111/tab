@@ -260,10 +260,65 @@ browser.runtime.onInstalled.addListener(async () => {
     title: 'Options',
     contexts: ['browser_action']
   });
+  await browser.contextMenus.create({
+    id: 'create-group',
+    title: 'Create Group',
+    contexts: ['browser_action']
+  });
+  await browser.contextMenus.create({
+    id: 'delete-group',
+    title: 'Delete Group',
+    contexts: ['browser_action']
+  });
+  await browser.contextMenus.create({
+    id: 'create-group-from-tab',
+    title: 'Create Group from Tab',
+    contexts: ['tab']
+  });
+  await browser.contextMenus.create({
+    id: 'add-to-group',
+    title: 'Add Tab to Group',
+    contexts: ['tab']
+  });
+  await browser.contextMenus.create({
+    id: 'remove-from-group',
+    title: 'Remove Tab from Group',
+    contexts: ['tab']
+  });
 });
 
-browser.contextMenus.onClicked.addListener((info) => {
+browser.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'open-options') {
     browser.runtime.openOptionsPage();
+  } else if (info.menuItemId === 'create-group') {
+    const name = prompt('New group name:');
+    if (name) {
+      kepiGroups.createGroup(name);
+    }
+  } else if (info.menuItemId === 'delete-group') {
+    const name = prompt('Delete which group?');
+    const group = kepiGroups.groups.find(g => g.name === name);
+    if (group && confirm(`Delete group "${name}"?`)) {
+      kepiGroups.removeGroup(group.id);
+    }
+  } else if (info.menuItemId === 'create-group-from-tab') {
+    const name = prompt('Group name:');
+    if (name) {
+      const group = kepiGroups.createGroup(name);
+      kepiGroups.assignTabToGroup(tab.id, group.id);
+    }
+  } else if (info.menuItemId === 'add-to-group') {
+    const name = prompt('Add to group (name):');
+    if (name) {
+      let group = kepiGroups.groups.find(g => g.name === name);
+      if (!group) group = kepiGroups.createGroup(name);
+      kepiGroups.assignTabToGroup(tab.id, group.id);
+    }
+  } else if (info.menuItemId === 'remove-from-group') {
+    for (const g of kepiGroups.groups) {
+      if (g.tabs.includes(tab.id)) {
+        kepiGroups.removeTabFromGroup(tab.id, g.id);
+      }
+    }
   }
 });
