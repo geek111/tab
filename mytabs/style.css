@@ -7,13 +7,13 @@
   --color-selected: #dceaff;
   --color-muted: #888;
   --color-visited: #f0fff0;
-  --tile-width: 150px;
+  --tile-width: 255px;
   --tile-height: 32px;
   --tile-scale: 0.9;
   --tile-height: calc(32px * var(--tile-scale));
   --font-scale: 0.8125;
-  --close-scale: 0.5;
-  --row-gap: 0.1em;
+  --close-scale: 1.55;
+  --row-gap: 0em;
   --color-close: #888;
   --color-close-hover: #f33;
 }
