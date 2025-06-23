@@ -5,7 +5,7 @@ const BASE_CLOSE_SCALE = 0.5;
 async function load(){
   const data = await browser.storage.local.get([
     'theme','tileWidth','tileScale','fontScale','closeScale','rowGap','scrollSpeed',
-    'showRecent','showDuplicates','enableMove',
+    'showRecent','showDuplicates','enableMove','autoUnload','autoUnloadMinutes',
     'keyOpenPopup','keyOpenFull','keyUnloadAll',
     'keyViewAll','keyViewRecent','keyViewDups'
   ]);
@@ -19,6 +19,8 @@ async function load(){
     showRecent=true,
     showDuplicates=true,
     enableMove=true,
+    autoUnload=false,
+    autoUnloadMinutes=60,
     keyOpenPopup='Alt+Shift+H',
     keyOpenFull='Alt+Shift+F',
     keyUnloadAll='Alt+Shift+U',
@@ -44,6 +46,9 @@ async function load(){
   document.getElementById('opt-show-recent').checked = showRecent;
   document.getElementById('opt-show-dups').checked = showDuplicates;
   document.getElementById('opt-enable-move').checked = enableMove;
+  document.getElementById('opt-auto-unload').checked = autoUnload;
+  document.getElementById('opt-auto-unload-mins').value = autoUnloadMinutes;
+  document.getElementById('opt-auto-unload-mins').disabled = !autoUnload;
   document.getElementById('key-open-popup').value = keyOpenPopup;
   document.getElementById('key-open-full').value = keyOpenFull;
   document.getElementById('key-unload-all').value = keyUnloadAll;
@@ -66,6 +71,8 @@ async function save(){
   const showRecent=document.getElementById('opt-show-recent').checked;
   const showDuplicates=document.getElementById('opt-show-dups').checked;
   const enableMove=document.getElementById('opt-enable-move').checked;
+  const autoUnload=document.getElementById('opt-auto-unload').checked;
+  const autoUnloadMinutes=parseInt(document.getElementById('opt-auto-unload-mins').value,10);
   const keyOpenPopup=document.getElementById('key-open-popup').value.trim();
   const keyOpenFull=document.getElementById('key-open-full').value.trim();
   const keyUnloadAll=document.getElementById('key-unload-all').value.trim();
@@ -75,7 +82,7 @@ async function save(){
   const rowGap=parseFloat(document.getElementById('rowGap').value);
   await browser.storage.local.set({
     theme, tileWidth, tileScale, fontScale, closeScale, rowGap, scrollSpeed,
-    showRecent, showDuplicates, enableMove,
+    showRecent, showDuplicates, enableMove, autoUnload, autoUnloadMinutes,
     keyOpenPopup, keyOpenFull, keyUnloadAll,
     keyViewAll, keyViewRecent, keyViewDups
   });
@@ -164,6 +171,8 @@ const elCloseScale = document.getElementById('closeScale');
 const elUIScale = document.getElementById('uiScale');
 const elScrollSpeed = document.getElementById('scrollSpeed');
 const elRowGap = document.getElementById('rowGap');
+const elAutoUnload = document.getElementById('opt-auto-unload');
+const elAutoUnloadMins = document.getElementById('opt-auto-unload-mins');
 
 elTileWidth.addEventListener('input', updateWidth);
 elTileWidth.addEventListener('change', updateWidth);
@@ -180,6 +189,10 @@ elCloseScale.addEventListener('change', updateCloseScale);
 elRowGap.addEventListener('input', updateRowGap);
 elRowGap.addEventListener('change', updateRowGap);
 
+elAutoUnload.addEventListener('change', () => {
+  elAutoUnloadMins.disabled = !elAutoUnload.checked;
+});
+
 elUIScale.addEventListener('input', updateUIScale);
 elUIScale.addEventListener('change', updateUIScale);
 
@@ -193,7 +206,7 @@ document.querySelectorAll('input[id^="key-"]').forEach(el => {
 });
 
 browser.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && (changes.tileScale || changes.fontScale || changes.closeScale || changes.rowGap)) {
+  if (area === 'local' && (changes.tileScale || changes.fontScale || changes.closeScale || changes.rowGap || changes.autoUnload || changes.autoUnloadMinutes)) {
     const tileScale = changes.tileScale ? changes.tileScale.newValue : parseFloat(document.getElementById('tileScale').value);
     const fontScale = changes.fontScale ? changes.fontScale.newValue : parseFloat(document.getElementById('fontScale').value);
     const closeScale = changes.closeScale ? changes.closeScale.newValue : parseFloat(document.getElementById('closeScale').value);
@@ -209,6 +222,13 @@ browser.storage.onChanged.addListener((changes, area) => {
     }
     const uiScale = 1 + (tileScale - BASE_TILE_SCALE);
     document.getElementById('uiScale').value = uiScale.toFixed(1);
+    if (changes.autoUnload) {
+      elAutoUnload.checked = changes.autoUnload.newValue;
+      elAutoUnloadMins.disabled = !elAutoUnload.checked;
+    }
+    if (changes.autoUnloadMinutes) {
+      elAutoUnloadMins.value = changes.autoUnloadMinutes.newValue;
+    }
   }
 });
 
