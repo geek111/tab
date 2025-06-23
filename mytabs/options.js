@@ -1,6 +1,6 @@
 const BASE_TILE_SCALE = 0.9;
 const BASE_FONT_SCALE = 0.8125;
-const BASE_CLOSE_SCALE = 0.5;
+const BASE_CLOSE_SCALE = 1.55;
 
 async function load(){
   const data = await browser.storage.local.get([
@@ -11,11 +11,11 @@ async function load(){
   ]);
   const {
     theme='light',
-    tileWidth=150,
+    tileWidth=255,
     tileScale=0.9,
     fontScale=0.8125,
     scrollSpeed=1,
-    rowGap=0.1,
+    rowGap=0,
     showRecent=true,
     showDuplicates=true,
     enableMove=true,
@@ -28,7 +28,7 @@ async function load(){
   } = data;
   let closeScale = data.closeScale;
   if (closeScale === undefined) {
-    closeScale = 0.5;
+    closeScale = 1.55;
     browser.storage.local.set({ closeScale });
   }
   document.getElementById('theme').value = theme;
