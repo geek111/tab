@@ -26,7 +26,13 @@ html, body {
   height: 100%;
 }
 
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
 body {
+  animation: fade-in 0.3s ease-out;
   font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: calc(16px * var(--font-scale));
   margin: 0;
@@ -63,6 +69,8 @@ body[data-theme="dark"] .tab {
 }
 body[data-theme="dark"] .tab:hover {
   background: #444;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
 body[data-theme="dark"] .duplicate {
   background: #663333;
@@ -163,6 +171,7 @@ body.full #tabs {
   -moz-user-select: none;
   user-select: none;
   cursor: grab;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
 }
 .tab:active {
   cursor: grabbing;
@@ -183,6 +192,8 @@ body.popup .tab {
 }
 .tab:hover {
   background: var(--color-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 .tab.active {
   background: var(--color-active);
@@ -425,6 +436,7 @@ body.full #tabs,
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
 }
 body.full .tab-title {
   padding: 2px 0;
