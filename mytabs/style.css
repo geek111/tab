@@ -445,9 +445,15 @@ body.full #menu {
   align-items: center;
   justify-content: space-between;
   padding: 0.3em 0;
+  transition: box-shadow 0.2s ease;
 }
 body.full #menu button {
   flex: 1 1 auto;
+}
+body.full #menu.scrolled,
+body.full #counts.scrolled {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.2s ease;
 }
 
 .default-btn {

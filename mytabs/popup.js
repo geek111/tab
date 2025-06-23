@@ -216,6 +216,16 @@ const saveScroll = debounce(() => {
   }
 }, 200);
 
+function updateMenuShadow() {
+  const menu = document.getElementById('menu');
+  const counts = document.getElementById('counts');
+  if (!menu || !scrollContainer) return;
+  const scrolled =
+    scrollContainer.scrollTop > 0 || scrollContainer.scrollLeft > 0;
+  menu.classList.toggle('scrolled', scrolled);
+  counts?.classList.toggle('scrolled', scrolled);
+}
+
 async function restoreScroll() {
   if (restored) return;
   if (document.body.classList.contains('full')) {
@@ -902,6 +912,7 @@ async function init() {
     : container;
   scrollContainer.addEventListener('scroll', saveScroll);
   scrollContainer.addEventListener('scroll', hideAllTooltips);
+  scrollContainer.addEventListener('scroll', updateMenuShadow);
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);
@@ -1015,6 +1026,7 @@ async function init() {
   else if (moveBtn) moveBtn.style.display = 'none';
   await update();
   restoreScroll();
+  updateMenuShadow();
 }
 
 // keep the tab list current while the popup is open

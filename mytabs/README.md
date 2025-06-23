@@ -13,6 +13,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   be configured on the Options page.
 - Each tab row includes a button to quickly close that tab.
 - Smooth hover effects highlight each tab row for a polished interface.
+- Sticky menu gains a subtle shadow while scrolling for a professional look.
 - Tabs can be reordered via drag and drop, including moving multiple selected tabs at once.
 - Bulk assign selected tabs to any Firefox container or move them back to the default container.
 - Pinned and active tabs retain their state and original order when moved between windows or containers.
