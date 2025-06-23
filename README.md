@@ -13,3 +13,7 @@ Configuration is stored in `.stylelintrc.json` and uses the
 npm install
 npm run lint
 ```
+
+## Installing Locally
+
+Load the `mytabs` directory in Firefox using **about:debugging** and the *Load Temporary Add-on* button. Ensure that the archive or folder contains the `manifest.json` at the top level.
