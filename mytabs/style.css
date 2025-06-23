@@ -127,10 +127,10 @@ body[data-theme="dark"] #context div:hover {
   margin-top: 0;
   max-height: 400px;
   overflow-y: hidden;
-
   overflow-x: hidden;
   width: 100%;
   box-sizing: border-box;
+  position: relative;
 }
 body.popup {
   overflow-x: hidden;
@@ -139,6 +139,28 @@ body.popup #tabs {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
+}
+body.popup #tabs::before,
+body.popup #tabs::after {
+  content: '';
+  position: sticky;
+  left: 0;
+  right: 0;
+  height: 1em;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1;
+}
+body.popup #tabs.fade-top::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--color-bg), transparent);
+  opacity: 1;
+}
+body.popup #tabs.fade-bottom::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--color-bg), transparent);
+  opacity: 1;
 }
 body.popup .tab {
   width: 100%;
@@ -406,6 +428,29 @@ body.full #tabs-wrapper,
   min-height: 0;
   margin: 0 !important;
   padding: 0 !important;
+  position: relative;
+}
+body.full #tabs-wrapper::before,
+body.full #tabs-wrapper::after {
+  content: '';
+  position: sticky;
+  top: 0;
+  bottom: 0;
+  width: 1em;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1;
+}
+body.full #tabs-wrapper.fade-left::before {
+  left: 0;
+  background: linear-gradient(to right, var(--color-bg), transparent);
+  opacity: 1;
+}
+body.full #tabs-wrapper.fade-right::after {
+  right: 0;
+  background: linear-gradient(to left, var(--color-bg), transparent);
+  opacity: 1;
 }
 body.full #tabs,
 .tab-grid {
@@ -445,9 +490,15 @@ body.full #menu {
   align-items: center;
   justify-content: space-between;
   padding: 0.3em 0;
+  transition: box-shadow 0.2s ease;
 }
 body.full #menu button {
   flex: 1 1 auto;
+}
+body.full #menu.scrolled,
+body.full #counts.scrolled {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.2s ease;
 }
 
 .default-btn {
