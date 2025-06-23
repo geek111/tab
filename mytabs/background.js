@@ -90,7 +90,7 @@ browser.tabs.query({}).then(tabs => {
       try { await browser.commands.update({ name: 'unload-all-tabs', shortcut: keyUnloadAll }); } catch (_) {}
     }
     if (action && action.setTitle) {
-      action.setTitle({ title: `KepiTAB (${keyOpenPopup})` });
+      action.setTitle({ title: `KepiTAB Manager (${keyOpenPopup})` });
     }
   } catch (e) {
     console.error('Failed to apply shortcuts', e);
@@ -252,7 +252,7 @@ browser.commands.onCommand.addListener((command) => {
 browser.runtime.onInstalled.addListener(async () => {
   await browser.contextMenus.create({
     id: 'show-version',
-    title: `KepiTAB v${browser.runtime.getManifest().version}`,
+    title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
     contexts: ['browser_action']
   });
   await browser.contextMenus.create({

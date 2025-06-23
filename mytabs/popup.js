@@ -1184,7 +1184,7 @@ function showContextMenu(e) {
 
   if (!tabEl && !selected.length) {
     const info = document.createElement('div');
-    info.textContent = `KepiTAB v${browser.runtime.getManifest().version}`;
+    info.textContent = `KepiTAB Manager v${browser.runtime.getManifest().version}`;
     context.appendChild(info);
   }
 
