@@ -84,6 +84,12 @@ function hideAllTooltips() {
   document.querySelectorAll('.tab-tooltip').forEach(t => t.remove());
 }
 
+function toggleScrollClass() {
+  const scrolled = scrollContainer &&
+    (scrollContainer.scrollTop > 0 || scrollContainer.scrollLeft > 0);
+  document.body.classList.toggle('scrolled', scrolled);
+}
+
 function showPlaceholder(target, before) {
   if (dropTarget === target &&
       target.classList.contains(before ? 'drop-before' : 'drop-after')) {
@@ -229,6 +235,7 @@ async function restoreScroll() {
       scrollContainer.scrollTop = scrollTop;
     }
   }
+  toggleScrollClass();
   restored = true;
 }
 
@@ -902,6 +909,7 @@ async function init() {
     : container;
   scrollContainer.addEventListener('scroll', saveScroll);
   scrollContainer.addEventListener('scroll', hideAllTooltips);
+  scrollContainer.addEventListener('scroll', toggleScrollClass);
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);

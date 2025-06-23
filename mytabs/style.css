@@ -89,6 +89,14 @@ body[data-theme="dark"] #context div:hover {
 #counts {
   margin-bottom: 0;
 }
+#menu,
+#counts {
+  transition: box-shadow 0.3s;
+}
+body.scrolled #menu,
+body.scrolled #counts {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
 #menu button {
   margin-right: 0.2em;
 }
@@ -139,6 +147,9 @@ body.popup #tabs {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-muted) var(--color-bg);
 }
 body.popup .tab {
   width: 100%;
@@ -400,6 +411,9 @@ body.full #tabs-wrapper,
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: none;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-muted) var(--color-bg);
   flex: 1 1 auto;
   display: block;
   width: 100%;
@@ -468,4 +482,22 @@ body.full #menu button {
     opacity: 1;
     transform: none;
   }
+}
+
+/* Scrollbar styling */
+body.popup #tabs::-webkit-scrollbar,
+body.full #tabs-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body.popup #tabs::-webkit-scrollbar-thumb,
+body.full #tabs-wrapper::-webkit-scrollbar-thumb {
+  background-color: var(--color-muted);
+  border-radius: 4px;
+}
+
+body.popup #tabs::-webkit-scrollbar-track,
+body.full #tabs-wrapper::-webkit-scrollbar-track {
+  background-color: var(--color-bg);
 }
