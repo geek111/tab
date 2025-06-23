@@ -5,6 +5,8 @@ let recent = [];
 let visited = new Set();
 let recentTimer = null;
 let visitedTimer = null;
+let autoUnload = false;
+let autoUnloadMinutes = 60;
 
 // Track duplicate tabs by URL
 const dupMap = new Map();
@@ -62,9 +64,18 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
-browser.storage.local.get(['recent', 'visited']).then(data => {
+browser.storage.local.get(['recent', 'visited', 'autoUnload', 'autoUnloadMinutes']).then(data => {
   recent = data.recent || [];
   visited = new Set(data.visited || []);
+  if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
+  if (typeof data.autoUnloadMinutes === 'number') autoUnloadMinutes = data.autoUnloadMinutes;
+});
+
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local') {
+    if (changes.autoUnload) autoUnload = changes.autoUnload.newValue;
+    if (changes.autoUnloadMinutes) autoUnloadMinutes = changes.autoUnloadMinutes.newValue;
+  }
 });
 
 // Initialize duplicate tracking
@@ -227,6 +238,26 @@ async function unloadAllTabs() {
       } catch (_) {}
     }));
 }
+
+async function checkAutoUnload() {
+  if (!autoUnload) return;
+  const threshold = Date.now() - autoUnloadMinutes * 60000;
+  try {
+    const tabs = await browser.tabs.query({});
+    await Promise.all(tabs.map(async t => {
+      if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
+        try {
+          await browser.tabs.discard(t.id);
+          unmarkVisited(t.id);
+        } catch (_) {}
+      }
+    }));
+  } catch (e) {
+    console.error('Auto unload failed', e);
+  }
+}
+
+setInterval(checkAutoUnload, 60000);
 
 // Open the multi-column tab manager when the icon is middle-clicked.
 if (action && action.onClicked && action.onClicked.addListener) {
