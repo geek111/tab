@@ -1,4 +1,4 @@
-# KepiTAB
+# KepiTAB Manager
 
 This is an open source Firefox add-on inspired by the features of **All Tabs Helper**.
 
