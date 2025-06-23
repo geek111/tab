@@ -1,4 +1,5 @@
-const MAX_RECENT = 30;
+// No cap on stored tabs so the Recent panel lists every visited tab
+const MAX_RECENT = Infinity;
 const action = browser.browserAction || browser.action;
 
 let recent = [];
