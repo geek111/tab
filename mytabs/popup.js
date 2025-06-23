@@ -84,6 +84,22 @@ function hideAllTooltips() {
   document.querySelectorAll('.tab-tooltip').forEach(t => t.remove());
 }
 
+function updateScrollFades() {
+  if (!scrollContainer) return;
+  const horizontal = document.body.classList.contains('full');
+  if (horizontal) {
+    const atLeft = scrollContainer.scrollLeft <= 0;
+    const atRight = scrollContainer.scrollWidth - scrollContainer.clientWidth - scrollContainer.scrollLeft <= 1;
+    scrollContainer.classList.toggle('hide-left', atLeft);
+    scrollContainer.classList.toggle('hide-right', atRight);
+  } else {
+    const atTop = scrollContainer.scrollTop <= 0;
+    const atBottom = scrollContainer.scrollHeight - scrollContainer.clientHeight - scrollContainer.scrollTop <= 1;
+    scrollContainer.classList.toggle('hide-top', atTop);
+    scrollContainer.classList.toggle('hide-bottom', atBottom);
+  }
+}
+
 function showPlaceholder(target, before) {
   if (dropTarget === target &&
       target.classList.contains(before ? 'drop-before' : 'drop-after')) {
@@ -222,11 +238,13 @@ async function restoreScroll() {
     const { scrollLeftFull = 0 } = await browser.storage.local.get('scrollLeftFull');
     if (scrollContainer) {
       scrollContainer.scrollLeft = scrollLeftFull;
+      updateScrollFades();
     }
   } else {
     const { scrollTop = 0 } = await browser.storage.local.get('scrollTop');
     if (scrollContainer) {
       scrollContainer.scrollTop = scrollTop;
+      updateScrollFades();
     }
   }
   restored = true;
@@ -704,6 +722,7 @@ async function update() {
     } else {
       scrollContainer.scrollTop = prevScroll;
     }
+    updateScrollFades();
   }
 }
 
@@ -742,6 +761,7 @@ searchBox.addEventListener('input', () => {
 });
 
 window.addEventListener('resize', updateClearButton);
+window.addEventListener('resize', updateScrollFades);
 
 clearBtn?.addEventListener('click', () => {
   if (searchBox.value) {
@@ -902,6 +922,9 @@ async function init() {
     : container;
   scrollContainer.addEventListener('scroll', saveScroll);
   scrollContainer.addEventListener('scroll', hideAllTooltips);
+  scrollContainer.classList.add('scroll-fade',
+    document.body.classList.contains('full') ? 'horizontal' : 'vertical');
+  scrollContainer.addEventListener('scroll', updateScrollFades);
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);
@@ -1015,6 +1038,7 @@ async function init() {
   else if (moveBtn) moveBtn.style.display = 'none';
   await update();
   restoreScroll();
+  updateScrollFades();
 }
 
 // keep the tab list current while the popup is open
@@ -1076,6 +1100,7 @@ window.addEventListener('resize', () => {
   if (document.body.classList.contains('full')) {
     requestAnimationFrame(adjustGridWidth);
   }
+  updateScrollFades();
 });
 
 // custom context menu

@@ -16,6 +16,7 @@
   --row-gap: 0em;
   --color-close: #888;
   --color-close-hover: #f33;
+  --scroll-fade-color: rgba(0,0,0,0.15);
 }
 
 *, *::before, *::after {
@@ -50,6 +51,7 @@ body[data-theme="dark"] {
   --color-visited: #304030;
   --color-close: #ccc;
   --color-close-hover: #f66;
+  --scroll-fade-color: rgba(255,255,255,0.15);
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -457,6 +459,56 @@ body.full #menu button {
 .default-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* fading edges for scroll containers */
+.scroll-fade {
+  position: relative;
+}
+.scroll-fade::before,
+.scroll-fade::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+.scroll-fade.vertical::before,
+.scroll-fade.vertical::after {
+  left: 0;
+  right: 0;
+  height: 1em;
+}
+.scroll-fade.vertical::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--scroll-fade-color), transparent);
+}
+.scroll-fade.vertical::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--scroll-fade-color), transparent);
+}
+.scroll-fade.horizontal::before,
+.scroll-fade.horizontal::after {
+  top: 0;
+  bottom: 0;
+  width: 1em;
+}
+.scroll-fade.horizontal::before {
+  left: 0;
+  background: linear-gradient(to right, var(--scroll-fade-color), transparent);
+}
+.scroll-fade.horizontal::after {
+  right: 0;
+  background: linear-gradient(to left, var(--scroll-fade-color), transparent);
+}
+.scroll-fade.hide-top::before,
+.scroll-fade.hide-left::before {
+  opacity: 0;
+}
+.scroll-fade.hide-bottom::after,
+.scroll-fade.hide-right::after {
+  opacity: 0;
 }
 
 @keyframes body-fade-in {
