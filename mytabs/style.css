@@ -38,6 +38,17 @@ body {
   color: var(--color-text);
 }
 
+body.fade-init {
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+body.fade-init.fade-show {
+  opacity: 1;
+  transform: none;
+}
+
 body[data-theme="dark"] {
   --color-bg: #222;
   --color-text: #eee;

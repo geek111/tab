@@ -58,4 +58,13 @@
   }
 
   document.addEventListener('wheel', onZoomWheel, { passive: false });
+
+  function showBody(){
+    document.body.classList.add('fade-show');
+  }
+
+  document.addEventListener('DOMContentLoaded', showBody);
+  if (document.readyState !== 'loading') {
+    showBody();
+  }
 })();
