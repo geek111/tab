@@ -216,6 +216,25 @@ const saveScroll = debounce(() => {
   }
 }, 200);
 
+function updateMenuShadow() {
+  const menu = document.getElementById('menu');
+  const counts = document.getElementById('counts');
+  if (!menu || !scrollContainer) return;
+  const scrolled =
+    scrollContainer.scrollTop > 0 || scrollContainer.scrollLeft > 0;
+  menu.classList.toggle('scrolled', scrolled);
+  counts?.classList.toggle('scrolled', scrolled);
+}
+
+function updateScrollFade() {
+  if (!scrollContainer) return;
+  const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+  const atTop = scrollTop === 0;
+  const atBottom = Math.ceil(scrollTop + clientHeight) >= scrollHeight;
+  scrollContainer.classList.toggle('fade-top', !atTop);
+  scrollContainer.classList.toggle('fade-bottom', !atBottom);
+}
+
 async function restoreScroll() {
   if (restored) return;
   if (document.body.classList.contains('full')) {
@@ -230,6 +249,7 @@ async function restoreScroll() {
     }
   }
   restored = true;
+  updateScrollFade();
 }
 
 async function getTabs(allTabs) {
@@ -902,6 +922,8 @@ async function init() {
     : container;
   scrollContainer.addEventListener('scroll', saveScroll);
   scrollContainer.addEventListener('scroll', hideAllTooltips);
+  scrollContainer.addEventListener('scroll', updateMenuShadow);
+  scrollContainer.addEventListener('scroll', updateScrollFade);
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);
@@ -1015,6 +1037,8 @@ async function init() {
   else if (moveBtn) moveBtn.style.display = 'none';
   await update();
   restoreScroll();
+  updateMenuShadow();
+  updateScrollFade();
 }
 
 // keep the tab list current while the popup is open

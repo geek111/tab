@@ -139,6 +139,40 @@ body.popup #tabs {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
+  position: relative;
+}
+
+#tabs::before,
+#tabs::after,
+#tabs-wrapper::before,
+#tabs-wrapper::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1em;
+  pointer-events: none;
+  background: linear-gradient(var(--color-bg), transparent);
+  transition: opacity 0.2s;
+  opacity: 0;
+  z-index: 2;
+}
+
+#tabs::after,
+#tabs-wrapper::after {
+  top: auto;
+  bottom: 0;
+  background: linear-gradient(transparent, var(--color-bg));
+}
+
+#tabs.fade-top::before,
+#tabs-wrapper.fade-top::before {
+  opacity: 1;
+}
+
+#tabs.fade-bottom::after,
+#tabs-wrapper.fade-bottom::after {
+  opacity: 1;
 }
 body.popup .tab {
   width: 100%;
@@ -400,6 +434,7 @@ body.full #tabs-wrapper,
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: none;
+  position: relative;
   flex: 1 1 auto;
   display: block;
   width: 100%;
@@ -445,9 +480,15 @@ body.full #menu {
   align-items: center;
   justify-content: space-between;
   padding: 0.3em 0;
+  transition: box-shadow 0.2s ease;
 }
 body.full #menu button {
   flex: 1 1 auto;
+}
+body.full #menu.scrolled,
+body.full #counts.scrolled {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.2s ease;
 }
 
 .default-btn {
