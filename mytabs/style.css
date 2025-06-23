@@ -139,6 +139,7 @@ body.popup #tabs {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
+  scroll-behavior: smooth;
 }
 body.popup .tab {
   width: 100%;
@@ -400,6 +401,7 @@ body.full #tabs-wrapper,
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: none;
+  scroll-behavior: smooth;
   flex: 1 1 auto;
   display: block;
   width: 100%;
