@@ -1,7 +1,9 @@
 {
   "manifest_version": 2,
   "name": "KepiTAB Manager",
+
   "version": "0.4.1",
+
   "description": "A simple tab management tool inspired by All Tabs Helper",
   "icons": { "48": "kepi-tab-manager.ico" },
     "permissions": [
