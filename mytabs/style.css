@@ -63,6 +63,8 @@ body[data-theme="dark"] .tab {
 }
 body[data-theme="dark"] .tab:hover {
   background: #444;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
 }
 body[data-theme="dark"] .duplicate {
   background: #663333;
@@ -163,6 +165,7 @@ body.full #tabs {
   -moz-user-select: none;
   user-select: none;
   cursor: grab;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 .tab:active {
   cursor: grabbing;
@@ -183,6 +186,8 @@ body.popup .tab {
 }
 .tab:hover {
   background: var(--color-hover);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
 }
 .tab.active {
   background: var(--color-active);
