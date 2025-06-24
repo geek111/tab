@@ -361,7 +361,29 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     iconCell.appendChild(icon);
   
     let tooltip;
+    let hideTimer;
+    const updateTooltipPosition = () => {
+      if (!tooltip) return;
+      const rect = icon.getBoundingClientRect();
+      let left = rect.right + window.scrollX + 5;
+      const top = rect.top + window.scrollY;
+      const width = tooltip.offsetWidth;
+      if (left + width > window.innerWidth - 5) {
+        left = rect.left + window.scrollX - width - 5;
+        tooltip.classList.add('left');
+      } else {
+        tooltip.classList.remove('left');
+      }
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    };
+    const onScroll = () => updateTooltipPosition();
     const showTooltip = () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      if (tooltip) return;
       // Allow tooltips in both popup and full views
       hideAllTooltips();
       tooltip = document.createElement('div');
@@ -378,32 +400,25 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       }
       tooltip.innerHTML = tooltipHtml;
       document.body.appendChild(tooltip);
-      const rect = icon.getBoundingClientRect();
-      let left = rect.right + window.scrollX + 5;
-      const top = rect.top + window.scrollY;
-      const width = tooltip.offsetWidth;
-      if (left + width > window.innerWidth - 5) {
-        left = rect.left + window.scrollX - width - 5;
-        tooltip.classList.add('left');
-      } else {
-        tooltip.classList.remove('left');
-      }
-      tooltip.style.left = `${left}px`;
-      tooltip.style.top = `${top}px`;
+      updateTooltipPosition();
       requestAnimationFrame(() => {
         tooltip.classList.add('visible');
       });
+      scrollContainer?.addEventListener('scroll', onScroll);
     };
     const hideTooltip = () => {
-      if (tooltip) {
-        tooltip.classList.remove('visible');
-        const el = tooltip;
+      if (!tooltip || hideTimer) return;
+      const el = tooltip;
+      hideTimer = setTimeout(() => {
+        el.classList.remove('visible');
         tooltip = null;
         setTimeout(() => {
           el.classList.remove('left');
           el.remove();
         }, 150);
-      }
+        scrollContainer?.removeEventListener('scroll', onScroll);
+        hideTimer = null;
+      }, 50);
     };
     icon.addEventListener('mouseenter', showTooltip);
     icon.addEventListener('mouseleave', hideTooltip);
@@ -901,7 +916,6 @@ async function init() {
     ? document.getElementById('tabs-wrapper')
     : container;
   scrollContainer.addEventListener('scroll', saveScroll);
-  scrollContainer.addEventListener('scroll', hideAllTooltips);
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);
