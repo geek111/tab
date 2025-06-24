@@ -361,7 +361,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     iconCell.appendChild(icon);
   
     let tooltip;
+    let hideTimer;
     const showTooltip = () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      if (tooltip) return;
       // Allow tooltips in both popup and full views
       hideAllTooltips();
       tooltip = document.createElement('div');
@@ -395,18 +401,20 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       });
     };
     const hideTooltip = () => {
-      if (tooltip) {
-        tooltip.classList.remove('visible');
-        const el = tooltip;
+      if (!tooltip || hideTimer) return;
+      const el = tooltip;
+      hideTimer = setTimeout(() => {
+        el.classList.remove('visible');
         tooltip = null;
         setTimeout(() => {
           el.classList.remove('left');
           el.remove();
         }, 150);
-      }
+        hideTimer = null;
+      }, 250);
     };
     icon.addEventListener('mouseenter', showTooltip);
-    icon.addEventListener('mouseleave', hideTooltip);
+    row.addEventListener('mouseleave', hideTooltip);
   }
   row.appendChild(iconCell);
 
