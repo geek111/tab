@@ -379,11 +379,11 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       tooltip.innerHTML = tooltipHtml;
       document.body.appendChild(tooltip);
       const rect = icon.getBoundingClientRect();
-      let left = rect.right + window.scrollX + 5;
-      const top = rect.top + window.scrollY;
+      let left = rect.right + 5;
+      const top = rect.top;
       const width = tooltip.offsetWidth;
       if (left + width > window.innerWidth - 5) {
-        left = rect.left + window.scrollX - width - 5;
+        left = rect.left - width - 5;
         tooltip.classList.add('left');
       } else {
         tooltip.classList.remove('left');

@@ -316,7 +316,7 @@ button:hover {
 }
 
 .tab-tooltip {
-  position: absolute;
+  position: fixed;
   background: rgba(60, 60, 60, 0.95);
   color: #fff;
   border: 1px solid #666;
