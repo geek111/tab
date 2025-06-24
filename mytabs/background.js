@@ -1,4 +1,5 @@
-const MAX_RECENT = 30;
+// No cap on stored tabs so the Recent panel lists every visited tab
+const MAX_RECENT = Infinity;
 const action = browser.browserAction || browser.action;
 
 let recent = [];
@@ -210,9 +211,23 @@ browser.runtime.onMessage.addListener((msg) => {
 });
 
 async function openFullView() {
+  const fullUrl = browser.runtime.getURL('full.html');
+  const wins = await browser.windows.getAll({ populate: true });
+
+  for (const win of wins) {
+    const tab = (win.tabs || []).find(t => t.url === fullUrl);
+    if (tab) {
+      try {
+        await browser.windows.update(win.id, { focused: true });
+        await browser.tabs.update(tab.id, { active: true });
+      } catch (_) {}
+      return;
+    }
+  }
+
   const { fullSize } = await browser.storage.local.get('fullSize');
   const createData = {
-    url: browser.runtime.getURL('full.html'),
+    url: fullUrl,
     type: 'popup'
   };
   if (fullSize) {
@@ -274,7 +289,7 @@ browser.commands.onCommand.addListener((command) => {
       action.openPopup();
     }
   } else if (command === 'open-tabs-helper-full') {
-    browser.tabs.create({ url: browser.runtime.getURL('full.html') });
+    openFullView();
   } else if (command === 'unload-all-tabs') {
     unloadAllTabs();
   }

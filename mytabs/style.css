@@ -443,3 +443,12 @@ body.full #menu {
 body.full #menu button {
   flex: 1 1 auto;
 }
+
+.default-btn {
+  margin-left: 0.3em;
+}
+
+.default-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -2,6 +2,28 @@ const BASE_TILE_SCALE = 0.9;
 const BASE_FONT_SCALE = 0.8125;
 const BASE_CLOSE_SCALE = 1.55;
 
+const DEFAULTS = {
+  theme: 'light',
+  tileWidth: 255,
+  tileScale: 0.9,
+  fontScale: 0.8125,
+  closeScale: 1.55,
+  uiScale: 1,
+  rowGap: 0,
+  scrollSpeed: 1,
+  'opt-show-recent': true,
+  'opt-show-dups': true,
+  'opt-enable-move': true,
+  'opt-auto-unload': false,
+  'opt-auto-unload-mins': 60,
+  'key-open-popup': 'Alt+Shift+H',
+  'key-open-full': 'Alt+Shift+F',
+  'key-unload-all': 'Alt+Shift+U',
+  'key-view-all': 'Shift+A',
+  'key-view-recent': 'Shift+R',
+  'key-view-dups': 'Shift+D'
+};
+
 async function load(){
   const data = await browser.storage.local.get([
     'theme','tileWidth','tileScale','fontScale','closeScale','rowGap','scrollSpeed',
@@ -60,6 +82,7 @@ async function load(){
   document.documentElement.style.setProperty('--font-scale', fontScale);
   document.documentElement.style.setProperty('--close-scale', closeScale);
   document.documentElement.style.setProperty('--row-gap', rowGap + 'em');
+  Object.keys(DEFAULTS).forEach(checkDefault);
 }
 async function save(){
   const theme=document.getElementById('theme').value;
@@ -162,6 +185,7 @@ function handleShortcutInput(e){
   }
   e.preventDefault();
   e.target.value=formatShortcut(e);
+  checkDefault(e.target.id);
 }
 
 const elTileWidth = document.getElementById('tileWidth');
@@ -173,36 +197,111 @@ const elScrollSpeed = document.getElementById('scrollSpeed');
 const elRowGap = document.getElementById('rowGap');
 const elAutoUnload = document.getElementById('opt-auto-unload');
 const elAutoUnloadMins = document.getElementById('opt-auto-unload-mins');
+const elShowRecent = document.getElementById('opt-show-recent');
+const elShowDups = document.getElementById('opt-show-dups');
+const elEnableMove = document.getElementById('opt-enable-move');
 
-elTileWidth.addEventListener('input', updateWidth);
-elTileWidth.addEventListener('change', updateWidth);
+const updateMap = {
+  tileWidth: updateWidth,
+  tileScale: updateScale,
+  fontScale: updateFont,
+  closeScale: updateCloseScale,
+  uiScale: updateUIScale,
+  rowGap: updateRowGap,
+  scrollSpeed: updateScroll
+};
 
-elTileScale.addEventListener('input', updateScale);
-elTileScale.addEventListener('change', updateScale);
+function checkDefault(id) {
+  const input = document.getElementById(id);
+  const btn = document.querySelector(`button[data-for="${id}"]`);
+  if (!input || !btn) return;
+  let val;
+  if (input.type === 'checkbox') {
+    val = input.checked;
+  } else {
+    val = input.value;
+    if (input.type === 'number' || input.type === 'range') {
+      val = parseFloat(val);
+    }
+  }
+  btn.disabled = val === DEFAULTS[id];
+}
 
-elFontScale.addEventListener('input', updateFont);
-elFontScale.addEventListener('change', updateFont);
+document.querySelectorAll('.default-btn').forEach(btn => {
+  const id = btn.dataset.for;
+  btn.addEventListener('click', () => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    const val = DEFAULTS[id];
+    if (input.type === 'checkbox') {
+      input.checked = val;
+      browser.storage.local.set({ [id]: val });
+    } else {
+      input.value = val;
+      if (updateMap[id]) {
+        updateMap[id]();
+      }
+    }
+    checkDefault(id);
+    if (id === 'uiScale') {
+      checkDefault('tileScale');
+      checkDefault('fontScale');
+      checkDefault('closeScale');
+    }
+  });
+});
 
-elCloseScale.addEventListener('input', updateCloseScale);
-elCloseScale.addEventListener('change', updateCloseScale);
+elTileWidth.addEventListener('input', () => { updateWidth(); checkDefault('tileWidth'); });
+elTileWidth.addEventListener('change', () => { updateWidth(); checkDefault('tileWidth'); });
 
-elRowGap.addEventListener('input', updateRowGap);
-elRowGap.addEventListener('change', updateRowGap);
+elTileScale.addEventListener('input', () => { updateScale(); checkDefault('tileScale'); });
+elTileScale.addEventListener('change', () => { updateScale(); checkDefault('tileScale'); });
+
+elFontScale.addEventListener('input', () => { updateFont(); checkDefault('fontScale'); });
+elFontScale.addEventListener('change', () => { updateFont(); checkDefault('fontScale'); });
+
+elCloseScale.addEventListener('input', () => { updateCloseScale(); checkDefault('closeScale'); });
+elCloseScale.addEventListener('change', () => { updateCloseScale(); checkDefault('closeScale'); });
+
+elRowGap.addEventListener('input', () => { updateRowGap(); checkDefault('rowGap'); });
+elRowGap.addEventListener('change', () => { updateRowGap(); checkDefault('rowGap'); });
+
+elAutoUnloadMins.addEventListener('input', () => checkDefault('opt-auto-unload-mins'));
+elAutoUnloadMins.addEventListener('change', () => checkDefault('opt-auto-unload-mins'));
+
+elShowRecent.addEventListener('change', () => {
+  browser.storage.local.set({ 'opt-show-recent': elShowRecent.checked });
+  checkDefault('opt-show-recent');
+});
+
+elShowDups.addEventListener('change', () => {
+  browser.storage.local.set({ 'opt-show-dups': elShowDups.checked });
+  checkDefault('opt-show-dups');
+});
+
+elEnableMove.addEventListener('change', () => {
+  browser.storage.local.set({ 'opt-enable-move': elEnableMove.checked });
+  checkDefault('opt-enable-move');
+});
 
 elAutoUnload.addEventListener('change', () => {
   elAutoUnloadMins.disabled = !elAutoUnload.checked;
+  browser.storage.local.set({ 'opt-auto-unload': elAutoUnload.checked });
+  checkDefault('opt-auto-unload');
 });
 
-elUIScale.addEventListener('input', updateUIScale);
-elUIScale.addEventListener('change', updateUIScale);
+elUIScale.addEventListener('input', () => { updateUIScale(); checkDefault('uiScale'); });
+elUIScale.addEventListener('change', () => { updateUIScale(); checkDefault('uiScale'); });
 
-elScrollSpeed.addEventListener('input', updateScroll);
-elScrollSpeed.addEventListener('change', updateScroll);
+elScrollSpeed.addEventListener('input', () => { updateScroll(); checkDefault('scrollSpeed'); });
+elScrollSpeed.addEventListener('change', () => { updateScroll(); checkDefault('scrollSpeed'); });
 document.getElementById('save').addEventListener('click', save);
 
 document.querySelectorAll('input[id^="key-"]').forEach(el => {
   el.addEventListener('keydown', handleShortcutInput);
   el.addEventListener('focus', () => el.select());
+  el.addEventListener('input', () => checkDefault(el.id));
+  el.addEventListener('change', () => checkDefault(el.id));
 });
 
 browser.storage.onChanged.addListener((changes, area) => {
@@ -225,10 +324,17 @@ browser.storage.onChanged.addListener((changes, area) => {
     if (changes.autoUnload) {
       elAutoUnload.checked = changes.autoUnload.newValue;
       elAutoUnloadMins.disabled = !elAutoUnload.checked;
+      checkDefault('opt-auto-unload');
     }
     if (changes.autoUnloadMinutes) {
       elAutoUnloadMins.value = changes.autoUnloadMinutes.newValue;
+      checkDefault('opt-auto-unload-mins');
     }
+    checkDefault('tileScale');
+    checkDefault('fontScale');
+    checkDefault('closeScale');
+    checkDefault('rowGap');
+    checkDefault('uiScale');
   }
 });
 
