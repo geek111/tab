@@ -467,3 +467,9 @@ body.full #menu button {
   opacity: 0.5;
   cursor: default;
 }
+
+/* Remove hover shift in popup mode */
+body.popup .tab:hover,
+body.popup[data-theme="dark"] .tab:hover {
+  transform: none;
+}
