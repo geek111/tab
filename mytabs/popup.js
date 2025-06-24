@@ -332,6 +332,9 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const row = document.createElement('div');
   const isFull = document.body.classList.contains('full');
   row.className = 'tab';
+  const content = document.createElement('div');
+  content.className = 'tab-content';
+  row.appendChild(content);
   row.dataset.tab = tab.id;
   row.dataset.windowId = tab.windowId;
   row.tabIndex = 0;
@@ -361,7 +364,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     iconCell.appendChild(icon);
   
     let tooltip;
+    let hideTimer;
     const showTooltip = () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      if (tooltip) return;
       // Allow tooltips in both popup and full views
       hideAllTooltips();
       tooltip = document.createElement('div');
@@ -395,20 +404,22 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       });
     };
     const hideTooltip = () => {
-      if (tooltip) {
-        tooltip.classList.remove('visible');
-        const el = tooltip;
+      if (!tooltip || hideTimer) return;
+      const el = tooltip;
+      hideTimer = setTimeout(() => {
+        el.classList.remove('visible');
         tooltip = null;
         setTimeout(() => {
           el.classList.remove('left');
           el.remove();
         }, 150);
-      }
+        hideTimer = null;
+      }, 250);
     };
     icon.addEventListener('mouseenter', showTooltip);
-    icon.addEventListener('mouseleave', hideTooltip);
+    row.addEventListener('mouseleave', hideTooltip);
   }
-  row.appendChild(iconCell);
+  content.appendChild(iconCell);
 
   const indicatorCell = document.createElement('div');
   const ctx = containerMap.get(tab.cookieStoreId);
@@ -419,7 +430,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     indicator.title = ctx.name;
     indicatorCell.appendChild(indicator);
   }
-  row.appendChild(indicatorCell);
+  content.appendChild(indicatorCell);
 
 
   const titleCell = document.createElement('div');
@@ -427,7 +438,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
   titleCell.appendChild(title);
-  row.appendChild(titleCell);
+  content.appendChild(titleCell);
 
   const closeCell = document.createElement('div');
   const closeBtn = document.createElement('button');
@@ -435,7 +446,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
   closeCell.appendChild(closeBtn);
-  row.appendChild(closeCell);
+  content.appendChild(closeCell);
 
   // ensure dragging works from any cell in popup mode
   row.querySelectorAll('*').forEach(el => {

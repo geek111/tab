@@ -61,7 +61,7 @@ body[data-theme="dark"] button {
 body[data-theme="dark"] .tab {
   border-bottom-color: var(--color-border);
 }
-body[data-theme="dark"] .tab:hover {
+body[data-theme="dark"] .tab:hover .tab-content {
   background: #444;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   transform: translateY(-2px);
@@ -145,7 +145,7 @@ body.popup .tab {
   width: 100%;
   padding-right: 0.5em;
 }
-body.popup .tab > div:last-child {
+body.popup .tab-content > div:last-child {
   margin-left: auto;
   margin-right: 0.5em;
 }
@@ -154,8 +154,6 @@ body.full #tabs {
 }
 
 .tab {
-  display: flex;
-  align-items: center;
   padding: 0;
   border-bottom: none;
   break-inside: avoid;
@@ -165,10 +163,15 @@ body.full #tabs {
   -moz-user-select: none;
   user-select: none;
   cursor: grab;
+}
+.tab-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
   transition: background-color 0.2s ease, box-shadow 0.2s ease,
     transform 0.2s ease;
 }
-.tab:active {
+.tab:active .tab-content {
   cursor: grabbing;
   transform: translateY(0);
 }
@@ -186,7 +189,7 @@ body.popup .tab {
   border-radius: 50%;
   margin-right: 0.25em;
 }
-.tab:hover {
+.tab:hover .tab-content {
   background: var(--color-hover);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
@@ -229,14 +232,14 @@ body[data-theme="dark"] .tab.move-pending {
   flex: 1 1 auto;
   min-width: 0;
 }
-.tab > div {
+.tab-content > div {
   padding: 0 0.2em;
   vertical-align: middle;
 }
-body.popup .tab > div {
+body.popup .tab-content > div {
   padding: 0 0.1em;
 }
-.tab > div:nth-child(3) {
+.tab-content > div:nth-child(3) {
   flex: 1 1 auto;
   min-width: 0;
 }
