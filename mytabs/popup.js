@@ -1080,6 +1080,16 @@ window.addEventListener('resize', () => {
 
 // custom context menu
 const context = document.getElementById('context');
+
+function hideContextMenu() {
+  context.classList.remove('show');
+}
+
+context.addEventListener('transitionend', () => {
+  if (!context.classList.contains('show')) {
+    context.classList.add('hidden');
+  }
+});
 async function movePendingTo(targetEl, evt) {
   const ids = movePending;
   if (!ids || !ids.length) return;
@@ -1140,7 +1150,7 @@ function showContextMenu(e) {
     const item = document.createElement('div');
     item.textContent = label;
     item.addEventListener('click', async () => {
-      context.classList.add('hidden');
+      hideContextMenu();
       await fn();
     });
     context.appendChild(item);
@@ -1194,9 +1204,10 @@ function showContextMenu(e) {
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
   context.classList.remove('hidden');
+  requestAnimationFrame(() => context.classList.add('show'));
 }
 
-document.addEventListener('click', () => context.classList.add('hidden'));
+document.addEventListener('click', hideContextMenu);
 
 function getSelectedTabIds() {
   return tabItems.filter(it => !it.separator && it.selected).map(it => it.tab.id);

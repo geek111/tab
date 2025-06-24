@@ -289,6 +289,16 @@ button:hover {
   padding: 0.2em;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   z-index: 1000;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+#context.show {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
 }
 
 #context div {
