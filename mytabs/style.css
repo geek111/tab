@@ -191,6 +191,9 @@ body.popup .tab {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
 }
+body.popup .tab:hover {
+  transform: none;
+}
 .tab.active {
   background: var(--color-active);
   font-weight: bold;
