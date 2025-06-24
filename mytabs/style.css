@@ -162,6 +162,7 @@ body.full #tabs {
   -webkit-user-select: none;
   -moz-user-select: none;
   user-select: none;
+  transition: background-color 0.2s ease;
   cursor: grab;
 }
 .tab:active {
@@ -451,4 +452,19 @@ body.full #menu button {
 .default-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tab.fade-in {
+  animation: tabFadeIn 0.25s ease;
 }

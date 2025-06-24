@@ -331,12 +331,15 @@ function refreshContainerDropdowns(identities) {
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const row = document.createElement('div');
   const isFull = document.body.classList.contains('full');
-  row.className = 'tab';
+  row.className = 'tab fade-in';
   row.dataset.tab = tab.id;
   row.dataset.windowId = tab.windowId;
   row.tabIndex = 0;
   row.draggable = true;
   row.setAttribute('draggable', 'true');
+  row.addEventListener('animationend', () => {
+    row.classList.remove('fade-in');
+  }, { once: true });
   if (item) row._item = item;
   if (tab.id === activeId || tab.active) {
     row.classList.add('active');
