@@ -361,7 +361,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     iconCell.appendChild(icon);
   
     let tooltip;
+    let hideTimer;
     const showTooltip = () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      if (tooltip) return;
       // Allow tooltips in both popup and full views
       hideAllTooltips();
       tooltip = document.createElement('div');
@@ -378,6 +384,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       }
       tooltip.innerHTML = tooltipHtml;
       document.body.appendChild(tooltip);
+      tooltip.addEventListener('mouseenter', () => {
+        if (hideTimer) {
+          clearTimeout(hideTimer);
+          hideTimer = null;
+        }
+      });
+      tooltip.addEventListener('mouseleave', hideTooltip);
       const rect = icon.getBoundingClientRect();
       let left = rect.right + window.scrollX + 5;
       const top = rect.top + window.scrollY;
@@ -394,19 +407,21 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
         tooltip.classList.add('visible');
       });
     };
-    const hideTooltip = () => {
-      if (tooltip) {
-        tooltip.classList.remove('visible');
-        const el = tooltip;
+    function hideTooltip() {
+      if (!tooltip || hideTimer) return;
+      const el = tooltip;
+      hideTimer = setTimeout(() => {
+        el.classList.remove('visible');
         tooltip = null;
         setTimeout(() => {
           el.classList.remove('left');
           el.remove();
         }, 150);
-      }
-    };
+        hideTimer = null;
+      }, 250);
+    }
     icon.addEventListener('mouseenter', showTooltip);
-    icon.addEventListener('mouseleave', hideTooltip);
+    row.addEventListener('mouseleave', hideTooltip);
   }
   row.appendChild(iconCell);
 
