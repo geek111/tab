@@ -1140,7 +1140,7 @@ function showContextMenu(e) {
     const item = document.createElement('div');
     item.textContent = label;
     item.addEventListener('click', async () => {
-      context.classList.add('hidden');
+      hideContextMenu();
       await fn();
     });
     context.appendChild(item);
@@ -1194,9 +1194,16 @@ function showContextMenu(e) {
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
   context.classList.remove('hidden');
+  requestAnimationFrame(() => context.classList.add('visible'));
 }
 
-document.addEventListener('click', () => context.classList.add('hidden'));
+function hideContextMenu() {
+  if (context.classList.contains('hidden')) return;
+  context.classList.remove('visible');
+  setTimeout(() => context.classList.add('hidden'), 150);
+}
+
+document.addEventListener('click', hideContextMenu);
 
 function getSelectedTabIds() {
   return tabItems.filter(it => !it.separator && it.selected).map(it => it.tab.id);
