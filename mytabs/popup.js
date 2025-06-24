@@ -361,9 +361,11 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
     iconCell.appendChild(icon);
   
     let tooltip;
+    let hideTimer;
     const showTooltip = () => {
       // Allow tooltips in both popup and full views
       hideAllTooltips();
+      clearTimeout(hideTimer);
       tooltip = document.createElement('div');
       tooltip.className = 'tab-tooltip';
       const truncatedTitle = truncateText(tab.title || tab.url);
@@ -378,6 +380,14 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       }
       tooltip.innerHTML = tooltipHtml;
       document.body.appendChild(tooltip);
+      tooltip.addEventListener('mouseenter', () => {
+        clearTimeout(hideTimer);
+      });
+      tooltip.addEventListener('mouseleave', () => {
+        hideTimer = setTimeout(() => {
+          if (!icon.matches(':hover')) hideTooltip();
+        }, 0);
+      });
       const rect = icon.getBoundingClientRect();
       let left = rect.right + window.scrollX + 5;
       const top = rect.top + window.scrollY;
@@ -395,6 +405,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       });
     };
     const hideTooltip = () => {
+      clearTimeout(hideTimer);
       if (tooltip) {
         tooltip.classList.remove('visible');
         const el = tooltip;
@@ -406,7 +417,12 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       }
     };
     icon.addEventListener('mouseenter', showTooltip);
-    icon.addEventListener('mouseleave', hideTooltip);
+    icon.addEventListener('mouseleave', () => {
+      hideTimer = setTimeout(() => {
+        if (!tooltip || tooltip.matches(':hover')) return;
+        hideTooltip();
+      }, 0);
+    });
   }
   row.appendChild(iconCell);
 
