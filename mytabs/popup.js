@@ -30,6 +30,8 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+// Scroll position to restore after certain operations
+let pendingScroll = null;
 
 function matchShortcut(def, e) {
   if (!def) return false;
@@ -589,14 +591,18 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
         height: container.clientHeight || 400,
         itemHeight: rowHeight,
         total: tabItems.length,
-        generate: generateRow
+        generate: generateRow,
+        scrollContainer,
+        overrideScrollPosition: () => scrollContainer.scrollTop
       });
     } else {
       virtualList.refresh(container, {
         height: container.clientHeight || 400,
         itemHeight: rowHeight,
         total: tabItems.length,
-        generate: generateRow
+        generate: generateRow,
+        scrollContainer,
+        overrideScrollPosition: () => scrollContainer.scrollTop
       });
     }
   }
@@ -681,11 +687,15 @@ function findDuplicates(tabs) {
 async function update() {
   hideAllTooltips();
   const isFull = document.body.classList.contains('full');
-  const prevScroll = scrollContainer
+  let prevScroll = scrollContainer
     ? isFull
       ? scrollContainer.scrollLeft
       : scrollContainer.scrollTop
     : 0;
+  if (pendingScroll !== null) {
+    prevScroll = pendingScroll;
+    pendingScroll = null;
+  }
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? {} : { currentWindow: true };
@@ -1356,6 +1366,9 @@ function onContainerClick(e) {
   if (e.target.classList.contains('close-btn')) {
     e.stopPropagation();
     const id = parseInt(tabEl.dataset.tab, 10);
+    if (scrollContainer) {
+      pendingScroll = scrollContainer.scrollTop;
+    }
     browser.tabs.remove(id).then(scheduleUpdate);
     return;
   }
