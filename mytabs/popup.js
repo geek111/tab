@@ -524,6 +524,7 @@ async function update() {
     const activeCount = allTabs.filter(t => !t.discarded).length;
     document.getElementById('active-count').textContent = activeCount;
     let tabs = await getTabs(allTabs);
+    const currentScroll = scrollContainer ? scrollContainer.scrollTop : 0;
     const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
     const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
     const dupIds = new Set(duplicates);
@@ -537,6 +538,9 @@ async function update() {
       list = tabs.map(t => ({ tab: t }));
     }
     renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
+    if (scrollContainer) {
+      scrollContainer.scrollTop = currentScroll;
+    }
   } catch (e) {
     console.error('Update failed', e);
     document.getElementById('error').textContent =
