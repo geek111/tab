@@ -138,12 +138,19 @@ body.popup {
   overflow-x: hidden;
 }
 body.popup #tabs {
+  max-height: none;
+  overflow: visible;
+}
+body.popup #tabs-wrapper {
+  max-height: 400px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
+  box-sizing: border-box;
+  position: relative;
 }
-body.popup #tabs::before,
-body.popup #tabs::after {
+body.popup #tabs-wrapper::before,
+body.popup #tabs-wrapper::after {
   content: '';
   position: sticky;
   left: 0;
@@ -154,12 +161,12 @@ body.popup #tabs::after {
   transition: opacity 0.3s;
   z-index: 1;
 }
-body.popup #tabs.fade-top::before {
+body.popup #tabs-wrapper.fade-top::before {
   top: 0;
   background: linear-gradient(to bottom, var(--color-bg), transparent);
   opacity: 1;
 }
-body.popup #tabs.fade-bottom::after {
+body.popup #tabs-wrapper.fade-bottom::after {
   bottom: 0;
   background: linear-gradient(to top, var(--color-bg), transparent);
   opacity: 1;
