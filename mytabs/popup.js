@@ -924,9 +924,7 @@ document.addEventListener('keydown', (e) => {
 async function init() {
   container = document.getElementById('tabs-body') ||
               document.getElementById('tabs');
-  scrollContainer = document.body.classList.contains('full')
-    ? document.getElementById('tabs-wrapper')
-    : container;
+  scrollContainer = document.getElementById('tabs-wrapper') || container;
   scrollContainer.addEventListener('scroll', saveScroll);
   scrollContainer.addEventListener('scroll', hideAllTooltips);
   scrollContainer.addEventListener('scroll', updateMenuShadow);
