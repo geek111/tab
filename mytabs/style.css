@@ -61,11 +61,16 @@ body[data-theme="dark"] button {
 }
 body[data-theme="dark"] .tab {
   border-bottom-color: var(--color-border);
+  position: relative;
+  z-index: 1;
 }
 body[data-theme="dark"] .tab:hover {
+  position: relative;
+  z-index: 2;
   background: #444;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   transform: translateY(-2px);
+  /* z-index zapobiega migotaniu kart */
 }
 body[data-theme="dark"] .duplicate {
   background: #663333;
@@ -189,6 +194,9 @@ body.full #tabs {
   user-select: none;
   cursor: grab;
 
+  position: relative;
+  z-index: 1;
+
   transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
   box-shadow: none;
   transform: none;
@@ -213,9 +221,12 @@ body.popup .tab {
   margin-right: 0.25em;
 }
 .tab:hover {
+  position: relative;
+  z-index: 2;
   background: var(--color-hover);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
+  /* z-index zapobiega migotaniu kart */
 }
 .tab.active {
   background: var(--color-active);
