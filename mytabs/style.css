@@ -151,7 +151,6 @@ body.popup #tabs::after {
   height: 1em;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s;
   z-index: 1;
 }
 body.popup #tabs.fade-top::before {
@@ -452,7 +451,6 @@ body.full #tabs-wrapper::after {
   width: 1em;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s;
   z-index: 1;
 }
 body.full #tabs-wrapper.fade-left::before {
