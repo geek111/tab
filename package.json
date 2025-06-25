@@ -1,13 +1,12 @@
 {
   "name": "kepi-tab",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Development tooling",
   "devDependencies": {
-    "stylelint": "^15.0.0"
-  },
-  "dependencies": {
+    "stylelint": "^15.0.0",
     "stylelint-order": "^6.0.4"
   },
+  "dependencies": {},
   "scripts": {
     "lint": "stylelint mytabs/style.css",
     "postinstall": "npx stylelint --version"
