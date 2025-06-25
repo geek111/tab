@@ -90,6 +90,7 @@ body[data-theme="dark"] #context div:hover {
   margin-top: 0.2em;
   max-height: 400px;
   overflow-y: auto;
+  scroll-behavior: auto;
 }
 
 .tab {

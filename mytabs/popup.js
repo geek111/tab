@@ -569,7 +569,15 @@ document.addEventListener('keydown', (e) => {
     const el = tabItems[newIdx].el;
     requestAnimationFrame(() => {
       el?.focus();
-      el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      if (el && scrollContainer) {
+        const top = el.offsetTop;
+        const bottom = top + el.offsetHeight;
+        if (top < scrollContainer.scrollTop) {
+          scrollContainer.scrollTop = top;
+        } else if (bottom > scrollContainer.scrollTop + scrollContainer.clientHeight) {
+          scrollContainer.scrollTop = bottom - scrollContainer.clientHeight;
+        }
+      }
     });
     return newIdx;
   };
