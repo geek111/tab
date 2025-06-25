@@ -66,6 +66,8 @@ body[data-theme="dark"] .tab:hover {
   background: #444;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   transform: translateY(-2px);
+  position: relative;
+  z-index: 2; /* prevents tab flickering */
 }
 body[data-theme="dark"] .duplicate {
   background: #663333;
@@ -216,6 +218,8 @@ body.popup .tab {
   background: var(--color-hover);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
+  position: relative;
+  z-index: 2; /* prevents tab flickering */
 }
 .tab.active {
   background: var(--color-active);
