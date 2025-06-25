@@ -30,6 +30,7 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+let lastScrollPos = 0;
 
 function matchShortcut(def, e) {
   if (!def) return false;
@@ -207,12 +208,20 @@ function clearSelection() {
   lastSelectedIndex = -1;
 }
 
+function rememberScroll() {
+  if (!scrollContainer) return;
+  lastScrollPos = document.body.classList.contains('full')
+    ? scrollContainer.scrollLeft
+    : scrollContainer.scrollTop;
+}
+
 const saveScroll = debounce(() => {
   if (!scrollContainer) return;
+  rememberScroll();
   if (document.body.classList.contains('full')) {
-    browser.storage.local.set({ scrollLeftFull: scrollContainer.scrollLeft });
+    browser.storage.local.set({ scrollLeftFull: lastScrollPos });
   } else {
-    browser.storage.local.set({ scrollTop: scrollContainer.scrollTop });
+    browser.storage.local.set({ scrollTop: lastScrollPos });
   }
 }, 200);
 
@@ -248,11 +257,13 @@ async function restoreScroll() {
     const { scrollLeftFull = 0 } = await browser.storage.local.get('scrollLeftFull');
     if (scrollContainer) {
       scrollContainer.scrollLeft = scrollLeftFull;
+      lastScrollPos = scrollLeftFull;
     }
   } else {
     const { scrollTop = 0 } = await browser.storage.local.get('scrollTop');
     if (scrollContainer) {
       scrollContainer.scrollTop = scrollTop;
+      lastScrollPos = scrollTop;
     }
   }
   updateFadeOverlay();
@@ -681,11 +692,8 @@ function findDuplicates(tabs) {
 async function update() {
   hideAllTooltips();
   const isFull = document.body.classList.contains('full');
-  const prevScroll = scrollContainer
-    ? isFull
-      ? scrollContainer.scrollLeft
-      : scrollContainer.scrollTop
-    : 0;
+  rememberScroll();
+  const prevScroll = lastScrollPos;
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? {} : { currentWindow: true };
@@ -731,6 +739,7 @@ async function update() {
     } else {
       scrollContainer.scrollTop = prevScroll;
     }
+    lastScrollPos = prevScroll;
   }
 }
 
@@ -925,6 +934,7 @@ async function init() {
   container = document.getElementById('tabs-body') ||
               document.getElementById('tabs');
   scrollContainer = document.getElementById('tabs-wrapper') || container;
+  scrollContainer.addEventListener('scroll', rememberScroll);
   scrollContainer.addEventListener('scroll', saveScroll);
   scrollContainer.addEventListener('scroll', hideAllTooltips);
   scrollContainer.addEventListener('scroll', updateMenuShadow);
