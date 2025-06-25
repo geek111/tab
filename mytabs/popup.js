@@ -396,32 +396,35 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       container.appendChild(el);
     }
   } else {
-    if (!virtualList) {
-      const sample = createTabRow(
-        tabItems[0].tab,
-        dupIds.has(tabItems[0].tab.id),
+    if (virtualList) {
+      virtualList.destroy();
+      virtualList = null;
+    }
+    for (const item of tabItems) {
+      const el = createTabRow(
+        item.tab,
+        dupIds.has(item.tab.id),
         activeId,
-        visitedIds.has(tabItems[0].tab.id),
-        tabItems[0]
+        visitedIds.has(item.tab.id),
+        item
       );
-      sample.style.position = 'absolute';
-      sample.style.visibility = 'hidden';
-      container.appendChild(sample);
-      rowHeight = sample.getBoundingClientRect().height || 32;
-      sample.remove();
-      virtualList = HyperList.create(container, {
-        height: container.clientHeight || 400,
-        itemHeight: rowHeight,
-        total: tabItems.length,
-        generate: generateRow
-      });
-    } else {
-      virtualList.refresh(container, {
-        height: container.clientHeight || 400,
-        itemHeight: rowHeight,
-        total: tabItems.length,
-        generate: generateRow
-      });
+      if (currentQuery && item.match && item.tab.title) {
+        const span = el.querySelector('.tab-title');
+        if (span) {
+          let html = '';
+          let last = 0;
+          for (const idx of item.match) {
+            html += escapeHtml(span.textContent.slice(last, idx));
+            html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
+            last = idx + 1;
+          }
+          html += escapeHtml(span.textContent.slice(last));
+          span.innerHTML = html;
+        }
+      }
+      if (item.selected) el.classList.add('selected');
+      item.el = el;
+      container.appendChild(el);
     }
   }
 }
