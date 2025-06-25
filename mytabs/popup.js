@@ -21,6 +21,8 @@ let targetSelect;
 let visitedIds = new Set();
 let movePending = null;
 
+let pendingScroll = null;
+
 let virtualList = null;
 let tabItems = [];
 let idIndexMap = new Map();
@@ -681,11 +683,17 @@ function findDuplicates(tabs) {
 async function update() {
   hideAllTooltips();
   const isFull = document.body.classList.contains('full');
-  const prevScroll = scrollContainer
-    ? isFull
-      ? scrollContainer.scrollLeft
-      : scrollContainer.scrollTop
-    : 0;
+  let prevScroll;
+  if (pendingScroll !== null) {
+    prevScroll = pendingScroll;
+    pendingScroll = null;
+  } else {
+    prevScroll = scrollContainer
+      ? isFull
+        ? scrollContainer.scrollLeft
+        : scrollContainer.scrollTop
+      : 0;
+  }
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? {} : { currentWindow: true };
@@ -1356,6 +1364,11 @@ function onContainerClick(e) {
   if (e.target.classList.contains('close-btn')) {
     e.stopPropagation();
     const id = parseInt(tabEl.dataset.tab, 10);
+    if (scrollContainer) {
+      pendingScroll = document.body.classList.contains('full')
+        ? scrollContainer.scrollLeft
+        : scrollContainer.scrollTop;
+    }
     browser.tabs.remove(id).then(scheduleUpdate);
     return;
   }
