@@ -526,10 +526,8 @@ body.full #counts.scrolled {
 @keyframes body-fade-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
