@@ -141,6 +141,7 @@ body.popup #tabs {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
+  padding: 2px 0;
 }
 body.popup #tabs::before,
 body.popup #tabs::after {
