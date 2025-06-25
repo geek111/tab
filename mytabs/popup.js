@@ -30,6 +30,8 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+// Scroll position to restore after certain operations
+let pendingScroll = null;
 
 function matchShortcut(def, e) {
   if (!def) return false;
@@ -483,7 +485,8 @@ function createWindowSeparator(label) {
   return div;
 }
 
-function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
+function renderTabs(list, activeId, dupIds, visitedIds, winMap,
+                    query = '', scrollOverride = null) {
   if (!container) return;
   currentDupIds = dupIds;
   currentActiveId = activeId;
@@ -571,6 +574,15 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       container.appendChild(el);
     }
   } else {
+    const config = {
+      height: container.clientHeight || 400,
+      itemHeight: rowHeight,
+      total: tabItems.length,
+      generate: generateRow
+    };
+    if (scrollOverride !== null) {
+      config.overrideScrollPosition = () => scrollOverride;
+    }
     if (!virtualList) {
       const sample = createTabRow(
         tabItems[0].tab,
@@ -585,19 +597,9 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       rowHeight = sample.getBoundingClientRect().height || 32;
       document.documentElement.style.setProperty('--tile-height', rowHeight + 'px');
       sample.remove();
-      virtualList = HyperList.create(container, {
-        height: container.clientHeight || 400,
-        itemHeight: rowHeight,
-        total: tabItems.length,
-        generate: generateRow
-      });
+      virtualList = HyperList.create(container, config);
     } else {
-      virtualList.refresh(container, {
-        height: container.clientHeight || 400,
-        itemHeight: rowHeight,
-        total: tabItems.length,
-        generate: generateRow
-      });
+      virtualList.refresh(container, config);
     }
   }
   adjustGridWidth();
@@ -681,11 +683,15 @@ function findDuplicates(tabs) {
 async function update() {
   hideAllTooltips();
   const isFull = document.body.classList.contains('full');
-  const prevScroll = scrollContainer
+  let prevScroll = scrollContainer
     ? isFull
       ? scrollContainer.scrollLeft
       : scrollContainer.scrollTop
     : 0;
+  if (pendingScroll !== null) {
+    prevScroll = pendingScroll;
+    pendingScroll = null;
+  }
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? {} : { currentWindow: true };
@@ -719,7 +725,7 @@ async function update() {
     } else {
       list = tabs.map(t => ({ tab: t }));
     }
-    renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
+    renderTabs(list, activeId, dupIds, visitedIds, winMap, query, prevScroll);
   } catch (e) {
     console.error('Update failed', e);
     document.getElementById('error').textContent =
@@ -1356,6 +1362,9 @@ function onContainerClick(e) {
   if (e.target.classList.contains('close-btn')) {
     e.stopPropagation();
     const id = parseInt(tabEl.dataset.tab, 10);
+    if (scrollContainer) {
+      pendingScroll = scrollContainer.scrollTop;
+    }
     browser.tabs.remove(id).then(scheduleUpdate);
     return;
   }
