@@ -61,8 +61,13 @@ body[data-theme="dark"] button {
 }
 body[data-theme="dark"] .tab {
   border-bottom-color: var(--color-border);
+  isolation: isolate;
+  /* isolation zapobiega migotaniu kart */
 }
 body[data-theme="dark"] .tab:hover {
+  /* z-index zapobiega migotaniu kart */
+  position: relative;
+  z-index: 2;
   background: #444;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   transform: translateY(-2px);
@@ -189,6 +194,9 @@ body.full #tabs {
   user-select: none;
   cursor: grab;
 
+  isolation: isolate;
+  /* isolation zapobiega migotaniu kart */
+
   transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
   box-shadow: none;
   transform: none;
@@ -213,6 +221,9 @@ body.popup .tab {
   margin-right: 0.25em;
 }
 .tab:hover {
+  /* z-index zapobiega migotaniu kart */
+  position: relative;
+  z-index: 2;
   background: var(--color-hover);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
