@@ -61,6 +61,8 @@ body[data-theme="dark"] button {
 }
 body[data-theme="dark"] .tab {
   border-bottom-color: var(--color-border);
+  isolation: isolate;
+  /* isolation zapobiega migotaniu kart */
 }
 body[data-theme="dark"] .tab:hover {
   background: #444;
@@ -188,6 +190,9 @@ body.full #tabs {
   -moz-user-select: none;
   user-select: none;
   cursor: grab;
+
+  isolation: isolate;
+  /* isolation zapobiega migotaniu kart */
 
   transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
   box-shadow: none;
