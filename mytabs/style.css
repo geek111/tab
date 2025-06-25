@@ -61,12 +61,16 @@ body[data-theme="dark"] button {
 }
 body[data-theme="dark"] .tab {
   border-bottom-color: var(--color-border);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 body[data-theme="dark"] .tab:hover {
+  will-change: transform;
+  backface-visibility: hidden;
   background: #444;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   transform: translateY(-2px);
-}
+} 
 body[data-theme="dark"] .duplicate {
   background: #663333;
 }
@@ -189,6 +193,9 @@ body.full #tabs {
   user-select: none;
   cursor: grab;
 
+  will-change: transform;
+  backface-visibility: hidden;
+
   transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
   box-shadow: none;
   transform: none;
@@ -213,6 +220,8 @@ body.popup .tab {
   margin-right: 0.25em;
 }
 .tab:hover {
+  will-change: transform;
+  backface-visibility: hidden;
   background: var(--color-hover);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
