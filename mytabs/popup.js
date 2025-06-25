@@ -17,10 +17,8 @@ let containerCache;
 let targetSelect;
 let visitedIds = new Set();
 
-let virtualList = null;
 let tabItems = [];
 let idIndexMap = new Map();
-let rowHeight = 0;
 let currentDupIds = new Set();
 let currentActiveId = -1;
 let currentVisited = new Set();
@@ -28,13 +26,8 @@ let currentWinMap = null;
 let currentQuery = '';
 
 function resetTabState() {
-  if (virtualList) {
-    virtualList.destroy();
-  }
-  virtualList = null;
   tabItems = [];
   idIndexMap = new Map();
-  rowHeight = 0;
   currentDupIds = new Set();
   currentActiveId = -1;
   currentVisited = new Set();
@@ -338,11 +331,6 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
 
   container.innerHTML = '';
   if (!tabItems.length) {
-    if (virtualList) {
-      virtualList.destroy();
-      virtualList = null;
-    }
-    rowHeight = 0;
     const msg = document.createElement('div');
     msg.id = 'empty';
     msg.textContent = 'No tabs to display';
@@ -350,26 +338,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     return;
   }
 
-  if (document.body.classList.contains('full')) {
-    if (virtualList) {
-      virtualList.destroy();
-      virtualList = null;
-    }
-    if (!rowHeight) {
-      const sample = createTabRow(
-        tabItems[0].tab,
-        dupIds.has(tabItems[0].tab.id),
-        activeId,
-        visitedIds.has(tabItems[0].tab.id),
-        tabItems[0]
-      );
-      sample.style.position = 'absolute';
-      sample.style.visibility = 'hidden';
-      container.appendChild(sample);
-      rowHeight = sample.getBoundingClientRect().height || 32;
-      sample.remove();
-    }
-    for (const item of tabItems) {
+  for (const item of tabItems) {
       const el = createTabRow(
         item.tab,
         dupIds.has(item.tab.id),
@@ -395,59 +364,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       item.el = el;
       container.appendChild(el);
     }
-  } else {
-    if (!virtualList) {
-      const sample = createTabRow(
-        tabItems[0].tab,
-        dupIds.has(tabItems[0].tab.id),
-        activeId,
-        visitedIds.has(tabItems[0].tab.id),
-        tabItems[0]
-      );
-      sample.style.position = 'absolute';
-      sample.style.visibility = 'hidden';
-      container.appendChild(sample);
-      rowHeight = sample.getBoundingClientRect().height || 32;
-      sample.remove();
-      virtualList = HyperList.create(container, {
-        height: container.clientHeight || 400,
-        itemHeight: rowHeight,
-        total: tabItems.length,
-        generate: generateRow
-      });
-    } else {
-      virtualList.refresh(container, {
-        height: container.clientHeight || 400,
-        itemHeight: rowHeight,
-        total: tabItems.length,
-        generate: generateRow
-      });
-    }
   }
-}
-
-function generateRow(index) {
-  const item = tabItems[index];
-  if (!item) return document.createElement('div');
-  if (!item.el) {
-    item.el = createTabRow(item.tab, currentDupIds.has(item.tab.id), currentActiveId, currentVisited.has(item.tab.id), item);
-    if (currentQuery && item.match && item.tab.title) {
-      const span = item.el.querySelector('.tab-title');
-      if (span) {
-        let html = '';
-        let last = 0;
-        for (const idx of item.match) {
-          html += escapeHtml(span.textContent.slice(last, idx));
-          html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
-          last = idx + 1;
-        }
-        html += escapeHtml(span.textContent.slice(last));
-        span.innerHTML = html;
-      }
-    }
-    if (item.selected) item.el.classList.add('selected');
-  }
-  return item.el;
 }
 
 function fuzzyMatchPositions(text, query) {
