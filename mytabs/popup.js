@@ -30,6 +30,7 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+let pendingScroll = null;
 
 function matchShortcut(def, e) {
   if (!def) return false;
@@ -681,11 +682,13 @@ function findDuplicates(tabs) {
 async function update() {
   hideAllTooltips();
   const isFull = document.body.classList.contains('full');
-  const prevScroll = scrollContainer
-    ? isFull
-      ? scrollContainer.scrollLeft
-      : scrollContainer.scrollTop
-    : 0;
+  const prevScroll = pendingScroll !== null
+    ? pendingScroll
+    : scrollContainer
+      ? isFull
+        ? scrollContainer.scrollLeft
+        : scrollContainer.scrollTop
+      : 0;
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? {} : { currentWindow: true };
@@ -731,6 +734,7 @@ async function update() {
     } else {
       scrollContainer.scrollTop = prevScroll;
     }
+    pendingScroll = null;
   }
 }
 
@@ -1199,6 +1203,7 @@ function showContextMenu(e) {
     const win = parseInt(tabEl.dataset.windowId, 10);
     // Place Close as the first entry for single-tab actions
     addItem('Close', async () => {
+      if (scrollContainer) pendingScroll = scrollContainer.scrollTop;
       await browser.tabs.remove(id);
       scheduleUpdate();
     });
@@ -1240,7 +1245,10 @@ function getSelectedTabIds() {
 
 async function bulkClose() {
   const ids = getSelectedTabIds();
-  if (ids.length) await browser.tabs.remove(ids);
+  if (ids.length) {
+    if (scrollContainer) pendingScroll = scrollContainer.scrollTop;
+    await browser.tabs.remove(ids);
+  }
   scheduleUpdate();
 }
 
@@ -1356,6 +1364,7 @@ function onContainerClick(e) {
   if (e.target.classList.contains('close-btn')) {
     e.stopPropagation();
     const id = parseInt(tabEl.dataset.tab, 10);
+    if (scrollContainer) pendingScroll = scrollContainer.scrollTop;
     browser.tabs.remove(id).then(scheduleUpdate);
     return;
   }
