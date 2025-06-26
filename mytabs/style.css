@@ -540,3 +540,19 @@ body.full #counts.scrolled {
     transform: none;
   }
 }
+
+/* Animation when switching between All, Recent and Duplicates views */
+#tabs.view-transition {
+  animation: view-fade 0.25s ease;
+}
+
+@keyframes view-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

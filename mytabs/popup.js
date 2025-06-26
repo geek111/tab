@@ -1,5 +1,6 @@
 // Shared script used by popup.html and sidebar.html
 let view = 'all';
+let viewChanged = false;
 let restored = false;
 // Feature toggles loaded from storage
 let SHOW_RECENT = true;
@@ -131,6 +132,13 @@ function truncateText(str, maxLen = 80) {
   return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
 }
 
+function switchView(newView) {
+  if (view === newView) return;
+  view = newView;
+  viewChanged = true;
+  scheduleUpdate();
+}
+
 async function loadOptions() {
   const {
     showRecent = true,
@@ -161,8 +169,7 @@ async function loadOptions() {
     if (SHOW_RECENT) {
       btnRecent.style.display = '';
       btnRecent.addEventListener('click', () => {
-        view = 'recent';
-        scheduleUpdate();
+        switchView('recent');
       });
     } else {
       btnRecent.style.display = 'none';
@@ -173,8 +180,7 @@ async function loadOptions() {
     if (SHOW_DUPLICATES) {
       btnDups.style.display = '';
       btnDups.addEventListener('click', () => {
-        view = 'dups';
-        scheduleUpdate();
+        switchView('dups');
       });
     } else {
       btnDups.style.display = 'none';
@@ -730,6 +736,16 @@ async function update() {
       list = tabs.map(t => ({ tab: t }));
     }
     renderTabs(list, activeId, dupIds, visitedIds, winMap, query);
+    if (viewChanged) {
+      const el = document.getElementById('tabs');
+      if (el) {
+        el.classList.add('view-transition');
+        el.addEventListener('animationend', () => {
+          el.classList.remove('view-transition');
+        }, { once: true });
+      }
+      viewChanged = false;
+    }
   } catch (e) {
     console.error('Update failed', e);
     document.getElementById('error').textContent =
@@ -789,28 +805,27 @@ clearBtn?.addEventListener('click', () => {
 });
 
 updateClearButton();
-document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
+document.getElementById('btn-all').addEventListener('click', () => {
+  switchView('all');
+});
 
 document.addEventListener('keydown', (e) => {
   if (!searchBox) return;
 
   if (matchShortcut(KEY_VIEW_ALL, e)) {
-    view = 'all';
-    scheduleUpdate();
+    switchView('all');
     e.preventDefault();
     e.stopPropagation();
     return;
   }
   if (matchShortcut(KEY_VIEW_RECENT, e) && SHOW_RECENT) {
-    view = 'recent';
-    scheduleUpdate();
+    switchView('recent');
     e.preventDefault();
     e.stopPropagation();
     return;
   }
   if (matchShortcut(KEY_VIEW_DUPS, e) && SHOW_DUPLICATES) {
-    view = 'dups';
-    scheduleUpdate();
+    switchView('dups');
     e.preventDefault();
     e.stopPropagation();
     return;
