@@ -161,8 +161,7 @@ async function loadOptions() {
     if (SHOW_RECENT) {
       btnRecent.style.display = '';
       btnRecent.addEventListener('click', () => {
-        view = 'recent';
-        scheduleUpdate();
+        switchView('recent');
       });
     } else {
       btnRecent.style.display = 'none';
@@ -173,8 +172,7 @@ async function loadOptions() {
     if (SHOW_DUPLICATES) {
       btnDups.style.display = '';
       btnDups.addEventListener('click', () => {
-        view = 'dups';
-        scheduleUpdate();
+        switchView('dups');
       });
     } else {
       btnDups.style.display = 'none';
@@ -746,6 +744,29 @@ async function update() {
 
 const scheduleUpdate = debounce(update, 200);
 
+let switchingView = false;
+async function switchView(newView) {
+  if (view === newView || switchingView) return;
+  const tabEl = document.getElementById('tabs');
+  if (!tabEl) {
+    view = newView;
+    scheduleUpdate();
+    return;
+  }
+  switchingView = true;
+  tabEl.classList.add('view-switch');
+  const onEnd = async () => {
+    tabEl.removeEventListener('transitionend', onEnd);
+    view = newView;
+    await update();
+    requestAnimationFrame(() => {
+      tabEl.classList.remove('view-switch');
+      switchingView = false;
+    });
+  };
+  tabEl.addEventListener('transitionend', onEnd, { once: true });
+}
+
 browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'visitedUpdated') {
     visitedIds = new Set(msg.visited || []);
@@ -789,28 +810,27 @@ clearBtn?.addEventListener('click', () => {
 });
 
 updateClearButton();
-document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
+document.getElementById('btn-all').addEventListener('click', () => {
+  switchView('all');
+});
 
 document.addEventListener('keydown', (e) => {
   if (!searchBox) return;
 
   if (matchShortcut(KEY_VIEW_ALL, e)) {
-    view = 'all';
-    scheduleUpdate();
+    switchView('all');
     e.preventDefault();
     e.stopPropagation();
     return;
   }
   if (matchShortcut(KEY_VIEW_RECENT, e) && SHOW_RECENT) {
-    view = 'recent';
-    scheduleUpdate();
+    switchView('recent');
     e.preventDefault();
     e.stopPropagation();
     return;
   }
   if (matchShortcut(KEY_VIEW_DUPS, e) && SHOW_DUPLICATES) {
-    view = 'dups';
-    scheduleUpdate();
+    switchView('dups');
     e.preventDefault();
     e.stopPropagation();
     return;
