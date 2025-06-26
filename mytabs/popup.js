@@ -33,6 +33,23 @@ let currentQuery = '';
 // Scroll position to restore after certain operations
 let pendingScroll = null;
 
+function animateViewChange() {
+  const el = scrollContainer || container;
+  if (!el) return;
+  el.classList.add('view-change');
+  el.addEventListener('animationend', () => {
+    el.classList.remove('view-change');
+  }, { once: true });
+}
+
+function switchView(mode) {
+  if (view !== mode) {
+    animateViewChange();
+    view = mode;
+    scheduleUpdate();
+  }
+}
+
 function matchShortcut(def, e) {
   if (!def) return false;
   const parts = def.toUpperCase().split('+');
@@ -161,8 +178,7 @@ async function loadOptions() {
     if (SHOW_RECENT) {
       btnRecent.style.display = '';
       btnRecent.addEventListener('click', () => {
-        view = 'recent';
-        scheduleUpdate();
+        switchView('recent');
       });
     } else {
       btnRecent.style.display = 'none';
@@ -173,8 +189,7 @@ async function loadOptions() {
     if (SHOW_DUPLICATES) {
       btnDups.style.display = '';
       btnDups.addEventListener('click', () => {
-        view = 'dups';
-        scheduleUpdate();
+        switchView('dups');
       });
     } else {
       btnDups.style.display = 'none';
@@ -789,28 +804,27 @@ clearBtn?.addEventListener('click', () => {
 });
 
 updateClearButton();
-document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
+document.getElementById('btn-all').addEventListener('click', () => {
+  switchView('all');
+});
 
 document.addEventListener('keydown', (e) => {
   if (!searchBox) return;
 
   if (matchShortcut(KEY_VIEW_ALL, e)) {
-    view = 'all';
-    scheduleUpdate();
+    switchView('all');
     e.preventDefault();
     e.stopPropagation();
     return;
   }
   if (matchShortcut(KEY_VIEW_RECENT, e) && SHOW_RECENT) {
-    view = 'recent';
-    scheduleUpdate();
+    switchView('recent');
     e.preventDefault();
     e.stopPropagation();
     return;
   }
   if (matchShortcut(KEY_VIEW_DUPS, e) && SHOW_DUPLICATES) {
-    view = 'dups';
-    scheduleUpdate();
+    switchView('dups');
     e.preventDefault();
     e.stopPropagation();
     return;
