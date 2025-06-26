@@ -86,6 +86,14 @@ function hideAllTooltips() {
   document.querySelectorAll('.tab-tooltip').forEach(t => t.remove());
 }
 
+function triggerViewAnimation() {
+  const el = document.getElementById('tabs');
+  if (!el) return;
+  el.classList.remove('view-transition');
+  void el.offsetWidth;
+  el.classList.add('view-transition');
+}
+
 function showPlaceholder(target, before) {
   if (dropTarget === target &&
       target.classList.contains(before ? 'drop-before' : 'drop-after')) {
@@ -162,6 +170,7 @@ async function loadOptions() {
       btnRecent.style.display = '';
       btnRecent.addEventListener('click', () => {
         view = 'recent';
+        triggerViewAnimation();
         scheduleUpdate();
       });
     } else {
@@ -174,6 +183,7 @@ async function loadOptions() {
       btnDups.style.display = '';
       btnDups.addEventListener('click', () => {
         view = 'dups';
+        triggerViewAnimation();
         scheduleUpdate();
       });
     } else {
@@ -789,13 +799,18 @@ clearBtn?.addEventListener('click', () => {
 });
 
 updateClearButton();
-document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
+document.getElementById('btn-all').addEventListener('click', () => {
+  view = 'all';
+  triggerViewAnimation();
+  scheduleUpdate();
+});
 
 document.addEventListener('keydown', (e) => {
   if (!searchBox) return;
 
   if (matchShortcut(KEY_VIEW_ALL, e)) {
     view = 'all';
+    triggerViewAnimation();
     scheduleUpdate();
     e.preventDefault();
     e.stopPropagation();
@@ -803,6 +818,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (matchShortcut(KEY_VIEW_RECENT, e) && SHOW_RECENT) {
     view = 'recent';
+    triggerViewAnimation();
     scheduleUpdate();
     e.preventDefault();
     e.stopPropagation();
@@ -810,6 +826,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (matchShortcut(KEY_VIEW_DUPS, e) && SHOW_DUPLICATES) {
     view = 'dups';
+    triggerViewAnimation();
     scheduleUpdate();
     e.preventDefault();
     e.stopPropagation();
