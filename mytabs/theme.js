@@ -1,6 +1,6 @@
 (async function(){
-  let { theme = 'light', tileWidth = 255, tileScale = 0.9, fontScale = 0.8125, closeScale = 1.55, rowGap = 0 } =
-    await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale','rowGap']);
+  let { theme = 'light', tileWidth = 255, tileScale = 0.9, fontScale = 0.8125, closeScale = 1.55, rowGap = 0, disableEffects = false } =
+    await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale','rowGap','disableEffects']);
   if (closeScale === undefined) {
     closeScale = 1.55;
     browser.storage.local.set({ closeScale });
@@ -8,6 +8,7 @@
 
   function apply(){
     document.body.dataset.theme = theme;
+    document.body.classList.toggle('no-effects', disableEffects);
     const width = tileWidth * tileScale;
     document.documentElement.style.setProperty('--tile-width', width + 'px');
     const isPopup = document.body.classList.contains('popup');
@@ -33,6 +34,7 @@
       if (changes.fontScale) fontScale = changes.fontScale.newValue;
       if (changes.closeScale) closeScale = changes.closeScale.newValue;
       if (changes.rowGap) rowGap = changes.rowGap.newValue;
+      if (changes.disableEffects) disableEffects = changes.disableEffects.newValue;
       apply();
     }
   });

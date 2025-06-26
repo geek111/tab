@@ -38,6 +38,7 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
   the Recent and Duplicates panels, the Move command and automatic unloading of inactive tabs.
 - The Close Button Scale adjusts the “×” size independent of the font scale.
 - A dark theme can also be enabled from the options page.
+- Animations can be disabled from the options page for a lightweight interface.
 - Keyboard shortcuts open the popup, sidebar and full view and can be changed from the Options page.
   New shortcuts let you switch between the **All**, **Recent** and **Duplicates** views
   using **Shift+A**, **Shift+R** and **Shift+D** by default. These can be customized or disabled, and the inputs show the combination as you press the keys.

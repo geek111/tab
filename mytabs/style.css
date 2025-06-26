@@ -39,6 +39,11 @@ body {
   animation: body-fade-in 0.2s ease-out;
 }
 
+body.no-effects, body.no-effects * {
+  transition: none !important;
+  animation: none !important;
+}
+
 body[data-theme="dark"] {
   --color-bg: #222;
   --color-text: #eee;
