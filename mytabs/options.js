@@ -16,6 +16,7 @@ const DEFAULTS = {
   'opt-enable-move': true,
   'opt-auto-unload': false,
   'opt-auto-unload-mins': 60,
+  'opt-disable-effects': false,
   'key-open-popup': 'Alt+Shift+H',
   'key-open-full': 'Alt+Shift+F',
   'key-unload-all': 'Alt+Shift+U',
@@ -27,7 +28,7 @@ const DEFAULTS = {
 async function load(){
   const data = await browser.storage.local.get([
     'theme','tileWidth','tileScale','fontScale','closeScale','rowGap','scrollSpeed',
-    'showRecent','showDuplicates','enableMove','autoUnload','autoUnloadMinutes',
+    'showRecent','showDuplicates','enableMove','autoUnload','autoUnloadMinutes','disableEffects',
     'keyOpenPopup','keyOpenFull','keyUnloadAll',
     'keyViewAll','keyViewRecent','keyViewDups'
   ]);
@@ -43,6 +44,7 @@ async function load(){
     enableMove=true,
     autoUnload=false,
     autoUnloadMinutes=60,
+    disableEffects=false,
     keyOpenPopup='Alt+Shift+H',
     keyOpenFull='Alt+Shift+F',
     keyUnloadAll='Alt+Shift+U',
@@ -71,6 +73,7 @@ async function load(){
   document.getElementById('opt-auto-unload').checked = autoUnload;
   document.getElementById('opt-auto-unload-mins').value = autoUnloadMinutes;
   document.getElementById('opt-auto-unload-mins').disabled = !autoUnload;
+  document.getElementById('opt-disable-effects').checked = disableEffects;
   document.getElementById('key-open-popup').value = keyOpenPopup;
   document.getElementById('key-open-full').value = keyOpenFull;
   document.getElementById('key-unload-all').value = keyUnloadAll;
@@ -102,10 +105,11 @@ async function save(){
   const keyViewAll=document.getElementById('key-view-all').value.trim();
   const keyViewRecent=document.getElementById('key-view-recent').value.trim();
   const keyViewDups=document.getElementById('key-view-dups').value.trim();
+  const disableEffects=document.getElementById('opt-disable-effects').checked;
   const rowGap=parseFloat(document.getElementById('rowGap').value);
   await browser.storage.local.set({
     theme, tileWidth, tileScale, fontScale, closeScale, rowGap, scrollSpeed,
-    showRecent, showDuplicates, enableMove, autoUnload, autoUnloadMinutes,
+    showRecent, showDuplicates, enableMove, autoUnload, autoUnloadMinutes, disableEffects,
     keyOpenPopup, keyOpenFull, keyUnloadAll,
     keyViewAll, keyViewRecent, keyViewDups
   });
@@ -200,6 +204,7 @@ const elAutoUnloadMins = document.getElementById('opt-auto-unload-mins');
 const elShowRecent = document.getElementById('opt-show-recent');
 const elShowDups = document.getElementById('opt-show-dups');
 const elEnableMove = document.getElementById('opt-enable-move');
+const elDisableEffects = document.getElementById('opt-disable-effects');
 
 const updateMap = {
   tileWidth: updateWidth,
@@ -284,6 +289,11 @@ elEnableMove.addEventListener('change', () => {
   checkDefault('opt-enable-move');
 });
 
+elDisableEffects.addEventListener('change', () => {
+  browser.storage.local.set({ disableEffects: elDisableEffects.checked });
+  checkDefault('opt-disable-effects');
+});
+
 elAutoUnload.addEventListener('change', () => {
   elAutoUnloadMins.disabled = !elAutoUnload.checked;
   browser.storage.local.set({ 'opt-auto-unload': elAutoUnload.checked });
@@ -305,7 +315,7 @@ document.querySelectorAll('input[id^="key-"]').forEach(el => {
 });
 
 browser.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && (changes.tileScale || changes.fontScale || changes.closeScale || changes.rowGap || changes.autoUnload || changes.autoUnloadMinutes)) {
+  if (area === 'local' && (changes.tileScale || changes.fontScale || changes.closeScale || changes.rowGap || changes.autoUnload || changes.autoUnloadMinutes || changes.disableEffects)) {
     const tileScale = changes.tileScale ? changes.tileScale.newValue : parseFloat(document.getElementById('tileScale').value);
     const fontScale = changes.fontScale ? changes.fontScale.newValue : parseFloat(document.getElementById('fontScale').value);
     const closeScale = changes.closeScale ? changes.closeScale.newValue : parseFloat(document.getElementById('closeScale').value);
@@ -335,6 +345,10 @@ browser.storage.onChanged.addListener((changes, area) => {
     checkDefault('closeScale');
     checkDefault('rowGap');
     checkDefault('uiScale');
+    if (changes.disableEffects) {
+      elDisableEffects.checked = changes.disableEffects.newValue;
+      checkDefault('opt-disable-effects');
+    }
   }
 });
 
