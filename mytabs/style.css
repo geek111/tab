@@ -148,6 +148,7 @@ body.popup #tabs-wrapper {
   scrollbar-gutter: stable;
   box-sizing: border-box;
   position: relative;
+  perspective: 700px;
 }
 body.popup #tabs-wrapper::before,
 body.popup #tabs-wrapper::after {
@@ -448,6 +449,7 @@ body.full #tabs-wrapper,
   min-height: 0;
   margin: 0 !important;
   padding: 0 !important;
+  perspective: 700px;
   position: relative;
 }
 body.full #tabs-wrapper::before,
@@ -539,4 +541,44 @@ body.full #counts.scrolled {
     opacity: 1;
     transform: none;
   }
+}
+
+@keyframes view-wow {
+  0% {
+    opacity: 0;
+    transform: rotateX(-90deg) scale(0.8);
+  }
+  70% {
+    opacity: 1;
+    transform: rotateX(15deg) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes view-flip {
+  0% {
+    opacity: 0;
+    transform: rotateY(-90deg) scale(0.8);
+  }
+  70% {
+    opacity: 1;
+    transform: rotateY(15deg) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+#tabs.view-wow.view-transition {
+  animation: view-wow 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  transform-origin: top center;
+}
+
+#tabs.view-flip.view-transition {
+  animation: view-flip 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  transform-origin: top center;
 }
