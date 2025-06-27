@@ -335,13 +335,11 @@ button:hover {
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   z-index: 1000;
   opacity: 0;
-  transform: scale(0.95);
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: scale(0.9);
 }
 
 #context.visible {
-  opacity: 1;
-  transform: scale(1);
+  animation: context-open 0.15s ease forwards;
 }
 
 #context div {
@@ -550,6 +548,17 @@ body.full #counts.scrolled {
   from {
     opacity: 0;
     transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes context-open {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
   }
   to {
     opacity: 1;
