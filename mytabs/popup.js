@@ -1240,7 +1240,7 @@ function showContextMenu(e) {
 
   if (!tabEl && !selected.length) {
     const info = document.createElement('div');
-    info.textContent = `KepiTAB Manager v${browser.runtime.getManifest().version}`;
+    info.textContent = 'You found the Easter Egg!';
     context.appendChild(info);
   }
 
