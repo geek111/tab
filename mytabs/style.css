@@ -89,6 +89,14 @@ body[data-theme="dark"] #context {
 body[data-theme="dark"] #context div:hover {
   background: #555;
 }
+body[data-theme="dark"] #easter-egg {
+  background: #333;
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+body[data-theme="dark"] #easter-egg .egg {
+  background: radial-gradient(circle at 50% 35%, #bbb, #666);
+}
 
 #menu {
   margin-bottom: 0;
@@ -326,6 +334,34 @@ button:hover {
 }
 .hidden {
   display: none;
+}
+#easter-egg {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: var(--color-bg);
+  border: 2px solid var(--color-active);
+  border-radius: 8px;
+  padding: 1.5em;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1500;
+  color: var(--color-text);
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  text-align: center;
+}
+#easter-egg .egg {
+  width: 80px;
+  height: 110px;
+  margin: 0 auto 0.5em;
+  background: radial-gradient(circle at 50% 35%, #fff, var(--color-hover));
+  border: 2px solid var(--color-border);
+  border-radius: 50% 50% 45% 45%;
+}
+#easter-egg.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
 }
 #context {
   position: absolute;

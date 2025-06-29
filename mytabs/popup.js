@@ -32,6 +32,21 @@ let currentWinMap = null;
 let currentQuery = '';
 // Scroll position to restore after certain operations
 let pendingScroll = null;
+let easterEgg;
+
+function showEasterEgg() {
+  if (!easterEgg) return;
+  if (!easterEgg.classList.contains('visible')) {
+    easterEgg.classList.remove('hidden');
+    requestAnimationFrame(() => easterEgg.classList.add('visible'));
+    const hide = () => {
+      easterEgg.classList.remove('visible');
+      setTimeout(() => easterEgg.classList.add('hidden'), 150);
+    };
+    easterEgg.addEventListener('click', hide, { once: true });
+    setTimeout(hide, 2000);
+  }
+}
 
 function matchShortcut(def, e) {
   if (!def) return false;
@@ -952,6 +967,9 @@ async function init() {
   container = document.getElementById('tabs-body') ||
               document.getElementById('tabs');
   scrollContainer = document.getElementById('tabs-wrapper') || container;
+  easterEgg = document.getElementById('easter-egg');
+  const menuEl = document.getElementById('menu');
+  menuEl?.addEventListener('dblclick', showEasterEgg);
   scrollContainer.addEventListener('scroll', saveScroll);
   scrollContainer.addEventListener('scroll', hideAllTooltips);
   scrollContainer.addEventListener('scroll', updateMenuShadow);
@@ -1239,9 +1257,8 @@ function showContextMenu(e) {
   }
 
   if (!tabEl && !selected.length) {
-    const info = document.createElement('div');
-    info.textContent = `KepiTAB Manager v${browser.runtime.getManifest().version}`;
-    context.appendChild(info);
+    showEasterEgg();
+    return;
   }
 
   addItem('Unload All Tabs', bulkUnloadAll);
