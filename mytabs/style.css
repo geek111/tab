@@ -89,6 +89,10 @@ body[data-theme="dark"] #context {
 body[data-theme="dark"] #context div:hover {
   background: #555;
 }
+body[data-theme="dark"] #easter-egg {
+  background: linear-gradient(135deg, #444, #222);
+  border-color: var(--color-border);
+}
 
 #menu {
   margin-bottom: 0;
@@ -326,6 +330,32 @@ button:hover {
 }
 .hidden {
   display: none;
+}
+#easter-egg {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
+  background: linear-gradient(135deg, #fff8dc, #ffe4e1);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1em;
+  max-width: 300px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 1500;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+#easter-egg.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+#easter-egg .egg-content h2 {
+  margin: 0 0 0.5em;
+}
+#easter-egg .egg-content p {
+  margin: 0;
 }
 #context {
   position: absolute;
