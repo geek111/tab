@@ -32,6 +32,7 @@ let currentWinMap = null;
 let currentQuery = '';
 // Scroll position to restore after certain operations
 let pendingScroll = null;
+let easterEgg;
 
 function matchShortcut(def, e) {
   if (!def) return false;
@@ -952,6 +953,21 @@ async function init() {
   container = document.getElementById('tabs-body') ||
               document.getElementById('tabs');
   scrollContainer = document.getElementById('tabs-wrapper') || container;
+  easterEgg = document.getElementById('easter-egg');
+  const menuEl = document.getElementById('menu');
+  menuEl?.addEventListener('dblclick', () => {
+    if (!easterEgg) return;
+    if (!easterEgg.classList.contains('visible')) {
+      easterEgg.classList.remove('hidden');
+      requestAnimationFrame(() => easterEgg.classList.add('visible'));
+      const hide = () => {
+        easterEgg.classList.remove('visible');
+        setTimeout(() => easterEgg.classList.add('hidden'), 150);
+      };
+      easterEgg.addEventListener('click', hide, { once: true });
+      setTimeout(hide, 2000);
+    }
+  });
   scrollContainer.addEventListener('scroll', saveScroll);
   scrollContainer.addEventListener('scroll', hideAllTooltips);
   scrollContainer.addEventListener('scroll', updateMenuShadow);
