@@ -11,5 +11,6 @@
   "scripts": {
     "lint": "stylelint mytabs/style.css",
     "postinstall": "npx stylelint --version"
-  }
+  },
+  "license": "GPL-3.0-or-later"
 }
