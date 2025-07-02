@@ -1270,6 +1270,19 @@ function showContextMenu(e) {
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
   context.classList.remove('hidden');
+  const rect = context.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth;
+  const vh = document.documentElement.clientHeight;
+  let left = e.pageX;
+  let top = e.pageY;
+  if (left + rect.width > vw) {
+    left = Math.max(0, vw - rect.width - 5);
+  }
+  if (top + rect.height > vh) {
+    top = Math.max(0, vh - rect.height - 5);
+  }
+  context.style.left = left + 'px';
+  context.style.top = top + 'px';
   requestAnimationFrame(() => context.classList.add('visible'));
 }
 
