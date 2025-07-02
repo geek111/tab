@@ -4,7 +4,7 @@
 
   "version": "0.5.0",
 
-  "description": "A simple tab management tool inspired by All Tabs Helper",
+  "description": "A simple tab management tool",
   "icons": { "48": "kepi-tab-manager.ico" },
     "permissions": [
       "tabs",
