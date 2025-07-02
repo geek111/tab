@@ -13,3 +13,7 @@ Configuration is stored in `.stylelintrc.json` and uses the
 npm install
 npm run lint
 ```
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 or later.

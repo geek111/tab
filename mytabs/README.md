@@ -60,4 +60,4 @@ This is an open source Firefox add-on inspired by the features of **All Tabs Hel
 
 To install for development, load the directory as a temporary add-on in Firefox.
 
-See LICENSE for the current project license.
+This project is licensed under the GNU General Public License v3.0 or later. See LICENSE for details.
