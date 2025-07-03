@@ -112,6 +112,25 @@ function triggerViewAnimation() {
   el.classList.add('view-transition');
 }
 
+function updateViewButtons() {
+  const btnAll = document.getElementById('btn-all');
+  const btnRecent = document.getElementById('btn-recent');
+  const btnDups = document.getElementById('btn-dups');
+  btnAll?.classList.remove('active-view');
+  btnRecent?.classList.remove('active-view');
+  btnDups?.classList.remove('active-view');
+  if (view === 'recent') btnRecent?.classList.add('active-view');
+  else if (view === 'dups') btnDups?.classList.add('active-view');
+  else btnAll?.classList.add('active-view');
+}
+
+function setView(newView) {
+  view = newView;
+  updateViewButtons();
+  triggerViewAnimation();
+  scheduleUpdate();
+}
+
 function showPlaceholder(target, before) {
   if (dropTarget === target &&
       target.classList.contains(before ? 'drop-before' : 'drop-after')) {
@@ -187,26 +206,22 @@ async function loadOptions() {
     if (SHOW_RECENT) {
       btnRecent.style.display = '';
       btnRecent.addEventListener('click', () => {
-        view = 'recent';
-        triggerViewAnimation();
-        scheduleUpdate();
+        setView('recent');
       });
     } else {
       btnRecent.style.display = 'none';
-      if (view === 'recent') view = 'all';
+      if (view === 'recent') setView('all');
     }
   }
   if (btnDups) {
     if (SHOW_DUPLICATES) {
       btnDups.style.display = '';
       btnDups.addEventListener('click', () => {
-        view = 'dups';
-        triggerViewAnimation();
-        scheduleUpdate();
+        setView('dups');
       });
     } else {
       btnDups.style.display = 'none';
-      if (view === 'dups') view = 'all';
+      if (view === 'dups') setView('all');
     }
   }
   KEY_VIEW_ALL = keyViewAll || '';
@@ -218,6 +233,7 @@ async function loadOptions() {
   if (btnDups) btnDups.title = KEY_VIEW_DUPS ? `Shortcut: ${KEY_VIEW_DUPS}` : '';
   const unloadBtn = document.getElementById('bulk-unload-all');
   if (unloadBtn) unloadBtn.title = `Shortcut: ${keyUnloadAll}`;
+  updateViewButtons();
 }
 
 function updateSelection(row, selected) {
@@ -818,34 +834,26 @@ clearBtn?.addEventListener('click', () => {
 
 updateClearButton();
 document.getElementById('btn-all').addEventListener('click', () => {
-  view = 'all';
-  triggerViewAnimation();
-  scheduleUpdate();
+  setView('all');
 });
 
 document.addEventListener('keydown', (e) => {
   if (!searchBox) return;
 
   if (matchShortcut(KEY_VIEW_ALL, e)) {
-    view = 'all';
-    triggerViewAnimation();
-    scheduleUpdate();
+    setView('all');
     e.preventDefault();
     e.stopPropagation();
     return;
   }
   if (matchShortcut(KEY_VIEW_RECENT, e) && SHOW_RECENT) {
-    view = 'recent';
-    triggerViewAnimation();
-    scheduleUpdate();
+    setView('recent');
     e.preventDefault();
     e.stopPropagation();
     return;
   }
   if (matchShortcut(KEY_VIEW_DUPS, e) && SHOW_DUPLICATES) {
-    view = 'dups';
-    triggerViewAnimation();
-    scheduleUpdate();
+    setView('dups');
     e.preventDefault();
     e.stopPropagation();
     return;

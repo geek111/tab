@@ -103,6 +103,17 @@ body[data-theme="dark"] #easter-egg {
 #menu button {
   margin-right: 0.2em;
 }
+#menu button.active-view {
+  background: linear-gradient(135deg, var(--color-selected), var(--color-active));
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+#menu button.active-view:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+}
 #container-filter {
   margin-left: 0.2em;
 }
