@@ -112,6 +112,12 @@ function triggerViewAnimation() {
   el.classList.add('view-transition');
 }
 
+function updateViewButtons() {
+  document.getElementById('btn-all')?.classList.toggle('active', view === 'all');
+  document.getElementById('btn-recent')?.classList.toggle('active', view === 'recent');
+  document.getElementById('btn-dups')?.classList.toggle('active', view === 'dups');
+}
+
 function showPlaceholder(target, before) {
   if (dropTarget === target &&
       target.classList.contains(before ? 'drop-before' : 'drop-after')) {
@@ -186,27 +192,35 @@ async function loadOptions() {
   if (btnRecent) {
     if (SHOW_RECENT) {
       btnRecent.style.display = '';
-      btnRecent.addEventListener('click', () => {
-        view = 'recent';
-        triggerViewAnimation();
-        scheduleUpdate();
-      });
+        btnRecent.addEventListener('click', () => {
+          view = 'recent';
+          triggerViewAnimation();
+          updateViewButtons();
+          scheduleUpdate();
+        });
     } else {
       btnRecent.style.display = 'none';
-      if (view === 'recent') view = 'all';
+      if (view === 'recent') {
+        view = 'all';
+        updateViewButtons();
+      }
     }
   }
   if (btnDups) {
     if (SHOW_DUPLICATES) {
       btnDups.style.display = '';
-      btnDups.addEventListener('click', () => {
-        view = 'dups';
-        triggerViewAnimation();
-        scheduleUpdate();
-      });
+        btnDups.addEventListener('click', () => {
+          view = 'dups';
+          triggerViewAnimation();
+          updateViewButtons();
+          scheduleUpdate();
+        });
     } else {
       btnDups.style.display = 'none';
-      if (view === 'dups') view = 'all';
+      if (view === 'dups') {
+        view = 'all';
+        updateViewButtons();
+      }
     }
   }
   KEY_VIEW_ALL = keyViewAll || '';
@@ -218,6 +232,7 @@ async function loadOptions() {
   if (btnDups) btnDups.title = KEY_VIEW_DUPS ? `Shortcut: ${KEY_VIEW_DUPS}` : '';
   const unloadBtn = document.getElementById('bulk-unload-all');
   if (unloadBtn) unloadBtn.title = `Shortcut: ${keyUnloadAll}`;
+  updateViewButtons();
 }
 
 function updateSelection(row, selected) {
@@ -820,36 +835,40 @@ updateClearButton();
 document.getElementById('btn-all').addEventListener('click', () => {
   view = 'all';
   triggerViewAnimation();
+  updateViewButtons();
   scheduleUpdate();
 });
 
 document.addEventListener('keydown', (e) => {
   if (!searchBox) return;
 
-  if (matchShortcut(KEY_VIEW_ALL, e)) {
-    view = 'all';
-    triggerViewAnimation();
-    scheduleUpdate();
-    e.preventDefault();
-    e.stopPropagation();
-    return;
-  }
-  if (matchShortcut(KEY_VIEW_RECENT, e) && SHOW_RECENT) {
-    view = 'recent';
-    triggerViewAnimation();
-    scheduleUpdate();
-    e.preventDefault();
-    e.stopPropagation();
-    return;
-  }
-  if (matchShortcut(KEY_VIEW_DUPS, e) && SHOW_DUPLICATES) {
-    view = 'dups';
-    triggerViewAnimation();
-    scheduleUpdate();
-    e.preventDefault();
-    e.stopPropagation();
-    return;
-  }
+    if (matchShortcut(KEY_VIEW_ALL, e)) {
+      view = 'all';
+      triggerViewAnimation();
+      updateViewButtons();
+      scheduleUpdate();
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (matchShortcut(KEY_VIEW_RECENT, e) && SHOW_RECENT) {
+      view = 'recent';
+      triggerViewAnimation();
+      updateViewButtons();
+      scheduleUpdate();
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (matchShortcut(KEY_VIEW_DUPS, e) && SHOW_DUPLICATES) {
+      view = 'dups';
+      triggerViewAnimation();
+      updateViewButtons();
+      scheduleUpdate();
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
 
   if (e.key === 'Escape') {
     if (searchBox.value) {
