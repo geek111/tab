@@ -103,6 +103,17 @@ body[data-theme="dark"] #easter-egg {
 #menu button {
   margin-right: 0.2em;
 }
+#menu button.active-view {
+  background: linear-gradient(135deg, var(--color-active), #ffe8a1);
+  font-weight: bold;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.25), 0 0 6px var(--color-active);
+  animation: active-glow 2s ease-in-out infinite;
+  transform: translateY(-1px);
+}
+body[data-theme="dark"] #menu button.active-view {
+  background: linear-gradient(135deg, #665500, #998800);
+  color: var(--color-bg);
+}
 #container-filter {
   margin-left: 0.2em;
 }
@@ -589,4 +600,9 @@ body.full #counts.scrolled {
 
 #tabs.view-transition {
   animation: view-fade 0.3s ease-out;
+}
+
+@keyframes active-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(255, 200, 60, 0.4); }
+  50% { box-shadow: 0 0 8px rgba(255, 200, 60, 0.8); }
 }

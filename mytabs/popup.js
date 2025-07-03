@@ -112,6 +112,12 @@ function triggerViewAnimation() {
   el.classList.add('view-transition');
 }
 
+function updateViewButtons() {
+  document.getElementById('btn-all')?.classList.toggle('active-view', view === 'all');
+  document.getElementById('btn-recent')?.classList.toggle('active-view', view === 'recent');
+  document.getElementById('btn-dups')?.classList.toggle('active-view', view === 'dups');
+}
+
 function showPlaceholder(target, before) {
   if (dropTarget === target &&
       target.classList.contains(before ? 'drop-before' : 'drop-after')) {
@@ -190,10 +196,12 @@ async function loadOptions() {
         view = 'recent';
         triggerViewAnimation();
         scheduleUpdate();
+        updateViewButtons();
       });
     } else {
       btnRecent.style.display = 'none';
       if (view === 'recent') view = 'all';
+      updateViewButtons();
     }
   }
   if (btnDups) {
@@ -203,10 +211,12 @@ async function loadOptions() {
         view = 'dups';
         triggerViewAnimation();
         scheduleUpdate();
+        updateViewButtons();
       });
     } else {
       btnDups.style.display = 'none';
       if (view === 'dups') view = 'all';
+      updateViewButtons();
     }
   }
   KEY_VIEW_ALL = keyViewAll || '';
@@ -821,6 +831,7 @@ document.getElementById('btn-all').addEventListener('click', () => {
   view = 'all';
   triggerViewAnimation();
   scheduleUpdate();
+  updateViewButtons();
 });
 
 document.addEventListener('keydown', (e) => {
@@ -830,6 +841,7 @@ document.addEventListener('keydown', (e) => {
     view = 'all';
     triggerViewAnimation();
     scheduleUpdate();
+    updateViewButtons();
     e.preventDefault();
     e.stopPropagation();
     return;
@@ -838,6 +850,7 @@ document.addEventListener('keydown', (e) => {
     view = 'recent';
     triggerViewAnimation();
     scheduleUpdate();
+    updateViewButtons();
     e.preventDefault();
     e.stopPropagation();
     return;
@@ -846,6 +859,7 @@ document.addEventListener('keydown', (e) => {
     view = 'dups';
     triggerViewAnimation();
     scheduleUpdate();
+    updateViewButtons();
     e.preventDefault();
     e.stopPropagation();
     return;
@@ -1003,6 +1017,7 @@ async function init() {
   const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
   currentDupIds = new Set(duplicates);
   await loadOptions();
+  updateViewButtons();
   registerTabEvents();
   const select = document.getElementById('container-filter');
   let containerIdents = [];
