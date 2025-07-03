@@ -112,6 +112,15 @@ function triggerViewAnimation() {
   el.classList.add('view-transition');
 }
 
+function updateMenuButtons() {
+  const btnAll = document.getElementById('btn-all');
+  const btnRecent = document.getElementById('btn-recent');
+  const btnDups = document.getElementById('btn-dups');
+  if (btnAll) btnAll.classList.toggle('active', view === 'all');
+  if (btnRecent) btnRecent.classList.toggle('active', view === 'recent');
+  if (btnDups) btnDups.classList.toggle('active', view === 'dups');
+}
+
 function showPlaceholder(target, before) {
   if (dropTarget === target &&
       target.classList.contains(before ? 'drop-before' : 'drop-after')) {
@@ -189,6 +198,7 @@ async function loadOptions() {
       btnRecent.addEventListener('click', () => {
         view = 'recent';
         triggerViewAnimation();
+        updateMenuButtons();
         scheduleUpdate();
       });
     } else {
@@ -202,6 +212,7 @@ async function loadOptions() {
       btnDups.addEventListener('click', () => {
         view = 'dups';
         triggerViewAnimation();
+        updateMenuButtons();
         scheduleUpdate();
       });
     } else {
@@ -218,6 +229,7 @@ async function loadOptions() {
   if (btnDups) btnDups.title = KEY_VIEW_DUPS ? `Shortcut: ${KEY_VIEW_DUPS}` : '';
   const unloadBtn = document.getElementById('bulk-unload-all');
   if (unloadBtn) unloadBtn.title = `Shortcut: ${keyUnloadAll}`;
+  updateMenuButtons();
 }
 
 function updateSelection(row, selected) {
@@ -820,6 +832,7 @@ updateClearButton();
 document.getElementById('btn-all').addEventListener('click', () => {
   view = 'all';
   triggerViewAnimation();
+  updateMenuButtons();
   scheduleUpdate();
 });
 
@@ -829,6 +842,7 @@ document.addEventListener('keydown', (e) => {
   if (matchShortcut(KEY_VIEW_ALL, e)) {
     view = 'all';
     triggerViewAnimation();
+    updateMenuButtons();
     scheduleUpdate();
     e.preventDefault();
     e.stopPropagation();
@@ -837,6 +851,7 @@ document.addEventListener('keydown', (e) => {
   if (matchShortcut(KEY_VIEW_RECENT, e) && SHOW_RECENT) {
     view = 'recent';
     triggerViewAnimation();
+    updateMenuButtons();
     scheduleUpdate();
     e.preventDefault();
     e.stopPropagation();
@@ -845,6 +860,7 @@ document.addEventListener('keydown', (e) => {
   if (matchShortcut(KEY_VIEW_DUPS, e) && SHOW_DUPLICATES) {
     view = 'dups';
     triggerViewAnimation();
+    updateMenuButtons();
     scheduleUpdate();
     e.preventDefault();
     e.stopPropagation();
