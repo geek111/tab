@@ -4,8 +4,10 @@
 
   "version": "1.0.0",
 
+  "browser_specific_settings": { "gecko": { "id": "kepi@addon" } },
+
   "description": "A simple tab management tool",
-  "icons": { "48": "kepi-tab-manager.ico" },
+  "icons": { "48": "kepi-tab-manager.png" },
     "permissions": [
       "tabs",
       "tabHide",
@@ -15,16 +17,17 @@
       "cookies"
     ],
   "background": {
+
     "scripts": ["background.js"]
   },
   "action": {
     "default_title": "KepiTAB Manager",
-    "default_icon": "kepi-tab-manager.ico",
+    "default_icon": "kepi-tab-manager.png",
     "default_popup": "popup.html"
   },
   "sidebar_action": {
     "default_title": "Tabs",
-    "default_icon": "kepi-tab-manager.ico",
+    "default_icon": "kepi-tab-manager.png",
     "default_panel": "sidebar.html",
     "open_at_install": false
   },
