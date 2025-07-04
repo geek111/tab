@@ -15,8 +15,7 @@
       "cookies"
     ],
   "background": {
-    "scripts": ["background.js"],
-    "service_worker": "background.js"
+    "scripts": ["background.js"]
   },
   "action": {
     "default_title": "KepiTAB Manager",
