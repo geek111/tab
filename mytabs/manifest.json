@@ -4,6 +4,8 @@
 
   "version": "1.0.0",
 
+  "browser_specific_settings": { "gecko": { "id": "kepi@addon" } },
+
   "description": "A simple tab management tool",
   "icons": { "48": "kepi-tab-manager.ico" },
     "permissions": [
