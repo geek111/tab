@@ -176,6 +176,24 @@ function truncateText(str, maxLen = 80) {
   return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
 }
 
+function applyHighlights(span, indices) {
+  const text = span.textContent;
+  span.textContent = '';
+  let last = 0;
+  for (const idx of indices) {
+    if (last < idx) {
+      span.appendChild(document.createTextNode(text.slice(last, idx)));
+    }
+    const mark = document.createElement('mark');
+    mark.textContent = text[idx];
+    span.appendChild(mark);
+    last = idx + 1;
+  }
+  if (last < text.length) {
+    span.appendChild(document.createTextNode(text.slice(last)));
+  }
+}
+
 async function loadOptions() {
   const {
     showRecent = true,
@@ -441,15 +459,15 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       tooltip.className = 'tab-tooltip';
       const truncatedTitle = truncateText(tab.title || tab.url);
       const truncatedUrl = truncateText(tab.url);
-      const safeTitle = escapeHtml(truncatedTitle);
-      const safeUrl = escapeHtml(truncatedUrl);
       const ctx = containerMap.get(tab.cookieStoreId);
-      let tooltipHtml = `${safeTitle}<br>${safeUrl}`;
+      tooltip.textContent = '';
+      tooltip.appendChild(document.createTextNode(truncatedTitle));
+      tooltip.appendChild(document.createElement('br'));
+      tooltip.appendChild(document.createTextNode(truncatedUrl));
       if (ctx) {
-        const safeCtx = escapeHtml(ctx.name);
-        tooltipHtml += `<br>${safeCtx}`;
+        tooltip.appendChild(document.createElement('br'));
+        tooltip.appendChild(document.createTextNode(ctx.name));
       }
-      tooltip.innerHTML = tooltipHtml;
       document.body.appendChild(tooltip);
       const rect = icon.getBoundingClientRect();
       let left = rect.right + window.scrollX + 5;
@@ -600,15 +618,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
         if (currentQuery && item.match && item.tab.title) {
           const span = el.querySelector('.tab-title');
           if (span) {
-            let html = '';
-            let last = 0;
-            for (const idx of item.match) {
-              html += escapeHtml(span.textContent.slice(last, idx));
-              html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
-              last = idx + 1;
-            }
-            html += escapeHtml(span.textContent.slice(last));
-            span.innerHTML = html;
+            applyHighlights(span, item.match);
           }
         }
         if (item.selected) el.classList.add('selected');
@@ -656,24 +666,16 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
 function generateRow(index) {
   const item = tabItems[index];
   if (!item) return document.createElement('div');
-  if (!item.el) {
-    item.el = createTabRow(item.tab, currentDupIds.has(item.tab.id), currentActiveId, currentVisited.has(item.tab.id), item);
-    if (currentQuery && item.match && item.tab.title) {
-      const span = item.el.querySelector('.tab-title');
-      if (span) {
-        let html = '';
-        let last = 0;
-        for (const idx of item.match) {
-          html += escapeHtml(span.textContent.slice(last, idx));
-          html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
-          last = idx + 1;
+    if (!item.el) {
+      item.el = createTabRow(item.tab, currentDupIds.has(item.tab.id), currentActiveId, currentVisited.has(item.tab.id), item);
+      if (currentQuery && item.match && item.tab.title) {
+        const span = item.el.querySelector('.tab-title');
+        if (span) {
+          applyHighlights(span, item.match);
         }
-        html += escapeHtml(span.textContent.slice(last));
-        span.innerHTML = html;
       }
+      if (item.selected) item.el.classList.add('selected');
     }
-    if (item.selected) item.el.classList.add('selected');
-  }
   return item.el;
 }
 
