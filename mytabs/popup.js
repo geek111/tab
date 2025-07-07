@@ -1257,6 +1257,12 @@ function showContextMenu(e) {
     const win = parseInt(tabEl.dataset.windowId, 10);
     // Place Close as the first entry for single-tab actions
     addItem('Close', async () => {
+      if (scrollContainer) {
+        const isFull = document.body.classList.contains('full');
+        pendingScroll = isFull
+          ? scrollContainer.scrollLeft
+          : scrollContainer.scrollTop;
+      }
       await browser.tabs.remove(id);
       scheduleUpdate();
     });
@@ -1427,7 +1433,10 @@ function onContainerClick(e) {
     e.stopPropagation();
     const id = parseInt(tabEl.dataset.tab, 10);
     if (scrollContainer) {
-      pendingScroll = scrollContainer.scrollTop;
+      const isFull = document.body.classList.contains('full');
+      pendingScroll = isFull
+        ? scrollContainer.scrollLeft
+        : scrollContainer.scrollTop;
     }
     browser.tabs.remove(id).then(scheduleUpdate);
     return;
