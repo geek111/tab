@@ -6,6 +6,9 @@ let SHOW_RECENT = true;
 let SHOW_DUPLICATES = true;
 let MOVE_ENABLED = true;
 let SCROLL_SPEED = 1;
+let KEY_VIEW_ALL = 'Shift+A';
+let KEY_VIEW_RECENT = 'Shift+R';
+let KEY_VIEW_DUPS = 'Shift+D';
 
 let lastSelectedIndex = -1;
 let container; // tab list element
@@ -16,6 +19,7 @@ let filterContainerId = '';
 let containerCache;
 let targetSelect;
 let visitedIds = new Set();
+let movePending = null;
 
 let virtualList = null;
 let tabItems = [];
@@ -26,6 +30,53 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+// Scroll position to restore after certain operations
+let pendingScroll = null;
+let easterEgg;
+
+function showEasterEgg() {
+  if (!easterEgg || easterEgg.classList.contains('visible')) return;
+  const hide = () => {
+    easterEgg.classList.remove('visible');
+    setTimeout(() => easterEgg.classList.add('hidden'), 150);
+    document.removeEventListener('keydown', escHandler);
+  };
+  const escHandler = ev => {
+    if (ev.key === 'Escape') hide();
+  };
+  easterEgg.classList.remove('hidden');
+  requestAnimationFrame(() => easterEgg.classList.add('visible'));
+  easterEgg.addEventListener('click', hide, { once: true });
+  document.addEventListener('keydown', escHandler);
+  setTimeout(hide, 3000);
+}
+
+function matchShortcut(def, e) {
+  if (!def) return false;
+  const parts = def.toUpperCase().split('+');
+  const key = parts.pop();
+  const req = {
+    CTRL: parts.includes('CTRL'),
+    ALT: parts.includes('ALT'),
+    META: parts.includes('META'),
+    SHIFT: parts.includes('SHIFT')
+  };
+  return key === e.key.toUpperCase() &&
+    e.ctrlKey === req.CTRL &&
+    e.altKey === req.ALT &&
+    e.metaKey === req.META &&
+    e.shiftKey === req.SHIFT;
+}
+
+function adjustGridWidth() {
+  if (!document.body.classList.contains('full')) return;
+  const wrapper = document.getElementById('tabs-wrapper');
+  const grid = document.getElementById('tabs');
+  if (!wrapper || !grid || !grid.lastElementChild) return;
+  const last = grid.lastElementChild;
+  const width = Math.max(wrapper.clientWidth, last.offsetLeft + last.offsetWidth);
+  grid.style.width = width + 'px';
+}
 
 function resetTabState() {
   if (virtualList) {
@@ -40,12 +91,44 @@ function resetTabState() {
   currentVisited = new Set();
   currentWinMap = null;
   currentQuery = '';
+  movePending = null;
 }
 function clearPlaceholder() {
   if (dropTarget) {
     dropTarget.classList.remove('drop-before', 'drop-after');
     dropTarget = null;
   }
+}
+
+function hideAllTooltips() {
+  document.querySelectorAll('.tab-tooltip').forEach(t => t.remove());
+}
+
+function triggerViewAnimation() {
+  const el = document.getElementById('tabs');
+  if (!el) return;
+  el.classList.remove('view-transition');
+  void el.offsetWidth;
+  el.classList.add('view-transition');
+}
+
+function updateViewButtons() {
+  const btnAll = document.getElementById('btn-all');
+  const btnRecent = document.getElementById('btn-recent');
+  const btnDups = document.getElementById('btn-dups');
+  btnAll?.classList.remove('active-view');
+  btnRecent?.classList.remove('active-view');
+  btnDups?.classList.remove('active-view');
+  if (view === 'recent') btnRecent?.classList.add('active-view');
+  else if (view === 'dups') btnDups?.classList.add('active-view');
+  else btnAll?.classList.add('active-view');
+}
+
+function setView(newView) {
+  view = newView;
+  updateViewButtons();
+  triggerViewAnimation();
+  scheduleUpdate();
 }
 
 function showPlaceholder(target, before) {
@@ -89,19 +172,47 @@ function escapeHtml(str) {
   }[c]));
 }
 
+function truncateText(str, maxLen = 80) {
+  return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
+}
+
+function applyHighlights(span, indices) {
+  const text = span.textContent;
+  span.textContent = '';
+  let last = 0;
+  for (const idx of indices) {
+    if (last < idx) {
+      span.appendChild(document.createTextNode(text.slice(last, idx)));
+    }
+    const mark = document.createElement('mark');
+    mark.textContent = text[idx];
+    span.appendChild(mark);
+    last = idx + 1;
+  }
+  if (last < text.length) {
+    span.appendChild(document.createTextNode(text.slice(last)));
+  }
+}
+
 async function loadOptions() {
   const {
     showRecent = true,
     showDuplicates = true,
     enableMove = true,
     scrollSpeed = 1,
-    keyUnloadAll = 'Alt+Shift+U'
+    keyUnloadAll = 'Alt+Shift+U',
+    keyViewAll = 'Shift+A',
+    keyViewRecent = 'Shift+R',
+    keyViewDups = 'Shift+D'
   } = await browser.storage.local.get([
     'showRecent',
     'showDuplicates',
     'enableMove',
     'scrollSpeed',
-    'keyUnloadAll'
+    'keyUnloadAll',
+    'keyViewAll',
+    'keyViewRecent',
+    'keyViewDups'
   ]);
   SHOW_RECENT = showRecent !== false;
   SHOW_DUPLICATES = showDuplicates !== false;
@@ -113,31 +224,38 @@ async function loadOptions() {
     if (SHOW_RECENT) {
       btnRecent.style.display = '';
       btnRecent.addEventListener('click', () => {
-        view = 'recent';
-        scheduleUpdate();
+        setView('recent');
       });
     } else {
       btnRecent.style.display = 'none';
-      if (view === 'recent') view = 'all';
+      if (view === 'recent') setView('all');
     }
   }
   if (btnDups) {
     if (SHOW_DUPLICATES) {
       btnDups.style.display = '';
       btnDups.addEventListener('click', () => {
-        view = 'dups';
-        scheduleUpdate();
+        setView('dups');
       });
     } else {
       btnDups.style.display = 'none';
-      if (view === 'dups') view = 'all';
+      if (view === 'dups') setView('all');
     }
   }
+  KEY_VIEW_ALL = keyViewAll || '';
+  KEY_VIEW_RECENT = keyViewRecent || '';
+  KEY_VIEW_DUPS = keyViewDups || '';
+  const btnAll = document.getElementById('btn-all');
+  if (btnAll) btnAll.title = KEY_VIEW_ALL ? `Shortcut: ${KEY_VIEW_ALL}` : '';
+  if (btnRecent) btnRecent.title = KEY_VIEW_RECENT ? `Shortcut: ${KEY_VIEW_RECENT}` : '';
+  if (btnDups) btnDups.title = KEY_VIEW_DUPS ? `Shortcut: ${KEY_VIEW_DUPS}` : '';
   const unloadBtn = document.getElementById('bulk-unload-all');
   if (unloadBtn) unloadBtn.title = `Shortcut: ${keyUnloadAll}`;
+  updateViewButtons();
 }
 
 function updateSelection(row, selected) {
+  if (!row.classList.contains('tab')) return;
   row.classList.toggle('selected', selected);
   if (row._item) {
     row._item.selected = selected;
@@ -146,6 +264,7 @@ function updateSelection(row, selected) {
 
 function clearSelection() {
   for (const item of tabItems) {
+    if (item.separator) continue;
     item.selected = false;
     if (item.el) updateSelection(item.el, false);
   }
@@ -161,6 +280,32 @@ const saveScroll = debounce(() => {
   }
 }, 200);
 
+function updateMenuShadow() {
+  const menu = document.getElementById('menu');
+  const counts = document.getElementById('counts');
+  if (!menu || !scrollContainer) return;
+  const scrolled =
+    scrollContainer.scrollTop > 0 || scrollContainer.scrollLeft > 0;
+  menu.classList.toggle('scrolled', scrolled);
+  counts?.classList.toggle('scrolled', scrolled);
+}
+
+function updateFadeOverlay() {
+  if (!scrollContainer) return;
+  const atTop = scrollContainer.scrollTop <= 0;
+  const atBottom =
+    scrollContainer.scrollTop + scrollContainer.clientHeight >=
+    scrollContainer.scrollHeight;
+  const atLeft = scrollContainer.scrollLeft <= 0;
+  const atRight =
+    scrollContainer.scrollLeft + scrollContainer.clientWidth >=
+    scrollContainer.scrollWidth;
+  scrollContainer.classList.toggle('fade-top', !atTop);
+  scrollContainer.classList.toggle('fade-bottom', !atBottom);
+  scrollContainer.classList.toggle('fade-left', !atLeft);
+  scrollContainer.classList.toggle('fade-right', !atRight);
+}
+
 async function restoreScroll() {
   if (restored) return;
   if (document.body.classList.contains('full')) {
@@ -174,6 +319,7 @@ async function restoreScroll() {
       scrollContainer.scrollTop = scrollTop;
     }
   }
+  updateFadeOverlay();
   restored = true;
 }
 
@@ -198,9 +344,7 @@ async function getTabs(allTabs) {
     return result;
   }
   if (view === 'dups') {
-    const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
-    const dupSet = new Set(duplicates);
-    return allTabs.filter(t => dupSet.has(t.id));
+    return allTabs.filter(t => currentDupIds.has(t.id));
   }
   return allTabs;
 }
@@ -225,14 +369,6 @@ async function activateTab(id, winId) {
 }
 
 async function getContainerIdentities() {
-  if (containerCache) {
-    return containerCache;
-  }
-  const stored = await browser.storage.local.get('containerIdentities');
-  if (stored.containerIdentities) {
-    containerCache = stored.containerIdentities;
-    return containerCache;
-  }
   if (!browser.contextualIdentities) {
     containerCache = [];
     return containerCache;
@@ -242,9 +378,45 @@ async function getContainerIdentities() {
     await browser.storage.local.set({ containerIdentities: containerCache });
   } catch (e) {
     console.error('Contextual identities unavailable', e);
-    containerCache = [];
+    if (!containerCache) {
+      const stored = await browser.storage.local.get('containerIdentities');
+      containerCache = stored.containerIdentities || [];
+    }
   }
   return containerCache;
+}
+
+function refreshContainerDropdowns(identities) {
+  const filter = document.getElementById('container-filter');
+  const target = document.getElementById('container-target');
+  containerMap.clear();
+  identities.forEach(ci => containerMap.set(ci.cookieStoreId, ci));
+  if (filter) {
+    const current = filter.value;
+    filter.textContent = '';
+    const optAll = document.createElement('option');
+    optAll.value = '';
+    optAll.textContent = 'All Containers';
+    filter.appendChild(optAll);
+    identities.forEach(ci => {
+      const opt = document.createElement('option');
+      opt.value = ci.cookieStoreId;
+      opt.textContent = ci.name;
+      filter.appendChild(opt);
+    });
+    filter.value = containerMap.has(current) ? current : '';
+  }
+  if (target) {
+    const currentT = target.value;
+    target.textContent = '';
+    identities.forEach(ci => {
+      const opt = document.createElement('option');
+      opt.value = ci.cookieStoreId;
+      opt.textContent = ci.name;
+      target.appendChild(opt);
+    });
+    target.value = containerMap.has(currentT) ? currentT : (identities[0]?.cookieStoreId || 'firefox-default');
+  }
 }
 
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
@@ -255,8 +427,9 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   row.dataset.windowId = tab.windowId;
   row.tabIndex = 0;
   row.draggable = true;
+  row.setAttribute('draggable', 'true');
   if (item) row._item = item;
-  if (tab.id === activeId) {
+  if (tab.id === activeId || tab.active) {
     row.classList.add('active');
   }
   if (isDuplicate) {
@@ -269,61 +442,109 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   }
 
 
+  const iconCell = document.createElement('div');
   if (tab.favIconUrl) {
-    icon = document.createElement('img');
+    const icon = document.createElement('img');
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
     icon.alt = '';
     icon.onerror = () => icon.remove();
-    row.appendChild(icon);
-
+    iconCell.appendChild(icon);
+  
     let tooltip;
     const showTooltip = () => {
-      if (!document.body.classList.contains('full')) return;
+      // Allow tooltips in both popup and full views
+      hideAllTooltips();
       tooltip = document.createElement('div');
       tooltip.className = 'tab-tooltip';
-      const safeTitle = escapeHtml(tab.title || tab.url);
-      const safeUrl = escapeHtml(tab.url);
-      tooltip.innerHTML = `${safeTitle}<br>${safeUrl}`;
+      const truncatedTitle = truncateText(tab.title || tab.url);
+      const truncatedUrl = truncateText(tab.url);
+      const ctx = containerMap.get(tab.cookieStoreId);
+      tooltip.textContent = '';
+      tooltip.appendChild(document.createTextNode(truncatedTitle));
+      tooltip.appendChild(document.createElement('br'));
+      tooltip.appendChild(document.createTextNode(truncatedUrl));
+      if (ctx) {
+        tooltip.appendChild(document.createElement('br'));
+        tooltip.appendChild(document.createTextNode(ctx.name));
+      }
       document.body.appendChild(tooltip);
       const rect = icon.getBoundingClientRect();
-      tooltip.style.left = `${rect.right + window.scrollX + 5}px`;
-      tooltip.style.top = `${rect.top + window.scrollY}px`;
+      let left = rect.right + window.scrollX + 5;
+      const top = rect.top + window.scrollY;
+      const width = tooltip.offsetWidth;
+      if (left + width > window.innerWidth - 5) {
+        left = rect.left + window.scrollX - width - 5;
+        tooltip.classList.add('left');
+      } else {
+        tooltip.classList.remove('left');
+      }
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+      requestAnimationFrame(() => {
+        tooltip.classList.add('visible');
+      });
     };
     const hideTooltip = () => {
       if (tooltip) {
-        tooltip.remove();
+        tooltip.classList.remove('visible');
+        const el = tooltip;
         tooltip = null;
+        setTimeout(() => {
+          el.classList.remove('left');
+          el.remove();
+        }, 150);
       }
     };
     icon.addEventListener('mouseenter', showTooltip);
     icon.addEventListener('mouseleave', hideTooltip);
   }
+  row.appendChild(iconCell);
 
+  const indicatorCell = document.createElement('div');
   const ctx = containerMap.get(tab.cookieStoreId);
   if (ctx) {
     const indicator = document.createElement('span');
     indicator.className = 'container-indicator';
     indicator.style.backgroundColor = ctx.colorCode;
     indicator.title = ctx.name;
-    row.appendChild(indicator);
+    indicatorCell.appendChild(indicator);
   }
+  row.appendChild(indicatorCell);
 
 
+  const titleCell = document.createElement('div');
   const title = document.createElement('span');
   title.textContent = tab.title || tab.url;
   title.className = 'tab-title';
-  row.appendChild(title);
+  titleCell.appendChild(title);
+  row.appendChild(titleCell);
 
+  const closeCell = document.createElement('div');
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
   closeBtn.textContent = '×';
   closeBtn.title = 'Close tab';
-  row.appendChild(closeBtn);
+  closeCell.appendChild(closeBtn);
+  row.appendChild(closeCell);
+
+  // ensure dragging works from any cell in popup mode
+  row.querySelectorAll('*').forEach(el => {
+    el.draggable = true;
+    el.setAttribute('draggable', 'true');
+  });
 
   // click and drag events handled via delegation
 
   return row;
+}
+
+function createWindowSeparator(label) {
+  const div = document.createElement('div');
+  div.className = 'window-separator';
+  div.textContent = label.toUpperCase();
+  div.tabIndex = -1;
+  return div;
 }
 
 function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
@@ -333,65 +554,75 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   currentVisited = visitedIds;
   currentWinMap = winMap;
   currentQuery = query;
-  tabItems = list.map(entry => ({ tab: entry.tab ?? entry, match: entry.match, selected: false, el: null }));
-  idIndexMap = new Map(tabItems.map((it, i) => [it.tab.id, i]));
+  const full = document.body.classList.contains('full') && winMap;
+  tabItems = [];
+  idIndexMap = new Map();
+  let lastWin = -1;
+  for (const entry of list) {
+    const tab = entry.tab ?? entry;
+    if (full && tab.windowId !== lastWin) {
+      tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
+      lastWin = tab.windowId;
+    }
+    const item = { tab, match: entry.match, selected: false, el: null };
+    tabItems.push(item);
+    idIndexMap.set(tab.id, tabItems.length - 1);
+  }
 
   container.innerHTML = '';
+  if (virtualList) {
+    virtualList.destroy();
+    virtualList = null;
+  }
   if (!tabItems.length) {
-    if (virtualList) {
-      virtualList.destroy();
-      virtualList = null;
-    }
     rowHeight = 0;
     const msg = document.createElement('div');
     msg.id = 'empty';
     msg.textContent = 'No tabs to display';
     container.appendChild(msg);
+    adjustGridWidth();
     return;
   }
 
   if (document.body.classList.contains('full')) {
-    if (virtualList) {
-      virtualList.destroy();
-      virtualList = null;
-    }
     if (!rowHeight) {
-      const sample = createTabRow(
-        tabItems[0].tab,
-        dupIds.has(tabItems[0].tab.id),
-        activeId,
-        visitedIds.has(tabItems[0].tab.id),
-        tabItems[0]
-      );
-      sample.style.position = 'absolute';
-      sample.style.visibility = 'hidden';
-      container.appendChild(sample);
-      rowHeight = sample.getBoundingClientRect().height || 32;
-      sample.remove();
+      const sampleItem = tabItems.find(it => !it.separator);
+      if (sampleItem) {
+        const sample = createTabRow(
+          sampleItem.tab,
+          dupIds.has(sampleItem.tab.id),
+          activeId,
+          visitedIds.has(sampleItem.tab.id),
+          sampleItem
+        );
+        sample.style.position = 'absolute';
+        sample.style.visibility = 'hidden';
+        container.appendChild(sample);
+        rowHeight = sample.getBoundingClientRect().height || 32;
+        document.documentElement.style.setProperty('--tile-height', rowHeight + 'px');
+        sample.remove();
+      }
     }
     for (const item of tabItems) {
-      const el = createTabRow(
-        item.tab,
-        dupIds.has(item.tab.id),
-        activeId,
-        visitedIds.has(item.tab.id),
-        item
-      );
-      if (currentQuery && item.match && item.tab.title) {
-        const span = el.querySelector('.tab-title');
-        if (span) {
-          let html = '';
-          let last = 0;
-          for (const idx of item.match) {
-            html += escapeHtml(span.textContent.slice(last, idx));
-            html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
-            last = idx + 1;
+      let el;
+      if (item.separator) {
+        el = createWindowSeparator(item.label);
+      } else {
+        el = createTabRow(
+          item.tab,
+          dupIds.has(item.tab.id),
+          activeId,
+          visitedIds.has(item.tab.id),
+          item
+        );
+        if (currentQuery && item.match && item.tab.title) {
+          const span = el.querySelector('.tab-title');
+          if (span) {
+            applyHighlights(span, item.match);
           }
-          html += escapeHtml(span.textContent.slice(last));
-          span.innerHTML = html;
         }
+        if (item.selected) el.classList.add('selected');
       }
-      if (item.selected) el.classList.add('selected');
       item.el = el;
       container.appendChild(el);
     }
@@ -408,45 +639,43 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       sample.style.visibility = 'hidden';
       container.appendChild(sample);
       rowHeight = sample.getBoundingClientRect().height || 32;
+      document.documentElement.style.setProperty('--tile-height', rowHeight + 'px');
       sample.remove();
       virtualList = HyperList.create(container, {
         height: container.clientHeight || 400,
         itemHeight: rowHeight,
         total: tabItems.length,
-        generate: generateRow
+        generate: generateRow,
+        scrollContainer,
+        overrideScrollPosition: () => scrollContainer.scrollTop
       });
     } else {
       virtualList.refresh(container, {
         height: container.clientHeight || 400,
         itemHeight: rowHeight,
         total: tabItems.length,
-        generate: generateRow
+        generate: generateRow,
+        scrollContainer,
+        overrideScrollPosition: () => scrollContainer.scrollTop
       });
     }
   }
+  adjustGridWidth();
 }
 
 function generateRow(index) {
   const item = tabItems[index];
   if (!item) return document.createElement('div');
-  if (!item.el) {
-    item.el = createTabRow(item.tab, currentDupIds.has(item.tab.id), currentActiveId, currentVisited.has(item.tab.id), item);
-    if (currentQuery && item.match && item.tab.title) {
-      const span = item.el.querySelector('.tab-title');
-      if (span) {
-        let html = '';
-        let last = 0;
-        for (const idx of item.match) {
-          html += escapeHtml(span.textContent.slice(last, idx));
-          html += '<mark>' + escapeHtml(span.textContent[idx]) + '</mark>';
-          last = idx + 1;
+    if (!item.el) {
+      item.el = createTabRow(item.tab, currentDupIds.has(item.tab.id), currentActiveId, currentVisited.has(item.tab.id), item);
+      if (currentQuery && item.match && item.tab.title) {
+        const span = item.el.querySelector('.tab-title');
+        if (span) {
+          applyHighlights(span, item.match);
         }
-        html += escapeHtml(span.textContent.slice(last));
-        span.innerHTML = html;
       }
+      if (item.selected) item.el.classList.add('selected');
     }
-    if (item.selected) item.el.classList.add('selected');
-  }
   return item.el;
 }
 
@@ -502,6 +731,17 @@ function findDuplicates(tabs) {
 }
 
 async function update() {
+  hideAllTooltips();
+  const isFull = document.body.classList.contains('full');
+  let prevScroll = scrollContainer
+    ? isFull
+      ? scrollContainer.scrollLeft
+      : scrollContainer.scrollTop
+    : 0;
+  if (pendingScroll !== null) {
+    prevScroll = pendingScroll;
+    pendingScroll = null;
+  }
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? {} : { currentWindow: true };
@@ -525,8 +765,7 @@ async function update() {
     document.getElementById('active-count').textContent = activeCount;
     let tabs = await getTabs(allTabs);
     const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
-    const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
-    const dupIds = new Set(duplicates);
+    const dupIds = currentDupIds;
     const activeId = allTabs.find(t => t.active)?.id ?? -1;
     const searchInput = document.getElementById('search');
     const query = searchInput.value.trim();
@@ -542,6 +781,13 @@ async function update() {
     document.getElementById('error').textContent =
       'Error updating tabs: ' + (e.message || e);
   }
+  if (scrollContainer) {
+    if (isFull) {
+      scrollContainer.scrollLeft = prevScroll;
+    } else {
+      scrollContainer.scrollTop = prevScroll;
+    }
+  }
 }
 
 const scheduleUpdate = debounce(update, 200);
@@ -550,11 +796,90 @@ browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'visitedUpdated') {
     visitedIds = new Set(msg.visited || []);
     scheduleUpdate();
+  } else if (msg && msg.type === 'duplicatesUpdated') {
+    currentDupIds = new Set(msg.duplicates || []);
+    scheduleUpdate();
   }
 });
 
-document.getElementById('search').addEventListener('input', scheduleUpdate);
-document.getElementById('btn-all').addEventListener('click', () => { view = 'all'; scheduleUpdate(); });
+const searchBox = document.getElementById('search');
+const clearBtn = document.getElementById('search-clear');
+const measureCtx = document.createElement('canvas').getContext('2d');
+
+function updateClearButton() {
+  if (!clearBtn) return;
+  const style = window.getComputedStyle(searchBox);
+  measureCtx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  const textWidth = measureCtx.measureText(searchBox.value).width;
+  const paddingLeft = parseFloat(style.paddingLeft) || 0;
+  const paddingRight = parseFloat(style.paddingRight) || 0;
+  const maxLeft = searchBox.offsetWidth - clearBtn.offsetWidth - paddingRight;
+  const left = Math.min(paddingLeft + textWidth + 4, maxLeft);
+  clearBtn.style.left = `${left}px`;
+  clearBtn.classList.toggle('hidden', !searchBox.value);
+}
+
+searchBox.addEventListener('input', () => {
+  updateClearButton();
+  scheduleUpdate();
+});
+
+window.addEventListener('resize', updateClearButton);
+
+clearBtn?.addEventListener('click', () => {
+  if (searchBox.value) {
+    searchBox.value = '';
+    updateClearButton();
+    scheduleUpdate();
+  }
+});
+
+updateClearButton();
+document.getElementById('btn-all').addEventListener('click', () => {
+  setView('all');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (!searchBox) return;
+
+  if (matchShortcut(KEY_VIEW_ALL, e)) {
+    setView('all');
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+  if (matchShortcut(KEY_VIEW_RECENT, e) && SHOW_RECENT) {
+    setView('recent');
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+  if (matchShortcut(KEY_VIEW_DUPS, e) && SHOW_DUPLICATES) {
+    setView('dups');
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+
+  if (e.key === 'Escape') {
+    if (searchBox.value) {
+      searchBox.value = '';
+      scheduleUpdate();
+    }
+    return;
+  }
+
+  if (document.activeElement.tagName !== 'INPUT' &&
+      e.key.length === 1 &&
+      !e.ctrlKey && !e.metaKey && !e.altKey &&
+      !e.shiftKey) {
+    searchBox.focus();
+    searchBox.value += e.key;
+    scheduleUpdate();
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
 
 document.addEventListener('keydown', (e) => {
   if (!tabItems.length) return;
@@ -564,7 +889,10 @@ document.addEventListener('keydown', (e) => {
   let idx = isTab ? idIndexMap.get(parseInt(focused.dataset.tab, 10)) : -1;
 
   const moveFocus = (delta) => {
-    const newIdx = Math.min(Math.max(idx + delta, 0), tabItems.length - 1);
+    let newIdx = idx;
+    do {
+      newIdx = Math.min(Math.max(newIdx + delta, 0), tabItems.length - 1);
+    } while (tabItems[newIdx] && tabItems[newIdx].separator);
     idx = newIdx;
     const el = tabItems[newIdx].el;
     requestAnimationFrame(() => {
@@ -580,6 +908,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();
     const oldIdx = idx;
@@ -589,12 +918,14 @@ document.addEventListener('keydown', (e) => {
       const start = Math.min(lastSelectedIndex, newIdx);
       const end = Math.max(lastSelectedIndex, newIdx);
       for (let i = 0; i < tabItems.length; i++) {
+        if (tabItems[i].separator) continue;
         const sel = i >= start && i <= end;
         tabItems[i].selected = sel;
         if (tabItems[i].el) updateSelection(tabItems[i].el, sel);
       }
     } else if (!e.ctrlKey && !e.metaKey) {
       tabItems.forEach(it => {
+        if (it.separator) return;
         it.selected = false;
         if (it.el) updateSelection(it.el, false);
       });
@@ -615,8 +946,14 @@ document.addEventListener('keydown', (e) => {
     focused.click();
   } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
     e.preventDefault();
-    tabItems.forEach(it => { it.selected = true; if (it.el) updateSelection(it.el, true); });
-    lastSelectedIndex = tabItems.length - 1;
+    let last = -1;
+    tabItems.forEach((it, i) => {
+      if (it.separator) return;
+      it.selected = true;
+      if (it.el) updateSelection(it.el, true);
+      last = i;
+    });
+    lastSelectedIndex = last;
   } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     switch (e.key.toLowerCase()) {
       case 'c':
@@ -640,11 +977,16 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function init() {
-  container = document.getElementById('tabs');
-  scrollContainer = document.body.classList.contains('full')
-    ? document.getElementById('tabs-wrapper')
-    : container;
+  container = document.getElementById('tabs-body') ||
+              document.getElementById('tabs');
+  scrollContainer = document.getElementById('tabs-wrapper') || container;
+  easterEgg = document.getElementById('easter-egg');
+  const menuEl = document.getElementById('menu');
+  menuEl?.addEventListener('dblclick', showEasterEgg);
   scrollContainer.addEventListener('scroll', saveScroll);
+  scrollContainer.addEventListener('scroll', hideAllTooltips);
+  scrollContainer.addEventListener('scroll', updateMenuShadow);
+  scrollContainer.addEventListener('scroll', updateFadeOverlay);
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);
@@ -653,19 +995,23 @@ async function init() {
     scrollContainer.addEventListener('wheel', (e) => {
       if (scrollContainer.scrollWidth > scrollContainer.clientWidth) {
         e.preventDefault();
-        scrollContainer.scrollLeft += e.deltaY * SCROLL_SPEED;
+        const delta = e.deltaX || e.deltaY;
+        scrollContainer.scrollLeft += delta * SCROLL_SPEED;
       }
     }, { passive: false });
     document.addEventListener('wheel', (e) => {
       if (!scrollContainer || e.target.closest('#tabs-wrapper')) return;
       e.preventDefault();
-      scrollContainer.scrollLeft += e.deltaY * SCROLL_SPEED;
+      const delta = e.deltaX || e.deltaY;
+      scrollContainer.scrollLeft += delta * SCROLL_SPEED;
     }, { passive: false });
   }
   document.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
   const { visited = [] } = await browser.storage.local.get('visited');
   visitedIds = new Set(visited);
+  const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
+  currentDupIds = new Set(duplicates);
   await loadOptions();
   registerTabEvents();
   const select = document.getElementById('container-filter');
@@ -684,62 +1030,34 @@ async function init() {
     document.getElementById('error').textContent =
       'Container actions disabled: container feature not available';
   }
-  if (select) {
-    if (browser.contextualIdentities) {
+  targetSelect = document.getElementById('container-target');
+  if (select || targetSelect) {
+    if (containersAvailable) {
       try {
-        const identities = await getContainerIdentities();
-        identities.forEach(ci => {
-          containerMap.set(ci.cookieStoreId, ci);
-          const opt = document.createElement('option');
-          opt.value = ci.cookieStoreId;
-          opt.textContent = ci.name;
-          select.appendChild(opt);
-        });
-        select.addEventListener('change', () => {
-          filterContainerId = select.value;
-          scheduleUpdate();
-        });
+        refreshContainerDropdowns(containerIdents);
+        if (select) {
+          select.addEventListener('change', () => {
+            filterContainerId = select.value;
+            scheduleUpdate();
+          });
+        }
       } catch (e) {
         console.error('Contextual identities unavailable', e);
         document.getElementById('error').textContent =
           'Container actions disabled: ' + (e.message || e);
-        select.disabled = true;
+        if (select) select.disabled = true;
+        if (targetSelect) targetSelect.disabled = true;
         containersAvailable = false;
+        document.getElementById('container-filter')?.setAttribute('disabled', 'true');
         document.getElementById('container-target')?.setAttribute('disabled', 'true');
         document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
         document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
       }
     } else {
-      select.disabled = true;
-      document.getElementById('container-target')?.setAttribute('disabled', 'true');
-      document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
-      document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
-    }
-  }
-  targetSelect = document.getElementById('container-target');
-  if (targetSelect) {
-    if (browser.contextualIdentities) {
-      try {
-        const identities = await getContainerIdentities();
-        identities.forEach(ci => {
-          const opt = document.createElement('option');
-          opt.value = ci.cookieStoreId;
-          opt.textContent = ci.name;
-          targetSelect.appendChild(opt);
-        });
-      } catch (e) {
-        console.error('Contextual identities unavailable', e);
-        document.getElementById('error').textContent =
-          'Container actions disabled: ' + (e.message || e);
-        targetSelect.disabled = true;
-        containersAvailable = false;
-        document.getElementById('container-filter')?.setAttribute('disabled', 'true');
-        document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
-        document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
-      }
-    } else {
-      targetSelect.disabled = true;
+      if (select) select.disabled = true;
+      if (targetSelect) targetSelect.disabled = true;
       document.getElementById('container-filter')?.setAttribute('disabled', 'true');
+      document.getElementById('container-target')?.setAttribute('disabled', 'true');
       document.getElementById('bulk-add-container')?.setAttribute('disabled', 'true');
       document.getElementById('bulk-remove-container')?.setAttribute('disabled', 'true');
     }
@@ -782,6 +1100,8 @@ async function init() {
   else if (moveBtn) moveBtn.style.display = 'none';
   await update();
   restoreScroll();
+  updateMenuShadow();
+  updateFadeOverlay();
 }
 
 // keep the tab list current while the popup is open
@@ -815,10 +1135,90 @@ if (document.readyState !== 'loading') {
 }
 window.addEventListener('unload', cleanup);
 
+// recompute item height when theme or scaling changes
+window.addEventListener('theme-applied', () => {
+  rowHeight = 0;
+  scheduleUpdate();
+});
+
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if ('keyViewAll' in changes) {
+    KEY_VIEW_ALL = changes.keyViewAll.newValue || '';
+    document.getElementById('btn-all').title = KEY_VIEW_ALL ? `Shortcut: ${KEY_VIEW_ALL}` : '';
+  }
+  if ('keyViewRecent' in changes) {
+    KEY_VIEW_RECENT = changes.keyViewRecent.newValue || '';
+    const btn = document.getElementById('btn-recent');
+    if (btn) btn.title = KEY_VIEW_RECENT ? `Shortcut: ${KEY_VIEW_RECENT}` : '';
+  }
+  if ('keyViewDups' in changes) {
+    KEY_VIEW_DUPS = changes.keyViewDups.newValue || '';
+    const btn = document.getElementById('btn-dups');
+    if (btn) btn.title = KEY_VIEW_DUPS ? `Shortcut: ${KEY_VIEW_DUPS}` : '';
+  }
+});
+
+window.addEventListener('resize', () => {
+  if (document.body.classList.contains('full')) {
+    requestAnimationFrame(adjustGridWidth);
+  }
+});
+
 // custom context menu
 const context = document.getElementById('context');
+async function movePendingTo(targetEl, evt) {
+  const ids = movePending;
+  if (!ids || !ids.length) return;
+  const toId = parseInt(targetEl.dataset.tab, 10);
+  const toTab = await browser.tabs.get(toId);
+  const rect = targetEl.getBoundingClientRect();
+  const before = evt.clientY < rect.top + rect.height / 2;
+  let index = before ? toTab.index : toTab.index + 1;
+  for (const id of ids) {
+    if (id === toId) continue;
+    const fromTab = await browser.tabs.get(id);
+    let idx = index;
+    if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
+      idx--;
+    }
+    if (idx < 0) idx = 0;
+    await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
+    if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
+      index++;
+    }
+  }
+  if (view === 'recent') {
+    await browser.runtime.sendMessage({
+      type: 'reorderRecent',
+      ids,
+      toId,
+      before
+    }).catch(() => {});
+  }
+  movePending = null;
+  tabItems.forEach(it => it.el?.classList.remove('move-pending'));
+  scheduleUpdate();
+}
+
+function flagTabsForMove() {
+  movePending = getSelectedTabIds().slice();
+  tabItems.forEach(it => {
+    if (!it.separator && it.selected && it.el) {
+      it.el.classList.add('move-pending');
+    }
+  });
+}
+
+function clearMovePending() {
+  movePending = null;
+  tabItems.forEach(it => it.el?.classList.remove('move-pending'));
+}
+
+
 function showContextMenu(e) {
   e.preventDefault();
+  hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   context.innerHTML = '';
 
@@ -827,7 +1227,7 @@ function showContextMenu(e) {
     const item = document.createElement('div');
     item.textContent = label;
     item.addEventListener('click', async () => {
-      context.classList.add('hidden');
+      hideContextMenu();
       await fn();
     });
     context.appendChild(item);
@@ -837,7 +1237,10 @@ function showContextMenu(e) {
     addItem('Close Selected', bulkClose);
     addItem('Reload Selected', bulkReload);
     addItem('Unload Selected', bulkDiscard);
-    if (MOVE_ENABLED) addItem('Move Selected', bulkMove);
+    if (MOVE_ENABLED) {
+      if (!movePending) addItem('Flag for Move', flagTabsForMove);
+      else addItem('Clear Move Flag', clearMovePending);
+    }
     addItem('Add Selected to Container', () => {
       const id = targetSelect ? targetSelect.value : 'firefox-default';
       return bulkAssignToContainer(id);
@@ -845,31 +1248,30 @@ function showContextMenu(e) {
     addItem('Remove Selected from Container', bulkRemoveFromContainer);
   }
 
+  if (MOVE_ENABLED && movePending && tabEl) {
+    addItem('Move Flagged Tabs Here', () => movePendingTo(tabEl, e));
+  }
+
   if (tabEl && (!selected.length || !tabEl.classList.contains('selected'))) {
     const id = parseInt(tabEl.dataset.tab, 10);
     const win = parseInt(tabEl.dataset.windowId, 10);
+    // Place Close as the first entry for single-tab actions
+    addItem('Close', async () => {
+      await browser.tabs.remove(id);
+      scheduleUpdate();
+    });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       await browser.tabs.discard(id);
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
       scheduleUpdate();
     });
-    addItem('Close', async () => { await browser.tabs.remove(id); scheduleUpdate(); });
-    if (MOVE_ENABLED) {
-      addItem('Move', async () => {
-        const t = await browser.tabs.get(id);
-        const wins = await browser.windows.getAll({populate: false});
-        const other = wins.find(w => w.id !== t.windowId);
-        if (other) await browser.tabs.move(id, {windowId: other.id, index: -1});
-        scheduleUpdate();
-      });
-    }
+    // Direct move option removed in favor of flagged move workflow
   }
 
   if (!tabEl && !selected.length) {
-    const info = document.createElement('div');
-    info.textContent = `KepiTAB v${browser.runtime.getManifest().version}`;
-    context.appendChild(info);
+    showEasterEgg();
+    return;
   }
 
   addItem('Unload All Tabs', bulkUnloadAll);
@@ -878,12 +1280,32 @@ function showContextMenu(e) {
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
   context.classList.remove('hidden');
+  const rect = context.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth;
+  const vh = document.documentElement.clientHeight;
+  let left = e.pageX;
+  let top = e.pageY;
+  if (left + rect.width > vw) {
+    left = Math.max(0, vw - rect.width - 5);
+  }
+  if (top + rect.height > vh) {
+    top = Math.max(0, vh - rect.height - 5);
+  }
+  context.style.left = left + 'px';
+  context.style.top = top + 'px';
+  requestAnimationFrame(() => context.classList.add('visible'));
 }
 
-document.addEventListener('click', () => context.classList.add('hidden'));
+function hideContextMenu() {
+  if (context.classList.contains('hidden')) return;
+  context.classList.remove('visible');
+  setTimeout(() => context.classList.add('hidden'), 150);
+}
+
+document.addEventListener('click', hideContextMenu);
 
 function getSelectedTabIds() {
-  return tabItems.filter(it => it.selected).map(it => it.tab.id);
+  return tabItems.filter(it => !it.separator && it.selected).map(it => it.tab.id);
 }
 
 async function bulkClose() {
@@ -933,23 +1355,23 @@ async function bulkMove() {
 async function bulkAssignToContainer(containerId) {
   const errorEl = document.getElementById('error');
   if (errorEl) errorEl.textContent = '';
+  let identities = [];
   if (browser.contextualIdentities) {
     try {
-      let identities = await browser.contextualIdentities.query({});
-      let exists = identities.some(ci => ci.cookieStoreId === containerId);
-      if (!exists) {
-        containerCache = null;
-        identities = await getContainerIdentities();
-        exists = identities.some(ci => ci.cookieStoreId === containerId);
-      }
-      if (!exists) {
-        if (errorEl) errorEl.textContent = 'Selected container does not exist';
-        return;
+      identities = await getContainerIdentities();
+      refreshContainerDropdowns(identities);
+      if (containerId !== 'firefox-default') {
+        const exists = identities.some(ci => ci.cookieStoreId === containerId);
+        if (!exists) {
+          if (errorEl) errorEl.textContent = 'Selected container does not exist';
+          return;
+        }
       }
     } catch (e) {
       console.error('Contextual identities unavailable', e);
-      if (errorEl) errorEl.textContent =
-        'Container actions disabled: ' + (e.message || e);
+      if (errorEl) {
+        errorEl.textContent = 'Container actions disabled: ' + (e.message || e);
+      }
       return;
     }
   }
@@ -998,11 +1420,15 @@ async function bulkRemoveFromContainer() {
 }
 
 function onContainerClick(e) {
+  hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   if (!tabEl || !container.contains(tabEl)) return;
   if (e.target.classList.contains('close-btn')) {
     e.stopPropagation();
     const id = parseInt(tabEl.dataset.tab, 10);
+    if (scrollContainer) {
+      pendingScroll = scrollContainer.scrollTop;
+    }
     browser.tabs.remove(id).then(scheduleUpdate);
     return;
   }
@@ -1030,6 +1456,7 @@ function onContainerClick(e) {
 }
 
 function onContainerDragStart(e) {
+  hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   if (!tabEl) return;
   const selected = getSelectedTabIds();
@@ -1038,19 +1465,23 @@ function onContainerDragStart(e) {
   } else {
     e.dataTransfer.setData('text/plain', tabEl.dataset.tab);
   }
+  e.dataTransfer.effectAllowed = 'move';
   clearPlaceholder();
 }
 
 function onContainerDragOver(e) {
+  hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   if (!tabEl) return;
   e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
   const rect = tabEl.getBoundingClientRect();
   const before = e.clientY < rect.top + rect.height / 2;
   showPlaceholder(tabEl, before);
 }
 
 async function onContainerDrop(e) {
+  hideAllTooltips();
   const tabEl = e.target.closest('.tab');
   if (!tabEl) return;
   e.preventDefault();
@@ -1075,6 +1506,14 @@ async function onContainerDrop(e) {
     if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
       index++;
     }
+  }
+  if (view === 'recent') {
+    await browser.runtime.sendMessage({
+      type: 'reorderRecent',
+      ids,
+      toId,
+      before
+    }).catch(() => {});
   }
   scheduleUpdate();
 }
