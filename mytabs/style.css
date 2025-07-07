@@ -99,6 +99,30 @@ body[data-theme="dark"] #easter-egg {
 }
 #counts {
   margin-bottom: 0;
+  display: flex;
+  gap: 0.5em;
+  font-weight: bold;
+}
+
+#counts .count {
+  background: linear-gradient(135deg, var(--color-selected), var(--color-active));
+  padding: 0.1em 0.5em;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+}
+
+#counts .count::before {
+  margin-right: 0.3em;
+}
+
+#counts .total::before {
+  content: "\1F4D1"; /* bookmark tabs icon */
+}
+
+#counts .active::before {
+  content: "\1F525"; /* fire icon */
 }
 #menu button {
   margin-right: 0.2em;
