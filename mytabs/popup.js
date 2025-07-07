@@ -557,16 +557,35 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   const full = document.body.classList.contains('full') && winMap;
   tabItems = [];
   idIndexMap = new Map();
-  let lastWin = -1;
-  for (const entry of list) {
-    const tab = entry.tab ?? entry;
-    if (full && tab.windowId !== lastWin) {
-      tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
-      lastWin = tab.windowId;
+  if (full && view === 'recent') {
+    const groups = new Map();
+    for (const entry of list) {
+      const tab = entry.tab ?? entry;
+      if (!groups.has(tab.windowId)) groups.set(tab.windowId, []);
+      groups.get(tab.windowId).push(entry);
     }
-    const item = { tab, match: entry.match, selected: false, el: null };
-    tabItems.push(item);
-    idIndexMap.set(tab.id, tabItems.length - 1);
+    const orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
+    for (const winId of orderedIds) {
+      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, el: null });
+      for (const entry of groups.get(winId)) {
+        const tab = entry.tab ?? entry;
+        const item = { tab, match: entry.match, selected: false, el: null };
+        tabItems.push(item);
+        idIndexMap.set(tab.id, tabItems.length - 1);
+      }
+    }
+  } else {
+    let lastWin = -1;
+    for (const entry of list) {
+      const tab = entry.tab ?? entry;
+      if (full && tab.windowId !== lastWin) {
+        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
+        lastWin = tab.windowId;
+      }
+      const item = { tab, match: entry.match, selected: false, el: null };
+      tabItems.push(item);
+      idIndexMap.set(tab.id, tabItems.length - 1);
+    }
   }
 
   container.innerHTML = '';
