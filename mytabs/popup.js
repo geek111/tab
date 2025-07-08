@@ -884,6 +884,8 @@ document.addEventListener('keydown', (e) => {
     if (searchBox.value) {
       searchBox.value = '';
       scheduleUpdate();
+    } else if (document.body.classList.contains('full')) {
+      closeUI();
     }
     return;
   }
