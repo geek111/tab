@@ -83,6 +83,7 @@ browser.storage.onChanged.addListener((changes, area) => {
 browser.tabs.query({}).then(tabs => {
   for (const t of tabs) {
     addDuplicate(t.id, t.url);
+    pushRecent(t.id);
   }
 });
 
@@ -168,6 +169,7 @@ browser.tabs.onActivated.addListener(info => {
 
 browser.tabs.onCreated.addListener(tab => {
   addDuplicate(tab.id, tab.url);
+  pushRecent(tab.id);
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
