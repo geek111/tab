@@ -168,6 +168,7 @@ browser.tabs.onActivated.addListener(info => {
 
 browser.tabs.onCreated.addListener(tab => {
   addDuplicate(tab.id, tab.url);
+  pushRecent(tab.id);
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {

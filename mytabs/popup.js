@@ -779,10 +779,11 @@ async function update() {
     } else {
       allTabs.sort((a, b) => a.index - b.index);
     }
-    document.getElementById('total-count').textContent = allTabs.length;
-    const activeCount = allTabs.filter(t => !t.discarded).length;
-    document.getElementById('active-count').textContent = activeCount;
     let tabs = await getTabs(allTabs);
+    const listForCounts = view === 'recent' ? tabs : allTabs;
+    document.getElementById('total-count').textContent = listForCounts.length;
+    const activeCount = listForCounts.filter(t => !t.discarded).length;
+    document.getElementById('active-count').textContent = activeCount;
     const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
     const dupIds = currentDupIds;
     const activeId = allTabs.find(t => t.active)?.id ?? -1;
