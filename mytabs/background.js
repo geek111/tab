@@ -65,11 +65,16 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
-browser.storage.local.get(['recent', 'visited', 'autoUnload', 'autoUnloadMinutes']).then(data => {
+browser.storage.local.get(['recent', 'visited', 'autoUnload', 'autoUnloadMinutes']).then(async data => {
   recent = data.recent || [];
   visited = new Set(data.visited || []);
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') autoUnloadMinutes = data.autoUnloadMinutes;
+
+  const tabs = await browser.tabs.query({});
+  for (const t of tabs) {
+    pushRecent(t.id);
+  }
 });
 
 browser.storage.onChanged.addListener((changes, area) => {
@@ -168,6 +173,7 @@ browser.tabs.onActivated.addListener(info => {
 
 browser.tabs.onCreated.addListener(tab => {
   addDuplicate(tab.id, tab.url);
+  pushRecent(tab.id);
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
