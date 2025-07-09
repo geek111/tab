@@ -168,7 +168,6 @@ browser.tabs.onActivated.addListener(info => {
 
 browser.tabs.onCreated.addListener(tab => {
   addDuplicate(tab.id, tab.url);
-  pushRecent(tab.id);
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
@@ -187,8 +186,6 @@ browser.tabs.onRemoved.addListener((tabId) => {
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.discarded === true) {
     unmarkVisited(tabId);
-  } else if (changeInfo.discarded === false) {
-    markVisited(tabId);
   }
   if (changeInfo.url) {
     removeDuplicate(tabId);
