@@ -72,6 +72,13 @@ browser.storage.local.get(['recent', 'visited', 'autoUnload', 'autoUnloadMinutes
   if (typeof data.autoUnloadMinutes === 'number') autoUnloadMinutes = data.autoUnloadMinutes;
 });
 
+browser.runtime.onStartup.addListener(async () => {
+  recent = [];
+  visited.clear();
+  await browser.storage.local.set({ recent, visited: [] });
+  sendVisitedUpdate();
+});
+
 browser.storage.onChanged.addListener((changes, area) => {
   if (area === 'local') {
     if (changes.autoUnload) autoUnload = changes.autoUnload.newValue;
