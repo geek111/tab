@@ -69,15 +69,26 @@ function sendVisitedUpdate() {
 browser.storage.local.get([
   'autoUnload',
   'autoUnloadMinutes',
-  'recent',
-  'visited'
+  'recent'
 ]).then(data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
   if (Array.isArray(data.recent)) recent = data.recent;
-  if (Array.isArray(data.visited)) visited = new Set(data.visited);
+  // Start each session with no visited tabs to avoid stale highlights
+  visited = new Set();
+
+  // Ensure recent list includes currently open tabs after restart
+  browser.tabs.query({}).then(tabs => {
+    const ids = new Set(recent);
+    for (const t of tabs) {
+      if (!ids.has(t.id)) {
+        recent.push(t.id);
+      }
+    }
+    scheduleRecentSave();
+  });
 });
 
 browser.storage.onChanged.addListener((changes, area) => {
