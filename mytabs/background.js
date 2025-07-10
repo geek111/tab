@@ -4,6 +4,7 @@ const action = browser.browserAction || browser.action;
 
 let recent = [];
 let visited = new Set();
+let ignoreActivation = true;
 let recentTimer = null;
 let visitedTimer = null;
 let autoUnload = false;
@@ -79,11 +80,12 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-// Initialize duplicate tracking
+// Initialize duplicate tracking and clear startup flag
 browser.tabs.query({}).then(tabs => {
   for (const t of tabs) {
     addDuplicate(t.id, t.url);
   }
+  ignoreActivation = false;
 });
 
 // Apply user-defined keyboard shortcuts if supported
@@ -162,6 +164,7 @@ function markVisited(tabId) {
 }
 
 browser.tabs.onActivated.addListener(info => {
+  if (ignoreActivation) return;
   pushRecent(info.tabId);
   markVisited(info.tabId);
 });
