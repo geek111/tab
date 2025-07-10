@@ -768,6 +768,8 @@ async function update() {
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
+    const extPrefix = browser.runtime.getURL('');
+    allTabs = allTabs.filter(t => !t.url.startsWith(extPrefix));
     if (allWins) {
       const wins = await browser.windows.getAll({populate: false});
       const order = new Map(wins.map((w, i) => [w.id, i]));
