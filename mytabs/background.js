@@ -9,6 +9,9 @@ let visitedTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+// Ensure previous session visit data does not persist
+browser.storage.local.remove('visited').catch(() => {});
+
 // Track duplicate tabs by URL
 const dupMap = new Map();
 const dupIds = new Set();
@@ -69,15 +72,19 @@ function sendVisitedUpdate() {
 browser.storage.local.get([
   'autoUnload',
   'autoUnloadMinutes',
-  'recent',
-  'visited'
+  'recent'
 ]).then(data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
   if (Array.isArray(data.recent)) recent = data.recent;
-  if (Array.isArray(data.visited)) visited = new Set(data.visited);
+});
+
+// Reset visited tabs on each startup to avoid stale highlighting
+browser.runtime.onStartup.addListener(() => {
+  visited = new Set();
+  browser.storage.local.remove('visited').catch(() => {});
 });
 
 browser.storage.onChanged.addListener((changes, area) => {
