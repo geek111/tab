@@ -65,11 +65,11 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
-browser.storage.local.get(['recent', 'visited', 'autoUnload', 'autoUnloadMinutes']).then(data => {
-  recent = data.recent || [];
-  visited = new Set(data.visited || []);
+// Clear session-specific data from previous runs
+browser.storage.local.get(['autoUnload', 'autoUnloadMinutes']).then(data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') autoUnloadMinutes = data.autoUnloadMinutes;
+  browser.storage.local.remove(['recent', 'visited']);
 });
 
 browser.storage.onChanged.addListener((changes, area) => {
