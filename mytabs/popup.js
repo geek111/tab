@@ -780,7 +780,7 @@ async function update() {
       allTabs.sort((a, b) => a.index - b.index);
     }
     document.getElementById('total-count').textContent = allTabs.length;
-    const activeCount = allTabs.filter(t => !t.discarded).length;
+    const activeCount = allTabs.filter(t => t.active).length;
     document.getElementById('active-count').textContent = activeCount;
     let tabs = await getTabs(allTabs);
     const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
