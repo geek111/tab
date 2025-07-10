@@ -69,15 +69,13 @@ function sendVisitedUpdate() {
 browser.storage.local.get([
   'autoUnload',
   'autoUnloadMinutes',
-  'recent',
-  'visited'
+  'recent'
 ]).then(data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
   if (Array.isArray(data.recent)) recent = data.recent;
-  if (Array.isArray(data.visited)) visited = new Set(data.visited);
 });
 
 browser.storage.onChanged.addListener((changes, area) => {
@@ -156,7 +154,7 @@ function scheduleVisitedSave() {
   if (!visitedTimer) {
     visitedTimer = setTimeout(() => {
       visitedTimer = null;
-      browser.storage.local.set({ visited: Array.from(visited) });
+      // visited state is kept only for the current session
     }, 500);
   }
 }

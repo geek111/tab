@@ -1029,7 +1029,7 @@ async function init() {
   }
   document.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
-  const { visited = [] } = await browser.storage.local.get('visited');
+  const { visited = [] } = await browser.runtime.sendMessage({ type: 'getVisited' });
   visitedIds = new Set(visited);
   const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
   currentDupIds = new Set(duplicates);
