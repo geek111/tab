@@ -34,6 +34,8 @@ let currentQuery = '';
 let pendingScroll = null;
 let easterEgg;
 
+const FULL_URL = browser.runtime.getURL('full.html');
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -765,6 +767,7 @@ async function update() {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? {} : { currentWindow: true };
     let allTabs = await browser.tabs.query(queryOpts);
+    allTabs = allTabs.filter(t => t.url !== FULL_URL);
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
