@@ -763,13 +763,13 @@ async function update() {
   }
   try {
     const allWins = document.body.classList.contains('full');
-    const queryOpts = allWins ? {} : { currentWindow: true };
+    const queryOpts = allWins ? { windowType: 'normal' } : { currentWindow: true, windowType: 'normal' };
     let allTabs = await browser.tabs.query(queryOpts);
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
     if (allWins) {
-      const wins = await browser.windows.getAll({populate: false});
+      const wins = await browser.windows.getAll({populate: false, windowTypes: ['normal']});
       const order = new Map(wins.map((w, i) => [w.id, i]));
       allTabs.sort((a, b) => {
         const wa = order.get(a.windowId) ?? 0;
@@ -783,7 +783,7 @@ async function update() {
     const activeCount = allTabs.filter(t => !t.discarded).length;
     document.getElementById('active-count').textContent = activeCount;
     let tabs = await getTabs(allTabs);
-    const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
+    const winMap = allWins ? new Map((await browser.windows.getAll({populate: false, windowTypes: ['normal']})).map((w, i) => [w.id, i + 1])) : null;
     const dupIds = currentDupIds;
     const activeId = allTabs.find(t => t.active)?.id ?? -1;
     const searchInput = document.getElementById('search');
@@ -1366,7 +1366,7 @@ async function bulkUnloadAll() {
 
 async function bulkMove() {
   const ids = getSelectedTabIds();
-  const windows = await browser.windows.getAll({populate: false});
+  const windows = await browser.windows.getAll({populate: false, windowTypes: ['normal']});
   const currentWinId = ids.length ? (await browser.tabs.get(ids[0])).windowId : null;
   const other = windows.find(w => ids.length && w.id !== currentWinId);
   if (other) {
