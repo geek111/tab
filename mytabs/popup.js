@@ -30,6 +30,7 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+const EXT_URL_PREFIX = browser.runtime.getURL('');
 // Scroll position to restore after certain operations
 let pendingScroll = null;
 let easterEgg;
@@ -765,6 +766,7 @@ async function update() {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? {} : { currentWindow: true };
     let allTabs = await browser.tabs.query(queryOpts);
+    allTabs = allTabs.filter(t => !t.url.startsWith(EXT_URL_PREFIX));
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
