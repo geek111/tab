@@ -9,8 +9,9 @@ let visitedTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
-// Ensure previous session visit data does not persist
-browser.storage.local.remove('visited').catch(() => {});
+// The visited list is reset on browser startup via onStartup
+// handler. Avoid clearing it here so data persists across
+// background script reloads during the session.
 
 // Track duplicate tabs by URL
 const dupMap = new Map();
