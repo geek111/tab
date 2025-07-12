@@ -78,7 +78,8 @@ browser.storage.local.get([
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
   if (Array.isArray(data.recent)) recent = data.recent;
-  if (Array.isArray(data.visited)) visited = new Set(data.visited);
+  // Always start with a clean visited set to avoid stale state between sessions
+  browser.storage.local.remove('visited').catch(() => {});
 });
 
 // Clear visited state when the browser starts
