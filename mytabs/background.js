@@ -85,6 +85,12 @@ browser.storage.local.get([
 browser.runtime.onStartup.addListener(() => {
   visited = new Set();
   browser.storage.local.remove('visited').catch(() => {});
+  browser.tabs.query({ active: true }).then(tabs => {
+    for (const t of tabs) {
+      pushRecent(t.id);
+      markVisited(t.id);
+    }
+  });
 });
 
 // Listen for settings changes
