@@ -99,6 +99,10 @@ browser.storage.onChanged.addListener((changes, area) => {
 browser.tabs.query({}).then(tabs => {
   for (const t of tabs) {
     addDuplicate(t.id, t.url);
+    if (!t.discarded) {
+      pushRecent(t.id);
+      markVisited(t.id);
+    }
   }
 });
 
