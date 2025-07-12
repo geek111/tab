@@ -70,14 +70,14 @@ function sendVisitedUpdate() {
 browser.storage.local.get([
   'autoUnload',
   'autoUnloadMinutes',
-  'recent','visited'
+  'recent'
 ]).then(data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
   if (Array.isArray(data.recent)) recent = data.recent;
-  if (Array.isArray(data.visited)) visited = new Set(data.visited);
+  visited = new Set();
 });
 
 // Listen for settings changes
@@ -154,12 +154,11 @@ function reorderRecent(ids, toId, before) {
 }
 
 function scheduleVisitedSave() {
-  if (!visitedTimer) {
-    visitedTimer = setTimeout(() => {
-      visitedTimer = null;
-      browser.storage.local.set({ visited: Array.from(visited) });
-    }, 500);
-  }
+  // Visited tabs are tracked only for the current session, so no persistence is needed.
+  if (visitedTimer) return;
+  visitedTimer = setTimeout(() => {
+    visitedTimer = null;
+  }, 500);
 }
 
 function markVisited(tabId) {
