@@ -9,8 +9,8 @@ let visitedTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
-// Ensure previous session visit data does not persist
-browser.storage.local.remove('visited').catch(() => {});
+// `visited` data should persist across service worker restarts.
+// Only clear it when the browser actually starts up.
 
 // Track duplicate tabs by URL
 const dupMap = new Map();
