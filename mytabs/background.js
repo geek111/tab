@@ -199,9 +199,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.discarded === true) {
-    unmarkVisited(tabId);
-  } else if (changeInfo.discarded === false && tab && tab.active) {
+  if (changeInfo.discarded === false && tab && tab.active) {
     markVisited(tabId);
   }
   if (changeInfo.url) {
@@ -263,7 +261,6 @@ async function unloadAllTabs() {
     .map(async t => {
       try {
         await browser.tabs.discard(t.id);
-        unmarkVisited(t.id);
       } catch (_) {}
     }));
 }
@@ -277,7 +274,6 @@ async function checkAutoUnload() {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
         try {
           await browser.tabs.discard(t.id);
-          unmarkVisited(t.id);
         } catch (_) {}
       }
     }));
