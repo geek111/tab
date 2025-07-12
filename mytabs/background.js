@@ -66,6 +66,15 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
+function resetVisited() {
+  visited = new Set();
+  browser.storage.local.remove('visited');
+  sendVisitedUpdate();
+}
+
+browser.runtime.onStartup.addListener(resetVisited);
+browser.runtime.onInstalled.addListener(resetVisited);
+
 // Restore persisted data
 browser.storage.local.get([
   'autoUnload',
