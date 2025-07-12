@@ -19,6 +19,7 @@ let filterContainerId = '';
 let containerCache;
 let targetSelect;
 let visitedIds = new Set();
+const visitedStore = (browser.storage && browser.storage.session) || browser.storage.local;
 let movePending = null;
 
 let virtualList = null;
@@ -1034,7 +1035,7 @@ async function init() {
   }
   document.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
-  const { visited = [] } = await browser.storage.local.get('visited');
+  const { visited = [] } = await visitedStore.get('visited');
   visitedIds = new Set(visited);
   const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
   currentDupIds = new Set(duplicates);

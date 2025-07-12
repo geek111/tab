@@ -4,6 +4,7 @@ const action = browser.browserAction || browser.action;
 
 let recent = [];
 let visited = new Set();
+const visitedStore = (browser.storage && browser.storage.session) || browser.storage.local;
 let recentTimer = null;
 let visitedTimer = null;
 let autoUnload = false;
@@ -70,21 +71,23 @@ function sendVisitedUpdate() {
 browser.storage.local.get([
   'autoUnload',
   'autoUnloadMinutes',
-  'recent',
-  'visited'
-]).then(data => {
+  'recent'
+]).then(async data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
   if (Array.isArray(data.recent)) recent = data.recent;
-  if (Array.isArray(data.visited)) visited = new Set(data.visited);
+  try {
+    const v = await visitedStore.get('visited');
+    if (Array.isArray(v.visited)) visited = new Set(v.visited);
+  } catch (_) {}
 });
 
 // Clear visited state when the browser starts
 browser.runtime.onStartup.addListener(() => {
   visited = new Set();
-  browser.storage.local.remove('visited').catch(() => {});
+  visitedStore.remove('visited').catch(() => {});
 });
 
 // Listen for settings changes
@@ -164,7 +167,7 @@ function scheduleVisitedSave() {
   if (!visitedTimer) {
     visitedTimer = setTimeout(() => {
       visitedTimer = null;
-      browser.storage.local.set({ visited: Array.from(visited) });
+      visitedStore.set({ visited: Array.from(visited) });
     }, 500);
   }
 }
