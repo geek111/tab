@@ -66,26 +66,28 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
-// Restore persisted data
+function clearVisited() {
+  visited = new Set();
+  browser.storage.local.remove('visited').catch(() => {});
+  sendVisitedUpdate();
+}
+
+// Restore persisted data except visited tabs
 browser.storage.local.get([
   'autoUnload',
   'autoUnloadMinutes',
-  'recent',
-  'visited'
+  'recent'
 ]).then(data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
   if (Array.isArray(data.recent)) recent = data.recent;
-  if (Array.isArray(data.visited)) visited = new Set(data.visited);
+  clearVisited();
 });
 
 // Clear visited state when the browser starts
-browser.runtime.onStartup.addListener(() => {
-  visited = new Set();
-  browser.storage.local.remove('visited').catch(() => {});
-});
+browser.runtime.onStartup.addListener(clearVisited);
 
 // Listen for settings changes
 browser.storage.onChanged.addListener((changes, area) => {
