@@ -8,7 +8,7 @@ This is an open source Firefox add-on for advanced tab management.
 - Shows a **Recent** panel listing all visited tabs.
 - Highlights duplicate tabs and provides a dedicated **Duplicates** view.
 - Visited tabs appear in **bold** while unvisited tabs are dimmed, making new pages easy to spot.
-- Perform bulk operations (close, reload, unload, move) on selected tabs, and a
+- Perform bulk operations (close, reload, load, unload, move) on selected tabs, and a
   command to unload all tabs at once. The keyboard shortcut for this command can
   be configured on the Options page.
 - Each tab row includes a button to quickly close that tab.
