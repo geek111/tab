@@ -25,6 +25,8 @@ let virtualList = null;
 let tabItems = [];
 let idIndexMap = new Map();
 let rowHeight = 0;
+let tileWidth = 0;
+let columnCount = 0;
 let currentDupIds = new Set();
 let currentActiveId = -1;
 let currentVisited = new Set();
@@ -72,9 +74,8 @@ function adjustGridWidth() {
   if (!document.body.classList.contains('full')) return;
   const wrapper = document.getElementById('tabs-wrapper');
   const grid = document.getElementById('tabs');
-  if (!wrapper || !grid || !grid.lastElementChild) return;
-  const last = grid.lastElementChild;
-  const width = Math.max(wrapper.clientWidth, last.offsetLeft + last.offsetWidth);
+  if (!wrapper || !grid) return;
+  const width = Math.max(wrapper.clientWidth, columnCount * tileWidth);
   grid.style.width = width + 'px';
 }
 
@@ -604,6 +605,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   }
 
   if (document.body.classList.contains('full')) {
+    const style = getComputedStyle(document.documentElement);
     if (!rowHeight) {
       const sampleItem = tabItems.find(it => !it.separator);
       if (sampleItem) {
@@ -622,28 +624,26 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
         sample.remove();
       }
     }
-    for (const item of tabItems) {
-      let el;
-      if (item.separator) {
-        el = createWindowSeparator(item.label);
-      } else {
-        el = createTabRow(
-          item.tab,
-          dupIds.has(item.tab.id),
-          activeId,
-          visitedIds.has(item.tab.id),
-          item
-        );
-        if (currentQuery && item.match && item.tab.title) {
-          const span = el.querySelector('.tab-title');
-          if (span) {
-            applyHighlights(span, item.match);
-          }
-        }
-        if (item.selected) el.classList.add('selected');
-      }
-      item.el = el;
-      container.appendChild(el);
+    if (!tileWidth) {
+      tileWidth = parseFloat(style.getPropertyValue('--tile-width')) || 250;
+    }
+    const rowsPerCol = Math.max(1, Math.floor(scrollContainer.clientHeight / rowHeight));
+    const totalCols = Math.ceil(tabItems.length / rowsPerCol);
+    columnCount = totalCols;
+    container.style.width = (tileWidth * totalCols) + 'px';
+    const config = {
+      horizontal: true,
+      height: scrollContainer.clientHeight || 400,
+      itemHeight: tileWidth,
+      total: totalCols,
+      generate: (idx) => generateColumn(idx, rowsPerCol),
+      scrollContainer,
+      overrideScrollPosition: () => scrollContainer.scrollLeft
+    };
+    if (!virtualList) {
+      virtualList = HyperList.create(container, config);
+    } else {
+      virtualList.refresh(container, config);
     }
   } else {
     if (!virtualList) {
@@ -685,17 +685,60 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
 function generateRow(index) {
   const item = tabItems[index];
   if (!item) return document.createElement('div');
-    if (!item.el) {
-      item.el = createTabRow(item.tab, currentDupIds.has(item.tab.id), currentActiveId, currentVisited.has(item.tab.id), item);
-      if (currentQuery && item.match && item.tab.title) {
-        const span = item.el.querySelector('.tab-title');
-        if (span) {
-          applyHighlights(span, item.match);
-        }
+  if (!item.el) {
+    item.el = createTabRow(
+      item.tab,
+      currentDupIds.has(item.tab.id),
+      currentActiveId,
+      currentVisited.has(item.tab.id),
+      item
+    );
+    if (currentQuery && item.match && item.tab.title) {
+      const span = item.el.querySelector('.tab-title');
+      if (span) {
+        applyHighlights(span, item.match);
       }
-      if (item.selected) item.el.classList.add('selected');
     }
+    if (item.selected) item.el.classList.add('selected');
+  }
   return item.el;
+}
+
+function generateColumn(colIndex, perCol) {
+  const start = colIndex * perCol;
+  const end = Math.min(start + perCol, tabItems.length);
+  const column = document.createElement('div');
+  column.style.position = 'absolute';
+  column.style.width = tileWidth + 'px';
+  column.style.left = (colIndex * tileWidth) + 'px';
+  for (let i = start; i < end; i++) {
+    const item = tabItems[i];
+    if (!item.el) {
+      if (item.separator) {
+        item.el = createWindowSeparator(item.label);
+      } else {
+        item.el = createTabRow(
+          item.tab,
+          currentDupIds.has(item.tab.id),
+          currentActiveId,
+          currentVisited.has(item.tab.id),
+          item
+        );
+        if (currentQuery && item.match && item.tab.title) {
+          const span = item.el.querySelector('.tab-title');
+          if (span) {
+            applyHighlights(span, item.match);
+          }
+        }
+        if (item.selected) item.el.classList.add('selected');
+      }
+    }
+    item.el.style.position = 'absolute';
+    item.el.style.top = ((i - start) * rowHeight) + 'px';
+    column.appendChild(item.el);
+  }
+  column.style.height = (perCol * rowHeight) + 'px';
+  return column;
 }
 
 function fuzzyMatchPositions(text, query) {
