@@ -99,6 +99,24 @@ body[data-theme="dark"] #easter-egg {
 }
 #counts {
   margin-bottom: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.5em;
+  font-weight: bold;
+}
+
+.count-label {
+  padding: 0.1em 0.6em;
+  background: linear-gradient(135deg, var(--color-selected), var(--color-hover));
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.count-icon {
+  font-size: 1.2em;
 }
 #menu button {
   margin-right: 0.2em;

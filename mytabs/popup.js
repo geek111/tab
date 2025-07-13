@@ -557,16 +557,35 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   const full = document.body.classList.contains('full') && winMap;
   tabItems = [];
   idIndexMap = new Map();
-  let lastWin = -1;
-  for (const entry of list) {
-    const tab = entry.tab ?? entry;
-    if (full && tab.windowId !== lastWin) {
-      tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
-      lastWin = tab.windowId;
+  if (full && view === 'recent') {
+    const groups = new Map();
+    for (const entry of list) {
+      const tab = entry.tab ?? entry;
+      if (!groups.has(tab.windowId)) groups.set(tab.windowId, []);
+      groups.get(tab.windowId).push(entry);
     }
-    const item = { tab, match: entry.match, selected: false, el: null };
-    tabItems.push(item);
-    idIndexMap.set(tab.id, tabItems.length - 1);
+    const orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
+    for (const winId of orderedIds) {
+      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, el: null });
+      for (const entry of groups.get(winId)) {
+        const tab = entry.tab ?? entry;
+        const item = { tab, match: entry.match, selected: false, el: null };
+        tabItems.push(item);
+        idIndexMap.set(tab.id, tabItems.length - 1);
+      }
+    }
+  } else {
+    let lastWin = -1;
+    for (const entry of list) {
+      const tab = entry.tab ?? entry;
+      if (full && tab.windowId !== lastWin) {
+        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
+        lastWin = tab.windowId;
+      }
+      const item = { tab, match: entry.match, selected: false, el: null };
+      tabItems.push(item);
+      idIndexMap.set(tab.id, tabItems.length - 1);
+    }
   }
 
   container.innerHTML = '';
@@ -744,13 +763,13 @@ async function update() {
   }
   try {
     const allWins = document.body.classList.contains('full');
-    const queryOpts = allWins ? {} : { currentWindow: true };
+    const queryOpts = allWins ? { windowType: 'normal' } : { currentWindow: true, windowType: 'normal' };
     let allTabs = await browser.tabs.query(queryOpts);
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
     if (allWins) {
-      const wins = await browser.windows.getAll({populate: false});
+      const wins = await browser.windows.getAll({populate: false, windowTypes: ['normal']});
       const order = new Map(wins.map((w, i) => [w.id, i]));
       allTabs.sort((a, b) => {
         const wa = order.get(a.windowId) ?? 0;
@@ -761,10 +780,15 @@ async function update() {
       allTabs.sort((a, b) => a.index - b.index);
     }
     document.getElementById('total-count').textContent = allTabs.length;
-    const activeCount = allTabs.filter(t => !t.discarded).length;
-    document.getElementById('active-count').textContent = activeCount;
     let tabs = await getTabs(allTabs);
-    const winMap = allWins ? new Map((await browser.windows.getAll({populate: false})).map((w, i) => [w.id, i + 1])) : null;
+    let activeCount;
+    if (view === 'recent') {
+      activeCount = tabs.length;
+    } else {
+      activeCount = allTabs.filter(t => !t.discarded).length;
+    }
+    document.getElementById('active-count').textContent = activeCount;
+    const winMap = allWins ? new Map((await browser.windows.getAll({populate: false, windowTypes: ['normal']})).map((w, i) => [w.id, i + 1])) : null;
     const dupIds = currentDupIds;
     const activeId = allTabs.find(t => t.active)?.id ?? -1;
     const searchInput = document.getElementById('search');
@@ -865,6 +889,8 @@ document.addEventListener('keydown', (e) => {
     if (searchBox.value) {
       searchBox.value = '';
       scheduleUpdate();
+    } else if (document.body.classList.contains('full')) {
+      closeUI();
     }
     return;
   }
@@ -1236,6 +1262,9 @@ function showContextMenu(e) {
   if (selected.length) {
     addItem('Close Selected', bulkClose);
     addItem('Reload Selected', bulkReload);
+    if (document.body.classList.contains('full')) {
+      addItem('Activate Selected', bulkActivate);
+    }
     addItem('Unload Selected', bulkDiscard);
     if (MOVE_ENABLED) {
       if (!movePending) addItem('Flag for Move', flagTabsForMove);
@@ -1257,13 +1286,18 @@ function showContextMenu(e) {
     const win = parseInt(tabEl.dataset.windowId, 10);
     // Place Close as the first entry for single-tab actions
     addItem('Close', async () => {
+      if (scrollContainer) {
+        const isFull = document.body.classList.contains('full');
+        pendingScroll = isFull
+          ? scrollContainer.scrollLeft
+          : scrollContainer.scrollTop;
+      }
       await browser.tabs.remove(id);
       scheduleUpdate();
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1319,11 +1353,19 @@ async function bulkReload() {
   await Promise.all(ids.map(id => browser.tabs.reload(id)));
 }
 
+async function bulkActivate() {
+  const tabs = await Promise.all(
+    getSelectedTabIds().map(id => browser.tabs.get(id))
+  );
+  for (const tab of tabs) {
+    await activateTab(tab.id, tab.windowId);
+  }
+}
+
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
     await browser.tabs.discard(id);
-    await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
   }));
   scheduleUpdate();
 }
@@ -1332,14 +1374,13 @@ async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.map(async t => {
     await browser.tabs.discard(t.id);
-    await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: t.id });
   }));
   scheduleUpdate();
 }
 
 async function bulkMove() {
   const ids = getSelectedTabIds();
-  const windows = await browser.windows.getAll({populate: false});
+  const windows = await browser.windows.getAll({populate: false, windowTypes: ['normal']});
   const currentWinId = ids.length ? (await browser.tabs.get(ids[0])).windowId : null;
   const other = windows.find(w => ids.length && w.id !== currentWinId);
   if (other) {
@@ -1427,7 +1468,10 @@ function onContainerClick(e) {
     e.stopPropagation();
     const id = parseInt(tabEl.dataset.tab, 10);
     if (scrollContainer) {
-      pendingScroll = scrollContainer.scrollTop;
+      const isFull = document.body.classList.contains('full');
+      pendingScroll = isFull
+        ? scrollContainer.scrollLeft
+        : scrollContainer.scrollTop;
     }
     browser.tabs.remove(id).then(scheduleUpdate);
     return;

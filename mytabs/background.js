@@ -2,12 +2,16 @@
 const MAX_RECENT = Infinity;
 const action = browser.browserAction || browser.action;
 
+// Generate a new token on each background script load to detect session restarts
+const SESSION_TOKEN = Date.now().toString();
+
 let recent = [];
 let visited = new Set();
 let recentTimer = null;
 let visitedTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
+
 
 // Track duplicate tabs by URL
 const dupMap = new Map();
@@ -65,13 +69,40 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
-browser.storage.local.get(['recent', 'visited', 'autoUnload', 'autoUnloadMinutes']).then(data => {
-  recent = data.recent || [];
-  visited = new Set(data.visited || []);
+// Restore persisted data
+browser.storage.local.get([
+  'autoUnload',
+  'autoUnloadMinutes',
+  'recent',
+  'visited',
+  'sessionToken'
+]).then(async data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
-  if (typeof data.autoUnloadMinutes === 'number') autoUnloadMinutes = data.autoUnloadMinutes;
+  if (typeof data.autoUnloadMinutes === 'number') {
+    autoUnloadMinutes = data.autoUnloadMinutes;
+  }
+  const newSession = data.sessionToken !== SESSION_TOKEN;
+  await browser.storage.local.set({ sessionToken: SESSION_TOKEN }).catch(() => {});
+  if (!newSession) {
+    if (Array.isArray(data.recent)) recent = data.recent;
+    if (Array.isArray(data.visited)) visited = new Set(data.visited);
+  } else {
+    recent = [];
+    visited = new Set();
+    await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+    sendVisitedUpdate();
+  }
 });
 
+// Clear visited state when the browser starts
+browser.runtime.onStartup.addListener(() => {
+  recent = [];
+  visited = new Set();
+  browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
+});
+
+// Listen for settings changes
 browser.storage.onChanged.addListener((changes, area) => {
   if (area === 'local') {
     if (changes.autoUnload) autoUnload = changes.autoUnload.newValue;
@@ -168,7 +199,6 @@ browser.tabs.onActivated.addListener(info => {
 
 browser.tabs.onCreated.addListener(tab => {
   addDuplicate(tab.id, tab.url);
-  pushRecent(tab.id);
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
@@ -184,10 +214,8 @@ browser.tabs.onRemoved.addListener((tabId) => {
   removeDuplicate(tabId);
 });
 
-browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (changeInfo.discarded === true) {
-    unmarkVisited(tabId);
-  } else if (changeInfo.discarded === false) {
+browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.discarded === false && tab && tab.active) {
     markVisited(tabId);
   }
   if (changeInfo.url) {
@@ -249,7 +277,6 @@ async function unloadAllTabs() {
     .map(async t => {
       try {
         await browser.tabs.discard(t.id);
-        unmarkVisited(t.id);
       } catch (_) {}
     }));
 }
@@ -263,7 +290,6 @@ async function checkAutoUnload() {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
         try {
           await browser.tabs.discard(t.id);
-          unmarkVisited(t.id);
         } catch (_) {}
       }
     }));
@@ -296,6 +322,10 @@ browser.commands.onCommand.addListener((command) => {
 });
 
 browser.runtime.onInstalled.addListener(async () => {
+  recent = [];
+  visited = new Set();
+  await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
   await browser.contextMenus.create({
     id: 'show-version',
     title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
