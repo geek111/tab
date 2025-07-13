@@ -21,6 +21,9 @@ let targetSelect;
 let visitedIds = new Set();
 let movePending = null;
 
+// Cached tab list provided by the background script
+let cachedTabs = null;
+
 let virtualList = null;
 let tabItems = [];
 let idIndexMap = new Map();
@@ -764,7 +767,18 @@ async function update() {
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? { windowType: 'normal' } : { currentWindow: true, windowType: 'normal' };
-    let allTabs = await browser.tabs.query(queryOpts);
+    let allTabs;
+    if (Array.isArray(cachedTabs)) {
+      allTabs = cachedTabs.slice();
+      if (!allWins) {
+        try {
+          const win = await browser.windows.getLastFocused({ windowTypes: ['normal'] });
+          allTabs = allTabs.filter(t => t.windowId === win.id);
+        } catch (_) {}
+      }
+    } else {
+      allTabs = await browser.tabs.query(queryOpts);
+    }
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
@@ -822,6 +836,10 @@ browser.runtime.onMessage.addListener((msg) => {
     scheduleUpdate();
   } else if (msg && msg.type === 'duplicatesUpdated') {
     currentDupIds = new Set(msg.duplicates || []);
+    scheduleUpdate();
+  } else if (msg && msg.type === 'tabState') {
+    cachedTabs = Array.isArray(msg.tabs) ? msg.tabs : null;
+    visitedIds = new Set(msg.visited || []);
     scheduleUpdate();
   }
 });
@@ -1039,6 +1057,14 @@ async function init() {
   const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
   currentDupIds = new Set(duplicates);
   await loadOptions();
+  setInterval(async () => {
+    try {
+      const { tabs, visited: v } = await browser.runtime.sendMessage({ type: 'getTabState' });
+      if (Array.isArray(tabs)) cachedTabs = tabs;
+      if (Array.isArray(v)) visitedIds = new Set(v);
+      scheduleUpdate();
+    } catch (_) {}
+  }, 5000);
   registerTabEvents();
   const select = document.getElementById('container-filter');
   let containerIdents = [];

@@ -12,6 +12,9 @@ let visitedTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+// Cache of all tabs for the extension page
+let allTabCache = [];
+
 
 // Track duplicate tabs by URL
 const dupMap = new Map();
@@ -69,6 +72,29 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
+async function updateTabCache() {
+  try {
+    allTabCache = await browser.tabs.query({ windowType: 'normal' });
+  } catch (_) {
+    allTabCache = [];
+  }
+}
+
+function sendTabState() {
+  browser.runtime.sendMessage({
+    type: 'tabState',
+    tabs: allTabCache,
+    visited: Array.from(visited)
+  }).catch(() => {});
+}
+
+async function refreshTabState() {
+  await updateTabCache();
+  sendTabState();
+}
+
+setInterval(refreshTabState, 5000);
+
 // Restore persisted data
 browser.storage.local.get([
   'autoUnload',
@@ -92,6 +118,7 @@ browser.storage.local.get([
     await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
     sendVisitedUpdate();
   }
+  refreshTabState();
 });
 
 // Clear visited state when the browser starts
@@ -100,6 +127,7 @@ browser.runtime.onStartup.addListener(() => {
   visited = new Set();
   browser.storage.local.remove(['recent', 'visited']).catch(() => {});
   sendVisitedUpdate();
+  refreshTabState();
 });
 
 // Listen for settings changes
@@ -115,6 +143,7 @@ browser.tabs.query({}).then(tabs => {
   for (const t of tabs) {
     addDuplicate(t.id, t.url);
   }
+  refreshTabState();
 });
 
 // Apply user-defined keyboard shortcuts if supported
@@ -195,10 +224,12 @@ function markVisited(tabId) {
 browser.tabs.onActivated.addListener(info => {
   pushRecent(info.tabId);
   markVisited(info.tabId);
+  refreshTabState();
 });
 
 browser.tabs.onCreated.addListener(tab => {
   addDuplicate(tab.id, tab.url);
+  refreshTabState();
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
@@ -212,6 +243,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
     sendVisitedUpdate();
   }
   removeDuplicate(tabId);
+  refreshTabState();
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -222,6 +254,7 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     removeDuplicate(tabId);
     addDuplicate(tabId, changeInfo.url);
   }
+  refreshTabState();
 });
 
 browser.runtime.onMessage.addListener((msg) => {
@@ -231,6 +264,8 @@ browser.runtime.onMessage.addListener((msg) => {
     return Promise.resolve({ visited: Array.from(visited) });
   } else if (msg && msg.type === 'getDuplicates') {
     return Promise.resolve({ duplicates: Array.from(dupIds) });
+  } else if (msg && msg.type === 'getTabState') {
+    return Promise.resolve({ tabs: allTabCache, visited: Array.from(visited) });
   } else if (msg && msg.type === 'unmarkVisited') {
     unmarkVisited(msg.tabId);
   } else if (msg && msg.type === 'reorderRecent') {
