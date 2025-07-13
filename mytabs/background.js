@@ -9,6 +9,11 @@ let visitedTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+// Start each browser session with no stored recent or visited data
+recent = [];
+visited = new Set();
+browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+
 
 // Track duplicate tabs by URL
 const dupMap = new Map();
@@ -69,22 +74,20 @@ function sendVisitedUpdate() {
 // Restore persisted data
 browser.storage.local.get([
   'autoUnload',
-  'autoUnloadMinutes',
-  'recent',
-  'visited'
+  'autoUnloadMinutes'
 ]).then(data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
-  if (Array.isArray(data.recent)) recent = data.recent;
-  if (Array.isArray(data.visited)) visited = new Set(data.visited);
 });
 
 // Clear visited state when the browser starts
 browser.runtime.onStartup.addListener(() => {
+  recent = [];
   visited = new Set();
-  browser.storage.local.remove('visited').catch(() => {});
+  browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
 });
 
 // Listen for settings changes
@@ -307,6 +310,10 @@ browser.commands.onCommand.addListener((command) => {
 });
 
 browser.runtime.onInstalled.addListener(async () => {
+  recent = [];
+  visited = new Set();
+  await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
   await browser.contextMenus.create({
     id: 'show-version',
     title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
