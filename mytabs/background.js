@@ -83,8 +83,10 @@ browser.storage.local.get([
 
 // Clear visited state when the browser starts
 browser.runtime.onStartup.addListener(() => {
+  recent = [];
   visited = new Set();
-  browser.storage.local.remove('visited').catch(() => {});
+  browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
 });
 
 // Listen for settings changes
@@ -307,6 +309,10 @@ browser.commands.onCommand.addListener((command) => {
 });
 
 browser.runtime.onInstalled.addListener(async () => {
+  recent = [];
+  visited = new Set();
+  await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
   await browser.contextMenus.create({
     id: 'show-version',
     title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
