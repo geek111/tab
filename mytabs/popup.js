@@ -437,7 +437,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   }
   if (isVisited) {
     row.classList.add('visited');
-  } else if (!isVisited && !tab.discarded) {
+  } else {
     row.classList.add('unvisited');
   }
 
@@ -785,7 +785,7 @@ async function update() {
     if (view === 'recent') {
       activeCount = tabs.length;
     } else {
-      activeCount = allTabs.filter(t => !t.discarded).length;
+      activeCount = allTabs.length;
     }
     document.getElementById('active-count').textContent = activeCount;
     const winMap = allWins ? new Map((await browser.windows.getAll({populate: false, windowTypes: ['normal']})).map((w, i) => [w.id, i + 1])) : null;
