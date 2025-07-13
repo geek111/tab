@@ -67,24 +67,25 @@ function sendVisitedUpdate() {
 }
 
 // Restore persisted data
+// Remove any stored session data when the background script starts
+browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+
 browser.storage.local.get([
   'autoUnload',
-  'autoUnloadMinutes',
-  'recent',
-  'visited'
+  'autoUnloadMinutes'
 ]).then(data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
-  if (Array.isArray(data.recent)) recent = data.recent;
-  if (Array.isArray(data.visited)) visited = new Set(data.visited);
 });
 
 // Clear visited state when the browser starts
 browser.runtime.onStartup.addListener(() => {
+  recent = [];
   visited = new Set();
-  browser.storage.local.remove('visited').catch(() => {});
+  browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
 });
 
 // Listen for settings changes
@@ -307,6 +308,10 @@ browser.commands.onCommand.addListener((command) => {
 });
 
 browser.runtime.onInstalled.addListener(async () => {
+  recent = [];
+  visited = new Set();
+  await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
   await browser.contextMenus.create({
     id: 'show-version',
     title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
