@@ -218,6 +218,8 @@ browser.runtime.onMessage.addListener((msg) => {
     return Promise.resolve({ duplicates: Array.from(dupIds) });
   } else if (msg && msg.type === 'unmarkVisited') {
     unmarkVisited(msg.tabId);
+  } else if (msg && msg.type === 'markVisited') {
+    (msg.ids || []).forEach(markVisited);
   } else if (msg && msg.type === 'reorderRecent') {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
   }

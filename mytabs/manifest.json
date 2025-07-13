@@ -14,7 +14,8 @@
       "storage",
       "contextMenus",
       "contextualIdentities",
-      "cookies"
+      "cookies",
+      "history"
     ],
   "background": {
 
