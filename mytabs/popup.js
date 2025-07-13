@@ -19,6 +19,7 @@ let filterContainerId = '';
 let containerCache;
 let targetSelect;
 let visitedIds = new Set();
+let backgroundTabs = [];
 let movePending = null;
 
 let virtualList = null;
@@ -764,7 +765,12 @@ async function update() {
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? { windowType: 'normal' } : { currentWindow: true, windowType: 'normal' };
-    let allTabs = await browser.tabs.query(queryOpts);
+    let allTabs = [];
+    if (allWins && backgroundTabs.length) {
+      allTabs = backgroundTabs.slice();
+    } else {
+      allTabs = await browser.tabs.query(queryOpts);
+    }
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
@@ -822,6 +828,10 @@ browser.runtime.onMessage.addListener((msg) => {
     scheduleUpdate();
   } else if (msg && msg.type === 'duplicatesUpdated') {
     currentDupIds = new Set(msg.duplicates || []);
+    scheduleUpdate();
+  } else if (msg && msg.type === 'tabState') {
+    if (Array.isArray(msg.visited)) visitedIds = new Set(msg.visited);
+    if (Array.isArray(msg.tabs)) backgroundTabs = msg.tabs;
     scheduleUpdate();
   }
 });

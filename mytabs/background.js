@@ -235,6 +235,11 @@ browser.runtime.onMessage.addListener((msg) => {
     unmarkVisited(msg.tabId);
   } else if (msg && msg.type === 'reorderRecent') {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
+  } else if (msg && msg.type === 'getTabState') {
+    return browser.tabs.query({ windowType: 'normal' }).then(tabs => ({
+      tabs,
+      visited: Array.from(visited)
+    }));
   }
 });
 
@@ -298,7 +303,19 @@ async function checkAutoUnload() {
   }
 }
 
+async function broadcastTabState() {
+  try {
+    const tabs = await browser.tabs.query({ windowType: 'normal' });
+    browser.runtime.sendMessage({
+      type: 'tabState',
+      tabs,
+      visited: Array.from(visited)
+    }).catch(() => {});
+  } catch (_) {}
+}
+
 setInterval(checkAutoUnload, 60000);
+setInterval(broadcastTabState, 5000);
 
 // Open the multi-column tab manager when the icon is middle-clicked.
 if (action && action.onClicked && action.onClicked.addListener) {
