@@ -4,6 +4,7 @@ const action = browser.browserAction || browser.action;
 
 let recent = [];
 let visited = new Set();
+const sessionStore = browser.storage.session || browser.storage.local;
 let recentTimer = null;
 let visitedTimer = null;
 let autoUnload = false;
@@ -69,22 +70,26 @@ function sendVisitedUpdate() {
 // Restore persisted data
 browser.storage.local.get([
   'autoUnload',
-  'autoUnloadMinutes',
-  'recent',
-  'visited'
+  'autoUnloadMinutes'
 ]).then(data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
+});
+
+sessionStore.get(['recent', 'visited']).then(data => {
   if (Array.isArray(data.recent)) recent = data.recent;
   if (Array.isArray(data.visited)) visited = new Set(data.visited);
 });
 
 // Clear visited state when the browser starts
 browser.runtime.onStartup.addListener(() => {
+  recent = [];
   visited = new Set();
-  browser.storage.local.remove('visited').catch(() => {});
+  sessionStore.remove(['recent', 'visited']).catch(() => {});
+  browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
 });
 
 // Listen for settings changes
@@ -136,7 +141,7 @@ function scheduleRecentSave() {
   if (!recentTimer) {
     recentTimer = setTimeout(() => {
       recentTimer = null;
-      browser.storage.local.set({ recent });
+      sessionStore.set({ recent });
     }, 500);
   }
 }
@@ -164,7 +169,7 @@ function scheduleVisitedSave() {
   if (!visitedTimer) {
     visitedTimer = setTimeout(() => {
       visitedTimer = null;
-      browser.storage.local.set({ visited: Array.from(visited) });
+      sessionStore.set({ visited: Array.from(visited) });
     }, 500);
   }
 }
@@ -307,6 +312,11 @@ browser.commands.onCommand.addListener((command) => {
 });
 
 browser.runtime.onInstalled.addListener(async () => {
+  recent = [];
+  visited = new Set();
+  await sessionStore.remove(['recent', 'visited']).catch(() => {});
+  await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
   await browser.contextMenus.create({
     id: 'show-version',
     title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
