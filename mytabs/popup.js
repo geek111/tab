@@ -1262,6 +1262,9 @@ function showContextMenu(e) {
   if (selected.length) {
     addItem('Close Selected', bulkClose);
     addItem('Reload Selected', bulkReload);
+    if (document.body.classList.contains('full')) {
+      addItem('Activate Selected', bulkActivate);
+    }
     addItem('Unload Selected', bulkDiscard);
     if (MOVE_ENABLED) {
       if (!movePending) addItem('Flag for Move', flagTabsForMove);
@@ -1348,6 +1351,15 @@ async function bulkClose() {
 async function bulkReload() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(id => browser.tabs.reload(id)));
+}
+
+async function bulkActivate() {
+  const tabs = await Promise.all(
+    getSelectedTabIds().map(id => browser.tabs.get(id))
+  );
+  for (const tab of tabs) {
+    await activateTab(tab.id, tab.windowId);
+  }
 }
 
 async function bulkDiscard() {
