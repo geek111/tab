@@ -14,10 +14,13 @@
         <option value="">All Containers</option>
       </select>
     </div>
-    <input type="text" id="search" placeholder="Search tabs" />
+    <div class="search-wrapper">
+      <input type="text" id="search" placeholder="Search tabs" />
+      <button id="search-clear" class="clear-btn hidden" type="button">&times;</button>
+    </div>
     <div id="error"></div>
-    <div id="tabs-wrapper">
-      <div id="tabs"></div>
+    <div id="tabs-wrapper" class="tab-grid-wrapper">
+      <div id="tabs" class="tab-grid"></div>
     </div>
     <div id="bulk-actions">
       <select id="container-target"></select>
@@ -27,7 +30,12 @@
       <button id="bulk-reload">Reload</button>
       <button id="bulk-discard">Unload</button>
       <button id="bulk-unload-all">Unload All</button>
-      <button id="bulk-move">Move</button>
+    </div>
+    <div id="easter-egg" class="hidden">
+      <div class="egg-content">
+        <h2>🎉 Hidden Menu 🎉</h2>
+        <p>Surprise! You found it.</p>
+      </div>
     </div>
     <div id="context" class="hidden"></div>
 
