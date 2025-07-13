@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "description": "Development tooling",
   "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^7.2.1",
     "stylelint": "^15.0.0"
   },
   "dependencies": {
@@ -10,7 +15,8 @@
   },
   "scripts": {
     "lint": "stylelint mytabs/style.css",
-    "postinstall": "npx stylelint --version"
+    "postinstall": "npx stylelint --version",
+    "lint:js": "eslint mytabs/*.js"
   },
   "license": "GPL-3.0-or-later"
 }
