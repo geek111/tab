@@ -1219,6 +1219,12 @@ window.addEventListener('resize', () => {
 
 // custom context menu
 const context = document.getElementById('context');
+context.addEventListener('contextmenu', (e) => {
+  if (!context.classList.contains('visible')) return;
+  e.preventDefault();
+  e.stopPropagation();
+  showEasterEgg();
+});
 async function movePendingTo(targetEl, evt) {
   const ids = movePending;
   if (!ids || !ids.length) return;
@@ -1329,10 +1335,6 @@ function showContextMenu(e) {
     // Direct move option removed in favor of flagged move workflow
   }
 
-  if (!tabEl && !selected.length) {
-    showEasterEgg();
-    return;
-  }
 
   addItem('Unload All Tabs', bulkUnloadAll);
   addItem('Options', () => browser.runtime.openOptionsPage());
