@@ -1277,6 +1277,7 @@ function clearMovePending() {
 function showContextMenu(e) {
   const tabEl = e.target.closest('.tab');
   if (!tabEl) {
+    e.preventDefault();
     hideContextMenu();
     return;
   }
