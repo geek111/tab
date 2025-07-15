@@ -1275,9 +1275,13 @@ function clearMovePending() {
 
 
 function showContextMenu(e) {
+  const tabEl = e.target.closest('.tab');
+  if (!tabEl) {
+    hideContextMenu();
+    return;
+  }
   e.preventDefault();
   hideAllTooltips();
-  const tabEl = e.target.closest('.tab');
   context.innerHTML = '';
 
   const selected = getSelectedTabIds();
