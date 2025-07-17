@@ -35,6 +35,8 @@ let currentWinMap = null;
 let currentQuery = '';
 // Scroll position to restore after certain operations
 let pendingScroll = null;
+// Remember scroll position for each view in full mode
+let scrollByView = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 
 function showEasterEgg() {
@@ -128,6 +130,10 @@ function updateViewButtons() {
 }
 
 function setView(newView) {
+  if (document.body.classList.contains('full') && scrollContainer) {
+    scrollByView[view] = scrollContainer.scrollLeft;
+    pendingScroll = scrollByView[newView] ?? 0;
+  }
   view = newView;
   updateViewButtons();
   triggerViewAnimation();
@@ -277,7 +283,9 @@ function clearSelection() {
 const saveScroll = debounce(() => {
   if (!scrollContainer) return;
   if (document.body.classList.contains('full')) {
-    browser.storage.local.set({ scrollLeftFull: scrollContainer.scrollLeft });
+    scrollByView[view] = scrollContainer.scrollLeft;
+    const key = `scrollLeftFull_${view}`;
+    browser.storage.local.set({ [key]: scrollByView[view] });
   } else {
     browser.storage.local.set({ scrollTop: scrollContainer.scrollTop });
   }
@@ -312,9 +320,13 @@ function updateFadeOverlay() {
 async function restoreScroll() {
   if (restored) return;
   if (document.body.classList.contains('full')) {
-    const { scrollLeftFull = 0 } = await browser.storage.local.get('scrollLeftFull');
+    const keys = ['scrollLeftFull_all', 'scrollLeftFull_recent', 'scrollLeftFull_dups'];
+    const stored = await browser.storage.local.get(keys);
+    scrollByView.all = stored.scrollLeftFull_all || 0;
+    scrollByView.recent = stored.scrollLeftFull_recent || 0;
+    scrollByView.dups = stored.scrollLeftFull_dups || 0;
     if (scrollContainer) {
-      scrollContainer.scrollLeft = scrollLeftFull;
+      scrollContainer.scrollLeft = scrollByView[view];
     }
   } else {
     const { scrollTop = 0 } = await browser.storage.local.get('scrollTop');
