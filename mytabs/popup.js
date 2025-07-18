@@ -131,7 +131,7 @@ function updateViewButtons() {
 
 function setView(newView) {
   if (document.body.classList.contains('full') && scrollContainer) {
-    fullScrollPos[view] = scrollContainer.scrollTop;
+    fullScrollPos[view] = scrollContainer.scrollLeft;
     pendingScroll = fullScrollPos[newView] || 0;
   }
   view = newView;
