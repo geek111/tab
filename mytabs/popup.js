@@ -131,7 +131,7 @@ function updateViewButtons() {
 
 function setView(newView) {
   if (document.body.classList.contains('full') && scrollContainer) {
-    fullScrollPos[view] = scrollContainer.scrollTop;
+    fullScrollPos[view] = scrollContainer.scrollLeft;
     pendingScroll = fullScrollPos[newView] || 0;
   }
   view = newView;
@@ -284,7 +284,7 @@ const saveScroll = debounce(() => {
   if (!scrollContainer) return;
   if (document.body.classList.contains('full')) {
     browser.storage.local.set({ scrollLeftFull: scrollContainer.scrollLeft });
-    fullScrollPos[view] = scrollContainer.scrollTop;
+    fullScrollPos[view] = scrollContainer.scrollLeft;
   } else {
     browser.storage.local.set({ scrollTop: scrollContainer.scrollTop });
   }
