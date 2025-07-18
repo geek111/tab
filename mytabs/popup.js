@@ -35,7 +35,7 @@ let currentWinMap = null;
 let currentQuery = '';
 // Scroll position to restore after certain operations
 let pendingScroll = null;
-// Remember scroll position for each view in full mode
+// Remember scroll position for each view
 let scrollByView = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 
@@ -130,8 +130,12 @@ function updateViewButtons() {
 }
 
 function setView(newView) {
-  if (document.body.classList.contains('full') && scrollContainer) {
-    scrollByView[view] = scrollContainer.scrollLeft;
+  if (scrollContainer) {
+    if (document.body.classList.contains('full')) {
+      scrollByView[view] = scrollContainer.scrollLeft;
+    } else {
+      scrollByView[view] = scrollContainer.scrollTop;
+    }
     pendingScroll = scrollByView[newView] ?? 0;
   }
   view = newView;
@@ -287,7 +291,9 @@ const saveScroll = debounce(() => {
     const key = `scrollLeftFull_${view}`;
     browser.storage.local.set({ [key]: scrollByView[view] });
   } else {
-    browser.storage.local.set({ scrollTop: scrollContainer.scrollTop });
+    scrollByView[view] = scrollContainer.scrollTop;
+    const key = `scrollTop_${view}`;
+    browser.storage.local.set({ [key]: scrollByView[view], scrollTop: scrollContainer.scrollTop });
   }
 }, 200);
 
@@ -329,9 +335,13 @@ async function restoreScroll() {
       scrollContainer.scrollLeft = scrollByView[view];
     }
   } else {
-    const { scrollTop = 0 } = await browser.storage.local.get('scrollTop');
+    const keys = ['scrollTop_all', 'scrollTop_recent', 'scrollTop_dups', 'scrollTop'];
+    const stored = await browser.storage.local.get(keys);
+    scrollByView.all = stored.scrollTop_all ?? stored.scrollTop ?? 0;
+    scrollByView.recent = stored.scrollTop_recent ?? stored.scrollTop ?? 0;
+    scrollByView.dups = stored.scrollTop_dups ?? stored.scrollTop ?? 0;
     if (scrollContainer) {
-      scrollContainer.scrollTop = scrollTop;
+      scrollContainer.scrollTop = scrollByView[view];
     }
   }
   updateFadeOverlay();
@@ -1326,9 +1336,10 @@ function showContextMenu(e) {
     addItem('Close', async () => {
       if (scrollContainer) {
         const isFull = document.body.classList.contains('full');
-        pendingScroll = isFull
+        scrollByView[view] = isFull
           ? scrollContainer.scrollLeft
           : scrollContainer.scrollTop;
+        pendingScroll = scrollByView[view];
       }
       await browser.tabs.remove(id);
       scheduleUpdate();
@@ -1507,9 +1518,10 @@ function onContainerClick(e) {
     const id = parseInt(tabEl.dataset.tab, 10);
     if (scrollContainer) {
       const isFull = document.body.classList.contains('full');
-      pendingScroll = isFull
+      scrollByView[view] = isFull
         ? scrollContainer.scrollLeft
         : scrollContainer.scrollTop;
+      pendingScroll = scrollByView[view];
     }
     browser.tabs.remove(id).then(scheduleUpdate);
     return;
