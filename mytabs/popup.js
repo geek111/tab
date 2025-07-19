@@ -1282,6 +1282,18 @@ function clearMovePending() {
 
 
 function showContextMenu(e) {
+  const inTabs = e.target.closest('#tabs');
+  const inMenu = e.target.closest('#context');
+
+  if (!inTabs) {
+    if (inMenu) {
+      e.preventDefault();
+      hideContextMenu();
+      showEasterEgg();
+    }
+    return;
+  }
+
   e.preventDefault();
   hideAllTooltips();
   const tabEl = e.target.closest('.tab');
@@ -1343,7 +1355,6 @@ function showContextMenu(e) {
   }
 
   if (!tabEl && !selected.length) {
-    showEasterEgg();
     return;
   }
 
