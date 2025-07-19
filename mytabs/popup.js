@@ -1063,7 +1063,9 @@ async function init() {
       scrollContainer.scrollLeft += delta * SCROLL_SPEED;
     }, { passive: false });
   }
-  document.addEventListener('contextmenu', showContextMenu);
+  const tabsEl = document.getElementById('tabs');
+  if (tabsEl) tabsEl.addEventListener('contextmenu', showContextMenu);
+  context.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
   const { visited = [] } = await browser.storage.local.get('visited');
   visitedIds = new Set(visited);
