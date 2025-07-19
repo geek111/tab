@@ -40,6 +40,7 @@ const fullScrollPos = { all: 0, recent: 0, dups: 0 };
 // Remember vertical scroll for each view in popup window
 const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
+let context; // custom context menu container
 
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
@@ -1038,6 +1039,7 @@ async function init() {
               document.getElementById('tabs');
   scrollContainer = document.getElementById('tabs-wrapper') || container;
   easterEgg = document.getElementById('easter-egg');
+  context = document.getElementById('context');
   const menuEl = document.getElementById('menu');
   menuEl?.addEventListener('dblclick', showEasterEgg);
   scrollContainer.addEventListener('scroll', saveScroll);
@@ -1063,7 +1065,9 @@ async function init() {
       scrollContainer.scrollLeft += delta * SCROLL_SPEED;
     }, { passive: false });
   }
-  document.addEventListener('contextmenu', showContextMenu);
+  // Limit custom context menu to the tab list and menu elements
+  container.addEventListener('contextmenu', showContextMenu);
+  context.addEventListener('contextmenu', showContextMenu);
   container.addEventListener('dragend', clearPlaceholder);
   const { visited = [] } = await browser.storage.local.get('visited');
   visitedIds = new Set(visited);
@@ -1231,7 +1235,6 @@ window.addEventListener('resize', () => {
 });
 
 // custom context menu
-const context = document.getElementById('context');
 async function movePendingTo(targetEl, evt) {
   const ids = movePending;
   if (!ids || !ids.length) return;
