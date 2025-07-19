@@ -1286,11 +1286,9 @@ function showContextMenu(e) {
   const inMenu = e.target.closest('#context');
 
   if (!inTabs) {
-    if (inMenu) {
-      e.preventDefault();
-      hideContextMenu();
-      showEasterEgg();
-    }
+    e.preventDefault();
+    hideContextMenu();
+    if (inMenu) showEasterEgg();
     return;
   }
 
