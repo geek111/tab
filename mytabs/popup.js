@@ -35,8 +35,10 @@ let currentWinMap = null;
 let currentQuery = '';
 // Scroll position to restore after certain operations
 let pendingScroll = null;
-// Remember vertical scroll for each view in full window
+// Remember horizontal scroll for each view in full window
 const fullScrollPos = { all: 0, recent: 0, dups: 0 };
+// Remember vertical scroll for each view in popup window
+const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 
 function showEasterEgg() {
@@ -131,8 +133,11 @@ function updateViewButtons() {
 
 function setView(newView) {
   if (document.body.classList.contains('full') && scrollContainer) {
-    fullScrollPos[view] = scrollContainer.scrollTop;
+    fullScrollPos[view] = scrollContainer.scrollLeft;
     pendingScroll = fullScrollPos[newView] || 0;
+  } else if (scrollContainer) {
+    popupScrollPos[view] = scrollContainer.scrollTop;
+    pendingScroll = popupScrollPos[newView] || 0;
   }
   view = newView;
   updateViewButtons();
@@ -287,6 +292,7 @@ const saveScroll = debounce(() => {
     fullScrollPos[view] = scrollContainer.scrollTop;
   } else {
     browser.storage.local.set({ scrollTop: scrollContainer.scrollTop });
+    popupScrollPos[view] = scrollContainer.scrollTop;
   }
 }, 200);
 
