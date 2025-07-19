@@ -180,6 +180,10 @@ body.popup {
 body.popup #counts {
   margin-bottom: 0.5em;
 }
+body.popup #menu {
+  /* Add spacing between the search field and menu buttons in popup mode */
+  margin-bottom: 0.5em;
+}
 body.popup #tabs {
   max-height: none;
   overflow: visible;
