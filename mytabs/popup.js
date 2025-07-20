@@ -767,7 +767,10 @@ function filterTabs(tabs, query) {
     const score = fuzzyScore(posTitle || posUrl);
     results.push({ tab, match: posTitle, score });
   }
-  results.sort((a, b) => b.score - a.score);
+  results.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.tab.index - b.tab.index;
+  });
   return results;
 }
 
@@ -1272,6 +1275,7 @@ async function movePendingTo(targetEl, evt) {
   }
   movePending = null;
   tabItems.forEach(it => it.el?.classList.remove('move-pending'));
+  cachedTabs = null;
   scheduleUpdate();
 }
 
@@ -1447,6 +1451,7 @@ async function bulkMove() {
       await browser.tabs.move(tab.id, { windowId: other.id, index: -1 });
     }
   }
+  cachedTabs = null;
   scheduleUpdate();
 }
 
@@ -1507,6 +1512,7 @@ async function bulkAssignToContainer(containerId) {
       failed.push(tab.title || tab.url);
     }
   }
+  cachedTabs = null;
   scheduleUpdate();
   if (failed.length) {
     if (errorEl) errorEl.textContent = `Some tabs could not be moved: ${failed.join(', ')}`;
@@ -1616,6 +1622,7 @@ async function onContainerDrop(e) {
       before
     }).catch(() => {});
   }
+  cachedTabs = null;
   scheduleUpdate();
 }
 
