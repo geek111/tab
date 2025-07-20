@@ -476,7 +476,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
 
 
   const iconCell = document.createElement('div');
-  if (tab.favIconUrl) {
+  if (tab.favIconUrl && !tab.favIconUrl.startsWith('chrome:')) {
     const icon = document.createElement('img');
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
