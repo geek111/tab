@@ -257,6 +257,10 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   refreshTabState();
 });
 
+browser.tabs.onMoved.addListener(() => {
+  refreshTabState();
+});
+
 browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'getRecent') {
     return Promise.resolve({ recent });

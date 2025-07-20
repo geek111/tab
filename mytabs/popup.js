@@ -767,7 +767,10 @@ function filterTabs(tabs, query) {
     const score = fuzzyScore(posTitle || posUrl);
     results.push({ tab, match: posTitle, score });
   }
-  results.sort((a, b) => b.score - a.score);
+  results.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.tab.index - b.tab.index;
+  });
   return results;
 }
 
@@ -1187,6 +1190,7 @@ function registerTabEvents() {
   browser.tabs.onActivated.addListener(updateListener);
   browser.tabs.onDetached.addListener(updateListener);
   browser.tabs.onAttached.addListener(updateListener);
+  browser.tabs.onMoved.addListener(updateListener);
 }
 
 function unregisterTabEvents() {
@@ -1196,6 +1200,7 @@ function unregisterTabEvents() {
   browser.tabs.onActivated.removeListener(updateListener);
   browser.tabs.onDetached.removeListener(updateListener);
   browser.tabs.onAttached.removeListener(updateListener);
+  browser.tabs.onMoved.removeListener(updateListener);
 }
 
 function cleanup() {
@@ -1616,6 +1621,7 @@ async function onContainerDrop(e) {
       before
     }).catch(() => {});
   }
+  cachedTabs = null;
   scheduleUpdate();
 }
 
