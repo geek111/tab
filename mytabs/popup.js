@@ -20,6 +20,8 @@ let containerCache;
 let targetSelect;
 let visitedIds = new Set();
 let movePending = null;
+// Persist selection across updates
+let selectedIds = new Set();
 
 // Cached tab list provided by the background script
 let cachedTabs = null;
@@ -99,6 +101,7 @@ function resetTabState() {
   currentWinMap = null;
   currentQuery = '';
   movePending = null;
+  selectedIds.clear();
 }
 function clearPlaceholder() {
   if (dropTarget) {
@@ -273,6 +276,17 @@ function updateSelection(row, selected) {
   row.classList.toggle('selected', selected);
   if (row._item) {
     row._item.selected = selected;
+    const id = row._item.tab.id;
+    if (selected) {
+      selectedIds.add(id);
+    } else {
+      selectedIds.delete(id);
+    }
+  } else {
+    const id = parseInt(row.dataset.tab, 10);
+    if (!isNaN(id)) {
+      if (selected) selectedIds.add(id); else selectedIds.delete(id);
+    }
   }
 }
 
@@ -282,6 +296,7 @@ function clearSelection() {
     item.selected = false;
     if (item.el) updateSelection(item.el, false);
   }
+  selectedIds.clear();
   lastSelectedIndex = -1;
 }
 
@@ -570,6 +585,10 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   currentVisited = visitedIds;
   currentWinMap = winMap;
   currentQuery = query;
+  const validIds = new Set(list.map(entry => (entry.tab ?? entry).id));
+  for (const id of Array.from(selectedIds)) {
+    if (!validIds.has(id)) selectedIds.delete(id);
+  }
   const full = document.body.classList.contains('full') && winMap;
   tabItems = [];
   idIndexMap = new Map();
@@ -585,7 +604,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, el: null });
       for (const entry of groups.get(winId)) {
         const tab = entry.tab ?? entry;
-        const item = { tab, match: entry.match, selected: false, el: null };
+        const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
         tabItems.push(item);
         idIndexMap.set(tab.id, tabItems.length - 1);
       }
@@ -598,7 +617,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
         tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
         lastWin = tab.windowId;
       }
-      const item = { tab, match: entry.match, selected: false, el: null };
+      const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
       tabItems.push(item);
       idIndexMap.set(tab.id, tabItems.length - 1);
     }
@@ -980,18 +999,8 @@ document.addEventListener('keydown', (e) => {
         tabItems[i].selected = sel;
         if (tabItems[i].el) updateSelection(tabItems[i].el, sel);
       }
-    } else if (!e.ctrlKey && !e.metaKey) {
-      tabItems.forEach(it => {
-        if (it.separator) return;
-        it.selected = false;
-        if (it.el) updateSelection(it.el, false);
-      });
-      tabItems[newIdx].selected = true;
-      if (tabItems[newIdx].el) updateSelection(tabItems[newIdx].el, true);
-      lastSelectedIndex = newIdx;
-    } else {
-      lastSelectedIndex = newIdx;
     }
+    lastSelectedIndex = newIdx;
   } else if (e.key === ' ' && isTab) {
     e.preventDefault();
     const item = tabItems[idx];
