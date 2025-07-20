@@ -1396,7 +1396,7 @@ function hideContextMenu() {
 document.addEventListener('click', hideContextMenu);
 
 function getSelectedTabIds() {
-  return tabItems.filter(it => !it.separator && it.selected).map(it => it.tab.id);
+  return Array.from(selectedIds);
 }
 
 async function bulkClose() {
