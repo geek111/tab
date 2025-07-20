@@ -515,7 +515,9 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       tooltip.style.left = `${left}px`;
       tooltip.style.top = `${top}px`;
       requestAnimationFrame(() => {
-        tooltip.classList.add('visible');
+        if (tooltip) {
+          tooltip.classList.add('visible');
+        }
       });
     };
     const hideTooltip = () => {
