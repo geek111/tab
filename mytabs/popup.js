@@ -756,7 +756,7 @@ function fuzzyScore(pos) {
   return cont * 10 - pos[0];
 }
 
-function filterTabs(tabs, query) {
+function filterTabs(tabs, query, sort = true) {
   const results = [];
   for (const tab of tabs) {
     const title = tab.title || '';
@@ -767,7 +767,9 @@ function filterTabs(tabs, query) {
     const score = fuzzyScore(posTitle || posUrl);
     results.push({ tab, match: posTitle, score });
   }
-  results.sort((a, b) => b.score - a.score);
+  if (sort) {
+    results.sort((a, b) => b.score - a.score);
+  }
   return results;
 }
 
@@ -841,7 +843,7 @@ async function update() {
     const query = searchInput.value.trim();
     let list;
     if (query) {
-      list = filterTabs(tabs, query);
+      list = filterTabs(tabs, query, false);
     } else {
       list = tabs.map(t => ({ tab: t }));
     }
