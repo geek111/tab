@@ -35,6 +35,7 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+let searchOrder = null;
 // Scroll position to restore after certain operations
 let pendingScroll = null;
 // Remember horizontal scroll for each view in full window
@@ -145,6 +146,7 @@ function setView(newView) {
   view = newView;
   updateViewButtons();
   triggerViewAnimation();
+  searchOrder = null;
   scheduleUpdate();
 }
 
@@ -767,8 +769,28 @@ function filterTabs(tabs, query) {
     const score = fuzzyScore(posTitle || posUrl);
     results.push({ tab, match: posTitle, score });
   }
-  results.sort((a, b) => b.score - a.score);
+  results.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.tab.index - b.tab.index;
+  });
   return results;
+}
+
+function applySearchOrder(list) {
+  if (!searchOrder || !currentQuery) return list;
+  const map = new Map(list.map(it => [it.tab.id, it]));
+  const ordered = [];
+  for (const id of searchOrder) {
+    const item = map.get(id);
+    if (item) {
+      ordered.push(item);
+      map.delete(id);
+    }
+  }
+  for (const item of list) {
+    if (map.has(item.tab.id)) ordered.push(item);
+  }
+  return ordered;
 }
 
 function findDuplicates(tabs) {
@@ -841,7 +863,7 @@ async function update() {
     const query = searchInput.value.trim();
     let list;
     if (query) {
-      list = filterTabs(tabs, query);
+      list = applySearchOrder(filterTabs(tabs, query));
     } else {
       list = tabs.map(t => ({ tab: t }));
     }
@@ -895,6 +917,7 @@ function updateClearButton() {
 
 searchBox.addEventListener('input', () => {
   updateClearButton();
+  searchOrder = null;
   scheduleUpdate();
 });
 
@@ -904,6 +927,7 @@ clearBtn?.addEventListener('click', () => {
   if (searchBox.value) {
     searchBox.value = '';
     updateClearButton();
+    searchOrder = null;
     scheduleUpdate();
   }
 });
@@ -1615,6 +1639,21 @@ async function onContainerDrop(e) {
       toId,
       before
     }).catch(() => {});
+  }
+  if (currentQuery) {
+    if (!searchOrder) {
+      searchOrder = tabItems.filter(it => !it.separator).map(it => it.tab.id);
+    }
+    let pos = searchOrder.indexOf(toId);
+    if (!before) pos++;
+    for (const id of ids) {
+      const idx = searchOrder.indexOf(id);
+      if (idx >= 0) {
+        searchOrder.splice(idx, 1);
+        if (idx < pos) pos--;
+      }
+    }
+    searchOrder.splice(pos, 0, ...ids);
   }
   scheduleUpdate();
 }

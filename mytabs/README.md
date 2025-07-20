@@ -19,6 +19,7 @@ This is an open source Firefox add-on for advanced tab management.
 - Sticky menu gains a subtle shadow while scrolling for a professional look.
 - Tab list edges fade in and out while scrolling to signal more content.
 - Tabs can be reordered via drag and drop, including moving multiple selected tabs at once.
+- Dragging to reorder works even when the list is filtered by the search box; the order updates instantly.
 - Bulk assign selected tabs to any Firefox container or move them back to the default container.
 - Pinned and active tabs retain their state and original order when moved between windows or containers.
 - Optionally unloads inactive tabs automatically after a configurable delay.
