@@ -312,6 +312,7 @@ async function unloadAllTabs() {
     .map(async t => {
       try {
         await browser.tabs.discard(t.id);
+        unmarkVisited(t.id);
       } catch (_) {}
     }));
 }
@@ -325,6 +326,7 @@ async function checkAutoUnload() {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
         try {
           await browser.tabs.discard(t.id);
+          unmarkVisited(t.id);
         } catch (_) {}
       }
     }));
