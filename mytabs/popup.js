@@ -1381,7 +1381,10 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      await browser.tabs.discard(id);
+      try {
+        await browser.tabs.discard(id);
+        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      } catch (_) {}
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1448,7 +1451,10 @@ async function bulkActivate() {
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
-    await browser.tabs.discard(id);
+    try {
+      await browser.tabs.discard(id);
+      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+    } catch (_) {}
   }));
   scheduleUpdate();
 }
@@ -1456,7 +1462,10 @@ async function bulkDiscard() {
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.map(async t => {
-    await browser.tabs.discard(t.id);
+    try {
+      await browser.tabs.discard(t.id);
+      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: t.id });
+    } catch (_) {}
   }));
   scheduleUpdate();
 }
