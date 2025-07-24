@@ -1514,6 +1514,7 @@ async function bulkAssignToContainer(containerId) {
   let tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
   tabs.sort((a, b) => a.windowId === b.windowId ? a.index - b.index : a.windowId - b.windowId);
   const failed = [];
+  const idMap = [];
   for (const tab of tabs) {
     try {
       if (/^(about:|moz-extension:|chrome:|file:|view-source:)/.test(tab.url)) {
@@ -1530,6 +1531,9 @@ async function bulkAssignToContainer(containerId) {
       });
       try {
         await browser.tabs.remove(tab.id);
+        if (newTab && newTab.id) {
+          idMap.push([tab.id, newTab.id]);
+        }
       } catch (e) {
         console.error('Failed to remove tab', e);
         failed.push(tab.title || tab.url);
@@ -1540,6 +1544,14 @@ async function bulkAssignToContainer(containerId) {
     } catch (e) {
       console.error('Failed to move tab', e);
       failed.push(tab.title || tab.url);
+    }
+  }
+  for (const [oldId, newId] of idMap) {
+    selectedIds.delete(oldId);
+    selectedIds.add(newId);
+    if (searchOrder) {
+      const idx = searchOrder.indexOf(oldId);
+      if (idx !== -1) searchOrder[idx] = newId;
     }
   }
   scheduleUpdate();
