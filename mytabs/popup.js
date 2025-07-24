@@ -1528,6 +1528,10 @@ async function bulkAssignToContainer(containerId) {
         pinned: tab.pinned,
         active: tab.active
       });
+      selectedIds.delete(tab.id);
+      if (newTab && newTab.id) {
+        selectedIds.add(newTab.id);
+      }
       try {
         await browser.tabs.remove(tab.id);
       } catch (e) {
