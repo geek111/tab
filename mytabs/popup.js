@@ -1464,9 +1464,9 @@ async function bulkUnloadAll() {
   await Promise.all(tabs.map(async t => {
     try {
       await browser.tabs.discard(t.id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: t.id });
     } catch (_) {}
   }));
+  await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
   scheduleUpdate();
 }
 

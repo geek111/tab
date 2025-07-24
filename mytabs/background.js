@@ -2,13 +2,9 @@
 const MAX_RECENT = Infinity;
 const action = browser.browserAction || browser.action;
 
-// Generate a new token on each background script load to detect session restarts
-const SESSION_TOKEN = Date.now().toString();
-
 let recent = [];
 let visited = new Set();
 let recentTimer = null;
-let visitedTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
@@ -72,6 +68,13 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
+async function clearVisitHistory() {
+  recent = [];
+  visited = new Set();
+  await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
+}
+
 async function updateTabCache() {
   try {
     allTabCache = await browser.tabs.query({ windowType: 'normal' });
@@ -100,33 +103,20 @@ browser.storage.local.get([
   'autoUnload',
   'autoUnloadMinutes',
   'recent',
-  'visited',
-  'sessionToken'
+  'visited'
 ]).then(async data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
-  const newSession = data.sessionToken !== SESSION_TOKEN;
-  await browser.storage.local.set({ sessionToken: SESSION_TOKEN }).catch(() => {});
-  if (!newSession) {
-    if (Array.isArray(data.recent)) recent = data.recent;
-    if (Array.isArray(data.visited)) visited = new Set(data.visited);
-  } else {
-    recent = [];
-    visited = new Set();
-    await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
-    sendVisitedUpdate();
-  }
+  if (Array.isArray(data.recent)) recent = data.recent;
+  if (Array.isArray(data.visited)) visited = new Set(data.visited);
   refreshTabState();
 });
 
 // Clear visited state when the browser starts
-browser.runtime.onStartup.addListener(() => {
-  recent = [];
-  visited = new Set();
-  browser.storage.local.remove(['recent', 'visited']).catch(() => {});
-  sendVisitedUpdate();
+browser.runtime.onStartup.addListener(async () => {
+  await clearVisitHistory();
   refreshTabState();
 });
 
@@ -171,7 +161,7 @@ browser.tabs.query({}).then(tabs => {
 
 function unmarkVisited(tabId) {
   if (visited.delete(tabId)) {
-    scheduleVisitedSave();
+    browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
     sendVisitedUpdate();
   }
 }
@@ -204,19 +194,11 @@ function reorderRecent(ids, toId, before) {
   scheduleRecentSave();
 }
 
-function scheduleVisitedSave() {
-  if (!visitedTimer) {
-    visitedTimer = setTimeout(() => {
-      visitedTimer = null;
-      browser.storage.local.set({ visited: Array.from(visited) });
-    }, 500);
-  }
-}
 
 function markVisited(tabId) {
   if (!visited.has(tabId)) {
     visited.add(tabId);
-    scheduleVisitedSave();
+    browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
     sendVisitedUpdate();
   }
 }
@@ -239,7 +221,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
     scheduleRecentSave();
   }
   if (visited.delete(tabId)) {
-    scheduleVisitedSave();
+    browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
     sendVisitedUpdate();
   }
   removeDuplicate(tabId);
@@ -270,6 +252,8 @@ browser.runtime.onMessage.addListener((msg) => {
     unmarkVisited(msg.tabId);
   } else if (msg && msg.type === 'reorderRecent') {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
+  } else if (msg && msg.type === 'clearVisitHistory') {
+    clearVisitHistory();
   }
 });
 
@@ -312,9 +296,9 @@ async function unloadAllTabs() {
     .map(async t => {
       try {
         await browser.tabs.discard(t.id);
-        unmarkVisited(t.id);
       } catch (_) {}
     }));
+  await clearVisitHistory();
 }
 
 async function checkAutoUnload() {
@@ -359,10 +343,7 @@ browser.commands.onCommand.addListener((command) => {
 });
 
 browser.runtime.onInstalled.addListener(async () => {
-  recent = [];
-  visited = new Set();
-  await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
-  sendVisitedUpdate();
+  await clearVisitHistory();
   await browser.contextMenus.create({
     id: 'show-version',
     title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
