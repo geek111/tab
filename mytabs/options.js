@@ -353,3 +353,4 @@ browser.storage.onChanged.addListener((changes, area) => {
 });
 
 load();
+document.getElementById('version').textContent = 'v' + browser.runtime.getManifest().version;

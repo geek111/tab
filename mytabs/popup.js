@@ -1202,6 +1202,8 @@ async function init() {
   restoreScroll();
   updateMenuShadow();
   updateFadeOverlay();
+  const verEl = document.getElementById('version');
+  if (verEl) verEl.textContent = 'v' + browser.runtime.getManifest().version;
 }
 
 // keep the tab list current while the popup is open
