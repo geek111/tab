@@ -353,3 +353,8 @@ browser.storage.onChanged.addListener((changes, area) => {
 });
 
 load();
+
+const versionEl = document.getElementById('version');
+if (versionEl) {
+  versionEl.textContent = `KepiTAB Manager v${browser.runtime.getManifest().version}`;
+}

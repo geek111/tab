@@ -425,6 +425,15 @@ button:hover {
   background: var(--color-hover);
 }
 
+#context .info {
+  cursor: default;
+  color: var(--color-muted);
+}
+
+#context .info:hover {
+  background: none;
+}
+
 .tab-tooltip {
   position: absolute;
   background: rgba(60, 60, 60, 0.95);
@@ -606,6 +615,13 @@ body.full #counts.scrolled {
 .default-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+#version {
+  margin-top: 1em;
+  font-size: 0.8em;
+  color: var(--color-muted);
+  text-align: center;
 }
 
 @keyframes body-fade-in {

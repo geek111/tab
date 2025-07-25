@@ -1073,6 +1073,10 @@ async function init() {
               document.getElementById('tabs');
   scrollContainer = document.getElementById('tabs-wrapper') || container;
   easterEgg = document.getElementById('easter-egg');
+  const versionEl = document.getElementById('version');
+  if (versionEl) {
+    versionEl.textContent = `KepiTAB Manager v${browser.runtime.getManifest().version}`;
+  }
   const menuEl = document.getElementById('menu');
   menuEl?.addEventListener('dblclick', showEasterEgg);
   scrollContainer.addEventListener('scroll', saveScroll);
@@ -1342,6 +1346,12 @@ function showContextMenu(e) {
     });
     context.appendChild(item);
   };
+  const addInfo = (label) => {
+    const item = document.createElement('div');
+    item.textContent = label;
+    item.classList.add('info');
+    context.appendChild(item);
+  };
 
   if (selected.length) {
     addItem('Close Selected', bulkClose);
@@ -1396,6 +1406,7 @@ function showContextMenu(e) {
 
   addItem('Unload All Tabs', bulkUnloadAll);
   addItem('Options', () => browser.runtime.openOptionsPage());
+  addInfo(`KepiTAB Manager v${browser.runtime.getManifest().version}`);
 
   context.style.left = e.pageX + 'px';
   context.style.top = e.pageY + 'px';
