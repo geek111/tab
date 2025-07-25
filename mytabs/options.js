@@ -353,3 +353,12 @@ browser.storage.onChanged.addListener((changes, area) => {
 });
 
 load();
+function displayVersion() {
+  const el = document.getElementById('addon-version');
+  if (el) {
+    const version = browser.runtime.getManifest().version;
+    el.textContent = `Version ${version}`;
+  }
+}
+
+displayVersion();
