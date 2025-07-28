@@ -114,10 +114,12 @@ browser.storage.local.get([
   refreshTabState();
 });
 
-// Clear visited state when the browser starts
+// Clear visit history only when Firefox starts
 browser.runtime.onStartup.addListener(async () => {
-  await clearVisitHistory();
-  refreshTabState();
+  await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
+  visited = new Set();
+  recent = [];
+  sendVisitedUpdate();
 });
 
 // Listen for settings changes
@@ -298,7 +300,10 @@ async function unloadAllTabs() {
         await browser.tabs.discard(t.id);
       } catch (_) {}
     }));
-  await clearVisitHistory();
+  await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
+  visited = new Set();
+  recent = [];
+  sendVisitedUpdate();
 }
 
 async function checkAutoUnload() {
