@@ -1174,6 +1174,9 @@ async function init() {
   const bulkUnloadAllBtn = document.getElementById('bulk-unload-all');
   if (bulkUnloadAllBtn) bulkUnloadAllBtn.addEventListener('click', bulkUnloadAll);
 
+  const bulkClearBtn = document.getElementById('bulk-clear');
+  if (bulkClearBtn) bulkClearBtn.addEventListener('click', clearSelection);
+
   const addContainerBtn = document.getElementById('bulk-add-container');
   if (addContainerBtn) {
     if (containersAvailable) {
