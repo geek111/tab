@@ -604,7 +604,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   const full = document.body.classList.contains('full') && winMap;
   tabItems = [];
   idIndexMap = new Map();
-  if (full && view === 'recent') {
+  if (full && (view === 'recent' || query)) {
     const groups = new Map();
     for (const entry of list) {
       const tab = entry.tab ?? entry;
