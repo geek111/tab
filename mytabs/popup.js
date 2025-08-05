@@ -43,6 +43,7 @@ const fullScrollPos = { all: 0, recent: 0, dups: 0 };
 // Remember vertical scroll for each view in popup window
 const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
+const collapsedWins = new Set();
 
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
@@ -574,11 +575,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   return row;
 }
 
-function createWindowSeparator(label) {
+function createWindowSeparator(label, winId) {
   const div = document.createElement('div');
-  div.className = 'window-separator';
-  div.textContent = label.toUpperCase();
+  const collapsed = collapsedWins.has(winId);
+  div.className = 'window-separator' + (collapsed ? ' collapsed' : '');
+  div.textContent = (collapsed ? '\u25B6 ' : '\u25BC ') + label.toUpperCase();
   div.tabIndex = -1;
+  div.dataset.windowId = winId;
   return div;
 }
 
@@ -589,7 +592,12 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   currentVisited = visitedIds;
   currentWinMap = winMap;
   currentQuery = query;
-  const validIds = new Set(list.map(entry => (entry.tab ?? entry).id));
+  const validIds = new Set(
+    list
+      .map(entry => entry.tab ?? entry)
+      .filter(t => !collapsedWins.has(t.windowId))
+      .map(t => t.id)
+  );
   for (const id of Array.from(selectedIds)) {
     if (!validIds.has(id)) selectedIds.delete(id);
   }
@@ -605,7 +613,8 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     }
     const orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
     for (const winId of orderedIds) {
-      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, el: null });
+      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, windowId: winId, el: null });
+      if (collapsedWins.has(winId)) continue;
       for (const entry of groups.get(winId)) {
         const tab = entry.tab ?? entry;
         const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
@@ -618,12 +627,14 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     for (const entry of list) {
       const tab = entry.tab ?? entry;
       if (full && tab.windowId !== lastWin) {
-        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
+        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, windowId: tab.windowId, el: null });
         lastWin = tab.windowId;
       }
-      const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
-      tabItems.push(item);
-      idIndexMap.set(tab.id, tabItems.length - 1);
+      if (!full || !collapsedWins.has(tab.windowId)) {
+        const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
+        tabItems.push(item);
+        idIndexMap.set(tab.id, tabItems.length - 1);
+      }
     }
   }
 
@@ -664,7 +675,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     for (const item of tabItems) {
       let el;
       if (item.separator) {
-        el = createWindowSeparator(item.label);
+        el = createWindowSeparator(item.label, item.windowId);
       } else {
         el = createTabRow(
           item.tab,
@@ -1569,6 +1580,14 @@ async function bulkRemoveFromContainer() {
 
 function onContainerClick(e) {
   hideAllTooltips();
+  const sepEl = e.target.closest('.window-separator');
+  if (sepEl && container.contains(sepEl)) {
+    const winId = parseInt(sepEl.dataset.windowId, 10);
+    if (collapsedWins.has(winId)) collapsedWins.delete(winId);
+    else collapsedWins.add(winId);
+    scheduleUpdate();
+    return;
+  }
   const tabEl = e.target.closest('.tab');
   if (!tabEl || !container.contains(tabEl)) return;
   if (e.target.classList.contains('close-btn')) {
