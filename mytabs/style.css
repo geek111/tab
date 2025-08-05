@@ -331,7 +331,8 @@ body.popup .tab > div {
 .window-separator {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 0.4em;
   font-weight: bold;
   font-size: 0.9em;
   background: var(--color-selected);
@@ -340,7 +341,18 @@ body.popup .tab > div {
   border-radius: 6px;
   height: calc(var(--tile-height) * 0.9);
   margin: 0.5em 0;
+  padding: 0 0.5em;
   box-sizing: border-box;
+  cursor: pointer;
+}
+.window-toggle {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font-weight: bold;
+  color: inherit;
+  cursor: pointer;
 }
 button {
   padding: 0.3em 0.6em;
