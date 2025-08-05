@@ -341,6 +341,15 @@ body.popup .tab > div {
   height: calc(var(--tile-height) * 0.9);
   margin: 0.5em 0;
   box-sizing: border-box;
+  cursor: pointer;
+}
+
+.window-separator.collapsed {
+  opacity: 0.7;
+}
+
+.tab.collapsed {
+  display: none;
 }
 button {
   padding: 0.3em 0.6em;
