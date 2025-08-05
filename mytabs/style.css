@@ -331,16 +331,23 @@ body.popup .tab > div {
 .window-separator {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  height: calc(var(--tile-height) * 0.9);
+  margin: 0.5em 0;
+  padding: 0 0.5em;
   font-weight: bold;
   font-size: 0.9em;
   background: var(--color-selected);
   color: var(--color-text);
   border: 2px solid var(--color-border);
   border-radius: 6px;
-  height: calc(var(--tile-height) * 0.9);
-  margin: 0.5em 0;
-  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+}
+
+.window-separator.collapsed {
+  opacity: 0.7;
 }
 button {
   padding: 0.3em 0.6em;

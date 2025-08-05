@@ -44,6 +44,9 @@ const fullScrollPos = { all: 0, recent: 0, dups: 0 };
 const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 
+// Track collapsed windows in full view
+let collapsedWins = new Set();
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -103,6 +106,7 @@ function resetTabState() {
   currentQuery = '';
   movePending = null;
   selectedIds.clear();
+  collapsedWins.clear();
 }
 function clearPlaceholder() {
   if (dropTarget) {
@@ -574,10 +578,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   return row;
 }
 
-function createWindowSeparator(label) {
+function createWindowSeparator(label, winId, collapsed) {
   const div = document.createElement('div');
   div.className = 'window-separator';
-  div.textContent = label.toUpperCase();
+  div.dataset.windowId = winId;
+  div.classList.toggle('collapsed', collapsed);
+  const prefix = collapsed ? '▶ ' : '▼ ';
+  div.textContent = prefix + label.toUpperCase();
   div.tabIndex = -1;
   return div;
 }
@@ -593,6 +600,10 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   for (const id of Array.from(selectedIds)) {
     if (!validIds.has(id)) selectedIds.delete(id);
   }
+  const winIds = new Set(list.map(entry => (entry.tab ?? entry).windowId));
+  for (const id of Array.from(collapsedWins)) {
+    if (!winIds.has(id)) collapsedWins.delete(id);
+  }
   const full = document.body.classList.contains('full') && winMap;
   tabItems = [];
   idIndexMap = new Map();
@@ -605,7 +616,9 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     }
     const orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
     for (const winId of orderedIds) {
-      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, el: null });
+      const collapsed = collapsedWins.has(winId);
+      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, windowId: winId, collapsed, el: null });
+      if (collapsed) continue;
       for (const entry of groups.get(winId)) {
         const tab = entry.tab ?? entry;
         const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
@@ -618,9 +631,12 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     for (const entry of list) {
       const tab = entry.tab ?? entry;
       if (full && tab.windowId !== lastWin) {
-        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
+        const collapsed = collapsedWins.has(tab.windowId);
+        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, windowId: tab.windowId, collapsed, el: null });
         lastWin = tab.windowId;
+        if (collapsed) continue;
       }
+      if (full && collapsedWins.has(tab.windowId)) continue;
       const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
       tabItems.push(item);
       idIndexMap.set(tab.id, tabItems.length - 1);
@@ -664,7 +680,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     for (const item of tabItems) {
       let el;
       if (item.separator) {
-        el = createWindowSeparator(item.label);
+        el = createWindowSeparator(item.label, item.windowId, item.collapsed);
       } else {
         el = createTabRow(
           item.tab,
@@ -1569,6 +1585,15 @@ async function bulkRemoveFromContainer() {
 
 function onContainerClick(e) {
   hideAllTooltips();
+  const sep = e.target.closest('.window-separator');
+  if (sep && container.contains(sep)) {
+    const winId = parseInt(sep.dataset.windowId, 10);
+    if (collapsedWins.has(winId)) collapsedWins.delete(winId);
+    else collapsedWins.add(winId);
+    selectedIds.clear();
+    scheduleUpdate();
+    return;
+  }
   const tabEl = e.target.closest('.tab');
   if (!tabEl || !container.contains(tabEl)) return;
   if (e.target.classList.contains('close-btn')) {
