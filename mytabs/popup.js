@@ -22,6 +22,8 @@ let visitedIds = new Set();
 let movePending = null;
 // Persist selection across updates
 let selectedIds = new Set();
+// Remember collapsed window groups in full view
+let collapsedWinIds = new Set();
 
 // Cached tab list provided by the background script
 let cachedTabs = null;
@@ -88,6 +90,18 @@ function adjustGridWidth() {
   grid.style.width = width + 'px';
 }
 
+function updateWindowVisibility() {
+  for (const item of tabItems) {
+    if (!item.el) continue;
+    if (item.separator) {
+      item.el.classList.toggle('collapsed', collapsedWinIds.has(item.winId));
+    } else {
+      item.el.style.display = collapsedWinIds.has(item.winId) ? 'none' : '';
+    }
+  }
+  adjustGridWidth();
+}
+
 function resetTabState() {
   if (virtualList) {
     virtualList.destroy();
@@ -103,6 +117,7 @@ function resetTabState() {
   currentQuery = '';
   movePending = null;
   selectedIds.clear();
+  collapsedWinIds.clear();
 }
 function clearPlaceholder() {
   if (dropTarget) {
@@ -574,11 +589,20 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   return row;
 }
 
-function createWindowSeparator(label) {
+function createWindowSeparator(label, winId) {
   const div = document.createElement('div');
   div.className = 'window-separator';
   div.textContent = label.toUpperCase();
   div.tabIndex = -1;
+  div.dataset.winId = winId;
+  div.addEventListener('click', () => {
+    if (collapsedWinIds.has(winId)) {
+      collapsedWinIds.delete(winId);
+    } else {
+      collapsedWinIds.add(winId);
+    }
+    updateWindowVisibility();
+  });
   return div;
 }
 
@@ -605,10 +629,10 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     }
     const orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
     for (const winId of orderedIds) {
-      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, el: null });
+      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, el: null, winId });
       for (const entry of groups.get(winId)) {
         const tab = entry.tab ?? entry;
-        const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
+        const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null, winId };
         tabItems.push(item);
         idIndexMap.set(tab.id, tabItems.length - 1);
       }
@@ -618,10 +642,10 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     for (const entry of list) {
       const tab = entry.tab ?? entry;
       if (full && tab.windowId !== lastWin) {
-        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
+        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null, winId: tab.windowId });
         lastWin = tab.windowId;
       }
-      const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
+      const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null, winId: tab.windowId };
       tabItems.push(item);
       idIndexMap.set(tab.id, tabItems.length - 1);
     }
@@ -664,7 +688,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     for (const item of tabItems) {
       let el;
       if (item.separator) {
-        el = createWindowSeparator(item.label);
+        el = createWindowSeparator(item.label, item.winId);
       } else {
         el = createTabRow(
           item.tab,
@@ -684,6 +708,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       item.el = el;
       container.appendChild(el);
     }
+    updateWindowVisibility();
   } else {
     if (!virtualList) {
       const sample = createTabRow(
