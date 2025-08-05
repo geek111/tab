@@ -36,6 +36,7 @@ This is an open source Firefox add-on for advanced tab management.
   - Hovering a tab's icon in the popup or Full View shows a custom tooltip with the tab title and URL, truncated for brevity. If the tab belongs to a container, the tooltip also displays the container name.
   - The columns can extend wider than the window and a horizontal scrollbar appears when needed.
   - Tabs from each window are separated by labeled dividers with extra spacing for clarity.
+  - Window dividers can be clicked to collapse or expand their tab groups.
   - A colored dot indicates the tab's container.
   - Options page lets you choose theme, tile width, tile scale, font scale, close button scale and the overall UI scale and toggle features such as
   the Recent and Duplicates panels, the Move command and automatic unloading of inactive tabs.
