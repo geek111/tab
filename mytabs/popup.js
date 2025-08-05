@@ -36,6 +36,7 @@ let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
 let searchOrder = null;
+let collapsedWindows = new Set();
 // Scroll position to restore after certain operations
 let pendingScroll = null;
 // Remember horizontal scroll for each view in full window
@@ -103,6 +104,7 @@ function resetTabState() {
   currentQuery = '';
   movePending = null;
   selectedIds.clear();
+  collapsedWindows.clear();
 }
 function clearPlaceholder() {
   if (dropTarget) {
@@ -574,11 +576,34 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   return row;
 }
 
-function createWindowSeparator(label) {
+function createWindowSeparator(label, windowId, collapsed = false) {
   const div = document.createElement('div');
   div.className = 'window-separator';
-  div.textContent = label.toUpperCase();
   div.tabIndex = -1;
+  div.dataset.windowId = windowId;
+  const icon = document.createElement('span');
+  icon.className = 'collapse-icon';
+  icon.textContent = collapsed ? '\u25B6' : '\u25BC';
+  div.appendChild(icon);
+  div.appendChild(document.createTextNode(' ' + label.toUpperCase()));
+  if (collapsed) div.classList.add('collapsed');
+  div.addEventListener('click', () => {
+    const isCollapsed = div.classList.toggle('collapsed');
+    icon.textContent = isCollapsed ? '\u25B6' : '\u25BC';
+    if (isCollapsed) {
+      collapsedWindows.add(windowId);
+    } else {
+      collapsedWindows.delete(windowId);
+    }
+    let sib = div.nextElementSibling;
+    while (sib && !sib.classList.contains('window-separator')) {
+      if (sib.dataset.windowId == windowId) {
+        sib.style.display = isCollapsed ? 'none' : '';
+      }
+      sib = sib.nextElementSibling;
+    }
+    adjustGridWidth();
+  });
   return div;
 }
 
@@ -605,7 +630,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     }
     const orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
     for (const winId of orderedIds) {
-      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, el: null });
+      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, windowId: winId, el: null });
       for (const entry of groups.get(winId)) {
         const tab = entry.tab ?? entry;
         const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
@@ -618,7 +643,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     for (const entry of list) {
       const tab = entry.tab ?? entry;
       if (full && tab.windowId !== lastWin) {
-        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
+        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, windowId: tab.windowId, el: null });
         lastWin = tab.windowId;
       }
       const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
@@ -661,10 +686,13 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
         sample.remove();
       }
     }
+    let hide = false;
     for (const item of tabItems) {
       let el;
       if (item.separator) {
-        el = createWindowSeparator(item.label);
+        const collapsed = collapsedWindows.has(item.windowId);
+        el = createWindowSeparator(item.label, item.windowId, collapsed);
+        hide = collapsed;
       } else {
         el = createTabRow(
           item.tab,
@@ -680,6 +708,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
           }
         }
         if (item.selected) el.classList.add('selected');
+        if (hide) el.style.display = 'none';
       }
       item.el = el;
       container.appendChild(el);
