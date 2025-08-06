@@ -8,28 +8,19 @@
 
   "description": "A simple tab management tool",
   "icons": { "48": "kepi-tab-manager.png" },
-    "permissions": [
-      "tabs",
-      "tabHide",
-      "storage",
-      "contextMenus",
-      "contextualIdentities",
-      "cookies"
-    ],
+  "permissions": [
+    "tabs",
+    "storage",
+    "contextMenus",
+    "cookies"
+  ],
   "background": {
-
-    "scripts": ["background.js"]
+    "service_worker": "background.js"
   },
   "action": {
     "default_title": "KepiTAB Manager",
     "default_icon": "kepi-tab-manager.png",
     "default_popup": "popup.html"
-  },
-  "sidebar_action": {
-    "default_title": "Tabs",
-    "default_icon": "kepi-tab-manager.png",
-    "default_panel": "sidebar.html",
-    "open_at_install": false
   },
   "options_ui": {
     "page": "options.html",
@@ -52,7 +43,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content-search.js"],
+      "js": ["browser-polyfill.js", "content-search.js"],
       "run_at": "document_idle"
     }
   ]

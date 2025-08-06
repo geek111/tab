@@ -1,6 +1,6 @@
 # KepiTAB Manager
 
-This is an open source Firefox add-on for advanced tab management.
+This is an open source browser extension for advanced tab management. It now supports Chromium-based browsers, although features that rely on Firefox containers and the sidebar are disabled.
 
 ## Features
 

@@ -1,6 +1,6 @@
 # KepiTAB Manager
 
-Container-related actions require Firefox's container feature and the `contextualIdentities` permission. Starting with version 0.3 the extension also needs the `cookies` permission so tabs can be opened in a different container. If containers are disabled, the container filter and "Add to Container" buttons will not be shown. Pinned and active tabs keep their state and order when moved between windows or containers.
+This project now supports Chromium-based browsers. Container-related actions still rely on Firefox's container feature and the `contextualIdentities` permission. If containers are unavailable, the container filter and "Add to Container" buttons are hidden. Pinned and active tabs keep their state and order when moved between windows or containers.
 
 ## Development
 
