@@ -1,4 +1,5 @@
 // Shared script used by popup.html and sidebar.html
+const browser = globalThis.browser || globalThis.chrome;
 let view = 'all';
 let restored = false;
 // Feature toggles loaded from storage

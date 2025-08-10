@@ -1,4 +1,5 @@
 (async function(){
+  const browser = globalThis.browser || globalThis.chrome;
   let { theme = 'light', tileWidth = 255, tileScale = 0.9, fontScale = 0.8125, closeScale = 1.55, rowGap = 0, disableEffects = false } =
     await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale','rowGap','disableEffects']);
   if (closeScale === undefined) {

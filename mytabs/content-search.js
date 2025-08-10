@@ -1,4 +1,5 @@
 (function(){
+  const browser = globalThis.browser || globalThis.chrome;
   browser.runtime.onMessage.addListener((msg) => {
     if(msg && msg.type === 'highlight' && msg.query){
       const sel = window.getSelection();

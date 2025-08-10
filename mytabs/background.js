@@ -1,3 +1,4 @@
+const browser = globalThis.browser || globalThis.chrome;
 // No cap on stored tabs so the Recent panel lists every visited tab
 const MAX_RECENT = Infinity;
 const action = browser.browserAction || browser.action;
@@ -352,12 +353,12 @@ browser.runtime.onInstalled.addListener(async () => {
   await browser.contextMenus.create({
     id: 'show-version',
     title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
-    contexts: ['browser_action']
+    contexts: ['action']
   });
   await browser.contextMenus.create({
     id: 'open-options',
     title: 'Options',
-    contexts: ['browser_action']
+    contexts: ['action']
   });
 });
 

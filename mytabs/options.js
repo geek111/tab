@@ -1,3 +1,4 @@
+const browser = globalThis.browser || globalThis.chrome;
 const BASE_TILE_SCALE = 0.9;
 const BASE_FONT_SCALE = 0.8125;
 const BASE_CLOSE_SCALE = 1.55;

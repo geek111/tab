@@ -1,4 +1,5 @@
 (async function(){
+  const browser = globalThis.browser || globalThis.chrome;
   const { fullSize } = await browser.storage.local.get('fullSize');
   if (fullSize && typeof fullSize.width === 'number' && typeof fullSize.height === 'number') {
     try {
