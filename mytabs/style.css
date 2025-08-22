@@ -484,10 +484,13 @@ body[data-theme="dark"] .tab-tooltip.left::after {
 
 #bulk-actions {
   margin-top: 0.5em;
-  text-align: right;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  justify-content: flex-end;
 }
 #bulk-actions button {
-  margin-left: 0.2em;
+  margin-left: 0;
 }
 
 
