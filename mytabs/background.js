@@ -154,7 +154,7 @@ browser.tabs.query({}).then(tabs => {
       try { await browser.commands.update({ name: 'unload-all-tabs', shortcut: keyUnloadAll }); } catch (_) {}
     }
     if (action && action.setTitle) {
-      action.setTitle({ title: `KepiTAB Manager (${keyOpenPopup})` });
+      action.setTitle({ title: `KepiTAB Manager (${keyOpenFull})` });
     }
   } catch (e) {
     console.error('Failed to apply shortcuts', e);
