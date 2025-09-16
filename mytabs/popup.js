@@ -20,6 +20,11 @@ let containerCache;
 let targetSelect;
 let visitedIds = new Set();
 let movePending = null;
+// Persist selection across updates
+let selectedIds = new Set();
+
+// Cached tab list provided by the background script
+let cachedTabs = null;
 
 let virtualList = null;
 let tabItems = [];
@@ -30,9 +35,15 @@ let currentActiveId = -1;
 let currentVisited = new Set();
 let currentWinMap = null;
 let currentQuery = '';
+let searchOrder = null;
 // Scroll position to restore after certain operations
 let pendingScroll = null;
+// Remember horizontal scroll for each view in full window
+const fullScrollPos = { all: 0, recent: 0, dups: 0 };
+// Remember vertical scroll for each view in popup window
+const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
+const collapsedWins = new Set();
 
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
@@ -92,6 +103,7 @@ function resetTabState() {
   currentWinMap = null;
   currentQuery = '';
   movePending = null;
+  selectedIds.clear();
 }
 function clearPlaceholder() {
   if (dropTarget) {
@@ -125,9 +137,17 @@ function updateViewButtons() {
 }
 
 function setView(newView) {
+  if (document.body.classList.contains('full') && scrollContainer) {
+    fullScrollPos[view] = scrollContainer.scrollLeft;
+    pendingScroll = fullScrollPos[newView] || 0;
+  } else if (scrollContainer) {
+    popupScrollPos[view] = scrollContainer.scrollTop;
+    pendingScroll = popupScrollPos[newView] || 0;
+  }
   view = newView;
   updateViewButtons();
   triggerViewAnimation();
+  searchOrder = null;
   scheduleUpdate();
 }
 
@@ -259,6 +279,17 @@ function updateSelection(row, selected) {
   row.classList.toggle('selected', selected);
   if (row._item) {
     row._item.selected = selected;
+    const id = row._item.tab.id;
+    if (selected) {
+      selectedIds.add(id);
+    } else {
+      selectedIds.delete(id);
+    }
+  } else {
+    const id = parseInt(row.dataset.tab, 10);
+    if (!isNaN(id)) {
+      if (selected) selectedIds.add(id); else selectedIds.delete(id);
+    }
   }
 }
 
@@ -268,6 +299,7 @@ function clearSelection() {
     item.selected = false;
     if (item.el) updateSelection(item.el, false);
   }
+  selectedIds.clear();
   lastSelectedIndex = -1;
 }
 
@@ -275,8 +307,10 @@ const saveScroll = debounce(() => {
   if (!scrollContainer) return;
   if (document.body.classList.contains('full')) {
     browser.storage.local.set({ scrollLeftFull: scrollContainer.scrollLeft });
+    fullScrollPos[view] = scrollContainer.scrollTop;
   } else {
     browser.storage.local.set({ scrollTop: scrollContainer.scrollTop });
+    popupScrollPos[view] = scrollContainer.scrollTop;
   }
 }, 200);
 
@@ -443,7 +477,7 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
 
 
   const iconCell = document.createElement('div');
-  if (tab.favIconUrl) {
+  if (tab.favIconUrl && !tab.favIconUrl.startsWith('chrome:')) {
     const icon = document.createElement('img');
     icon.className = 'tab-icon';
     icon.src = tab.favIconUrl;
@@ -482,7 +516,9 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
       tooltip.style.left = `${left}px`;
       tooltip.style.top = `${top}px`;
       requestAnimationFrame(() => {
-        tooltip.classList.add('visible');
+        if (tooltip) {
+          tooltip.classList.add('visible');
+        }
       });
     };
     const hideTooltip = () => {
@@ -539,11 +575,13 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   return row;
 }
 
-function createWindowSeparator(label) {
+function createWindowSeparator(label, winId) {
   const div = document.createElement('div');
-  div.className = 'window-separator';
-  div.textContent = label.toUpperCase();
+  const collapsed = collapsedWins.has(winId);
+  div.className = 'window-separator' + (collapsed ? ' collapsed' : '');
+  div.textContent = (collapsed ? '\u25B6 ' : '\u25BC ') + label.toUpperCase();
   div.tabIndex = -1;
+  div.dataset.windowId = winId;
   return div;
 }
 
@@ -554,10 +592,19 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   currentVisited = visitedIds;
   currentWinMap = winMap;
   currentQuery = query;
+  const validIds = new Set(
+    list
+      .map(entry => entry.tab ?? entry)
+      .filter(t => !collapsedWins.has(t.windowId))
+      .map(t => t.id)
+  );
+  for (const id of Array.from(selectedIds)) {
+    if (!validIds.has(id)) selectedIds.delete(id);
+  }
   const full = document.body.classList.contains('full') && winMap;
   tabItems = [];
   idIndexMap = new Map();
-  if (full && view === 'recent') {
+  if (full && (view === 'recent' || query)) {
     const groups = new Map();
     for (const entry of list) {
       const tab = entry.tab ?? entry;
@@ -566,10 +613,11 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     }
     const orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
     for (const winId of orderedIds) {
-      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, el: null });
+      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, windowId: winId, el: null });
+      if (collapsedWins.has(winId)) continue;
       for (const entry of groups.get(winId)) {
         const tab = entry.tab ?? entry;
-        const item = { tab, match: entry.match, selected: false, el: null };
+        const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
         tabItems.push(item);
         idIndexMap.set(tab.id, tabItems.length - 1);
       }
@@ -579,12 +627,14 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     for (const entry of list) {
       const tab = entry.tab ?? entry;
       if (full && tab.windowId !== lastWin) {
-        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, el: null });
+        tabItems.push({ separator: true, label: `Window ${winMap.get(tab.windowId)}`, windowId: tab.windowId, el: null });
         lastWin = tab.windowId;
       }
-      const item = { tab, match: entry.match, selected: false, el: null };
-      tabItems.push(item);
-      idIndexMap.set(tab.id, tabItems.length - 1);
+      if (!full || !collapsedWins.has(tab.windowId)) {
+        const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
+        tabItems.push(item);
+        idIndexMap.set(tab.id, tabItems.length - 1);
+      }
     }
   }
 
@@ -625,7 +675,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     for (const item of tabItems) {
       let el;
       if (item.separator) {
-        el = createWindowSeparator(item.label);
+        el = createWindowSeparator(item.label, item.windowId);
       } else {
         el = createTabRow(
           item.tab,
@@ -732,8 +782,28 @@ function filterTabs(tabs, query) {
     const score = fuzzyScore(posTitle || posUrl);
     results.push({ tab, match: posTitle, score });
   }
-  results.sort((a, b) => b.score - a.score);
+  results.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.tab.index - b.tab.index;
+  });
   return results;
+}
+
+function applySearchOrder(list) {
+  if (!searchOrder || !currentQuery) return list;
+  const map = new Map(list.map(it => [it.tab.id, it]));
+  const ordered = [];
+  for (const id of searchOrder) {
+    const item = map.get(id);
+    if (item) {
+      ordered.push(item);
+      map.delete(id);
+    }
+  }
+  for (const item of list) {
+    if (map.has(item.tab.id)) ordered.push(item);
+  }
+  return ordered;
 }
 
 function findDuplicates(tabs) {
@@ -764,7 +834,18 @@ async function update() {
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? { windowType: 'normal' } : { currentWindow: true, windowType: 'normal' };
-    let allTabs = await browser.tabs.query(queryOpts);
+    let allTabs;
+    if (Array.isArray(cachedTabs)) {
+      allTabs = cachedTabs.slice();
+      if (!allWins) {
+        try {
+          const win = await browser.windows.getLastFocused({ windowTypes: ['normal'] });
+          allTabs = allTabs.filter(t => t.windowId === win.id);
+        } catch (_) {}
+      }
+    } else {
+      allTabs = await browser.tabs.query(queryOpts);
+    }
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
@@ -795,7 +876,7 @@ async function update() {
     const query = searchInput.value.trim();
     let list;
     if (query) {
-      list = filterTabs(tabs, query);
+      list = applySearchOrder(filterTabs(tabs, query));
     } else {
       list = tabs.map(t => ({ tab: t }));
     }
@@ -823,6 +904,10 @@ browser.runtime.onMessage.addListener((msg) => {
   } else if (msg && msg.type === 'duplicatesUpdated') {
     currentDupIds = new Set(msg.duplicates || []);
     scheduleUpdate();
+  } else if (msg && msg.type === 'tabState') {
+    cachedTabs = Array.isArray(msg.tabs) ? msg.tabs : null;
+    visitedIds = new Set(msg.visited || []);
+    scheduleUpdate();
   }
 });
 
@@ -845,6 +930,7 @@ function updateClearButton() {
 
 searchBox.addEventListener('input', () => {
   updateClearButton();
+  searchOrder = null;
   scheduleUpdate();
 });
 
@@ -854,6 +940,7 @@ clearBtn?.addEventListener('click', () => {
   if (searchBox.value) {
     searchBox.value = '';
     updateClearButton();
+    searchOrder = null;
     scheduleUpdate();
   }
 });
@@ -949,18 +1036,8 @@ document.addEventListener('keydown', (e) => {
         tabItems[i].selected = sel;
         if (tabItems[i].el) updateSelection(tabItems[i].el, sel);
       }
-    } else if (!e.ctrlKey && !e.metaKey) {
-      tabItems.forEach(it => {
-        if (it.separator) return;
-        it.selected = false;
-        if (it.el) updateSelection(it.el, false);
-      });
-      tabItems[newIdx].selected = true;
-      if (tabItems[newIdx].el) updateSelection(tabItems[newIdx].el, true);
-      lastSelectedIndex = newIdx;
-    } else {
-      lastSelectedIndex = newIdx;
     }
+    lastSelectedIndex = newIdx;
   } else if (e.key === ' ' && isTab) {
     e.preventDefault();
     const item = tabItems[idx];
@@ -1039,6 +1116,14 @@ async function init() {
   const { duplicates = [] } = await browser.runtime.sendMessage({ type: 'getDuplicates' });
   currentDupIds = new Set(duplicates);
   await loadOptions();
+  setInterval(async () => {
+    try {
+      const { tabs, visited: v } = await browser.runtime.sendMessage({ type: 'getTabState' });
+      if (Array.isArray(tabs)) cachedTabs = tabs;
+      if (Array.isArray(v)) visitedIds = new Set(v);
+      scheduleUpdate();
+    } catch (_) {}
+  }, 5000);
   registerTabEvents();
   const select = document.getElementById('container-filter');
   let containerIdents = [];
@@ -1099,6 +1184,9 @@ async function init() {
 
   const bulkUnloadAllBtn = document.getElementById('bulk-unload-all');
   if (bulkUnloadAllBtn) bulkUnloadAllBtn.addEventListener('click', bulkUnloadAll);
+
+  const bulkClearBtn = document.getElementById('bulk-clear');
+  if (bulkClearBtn) bulkClearBtn.addEventListener('click', clearSelection);
 
   const addContainerBtn = document.getElementById('bulk-add-container');
   if (addContainerBtn) {
@@ -1243,6 +1331,16 @@ function clearMovePending() {
 
 
 function showContextMenu(e) {
+  const inTabs = e.target.closest('#tabs');
+  const inMenu = e.target.closest('#context');
+
+  if (!inTabs) {
+    e.preventDefault();
+    hideContextMenu();
+    if (inMenu) showEasterEgg();
+    return;
+  }
+
   e.preventDefault();
   hideAllTooltips();
   const tabEl = e.target.closest('.tab');
@@ -1297,14 +1395,16 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      await browser.tabs.discard(id);
+      try {
+        await browser.tabs.discard(id);
+        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      } catch (_) {}
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
   }
 
   if (!tabEl && !selected.length) {
-    showEasterEgg();
     return;
   }
 
@@ -1365,7 +1465,10 @@ async function bulkActivate() {
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
-    await browser.tabs.discard(id);
+    try {
+      await browser.tabs.discard(id);
+      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+    } catch (_) {}
   }));
   scheduleUpdate();
 }
@@ -1373,8 +1476,11 @@ async function bulkDiscard() {
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.map(async t => {
-    await browser.tabs.discard(t.id);
+    try {
+      await browser.tabs.discard(t.id);
+    } catch (_) {}
   }));
+  await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
   scheduleUpdate();
 }
 
@@ -1422,6 +1528,7 @@ async function bulkAssignToContainer(containerId) {
   let tabs = await Promise.all(ids.map(id => browser.tabs.get(id)));
   tabs.sort((a, b) => a.windowId === b.windowId ? a.index - b.index : a.windowId - b.windowId);
   const failed = [];
+  const idMap = [];
   for (const tab of tabs) {
     try {
       if (/^(about:|moz-extension:|chrome:|file:|view-source:)/.test(tab.url)) {
@@ -1438,6 +1545,9 @@ async function bulkAssignToContainer(containerId) {
       });
       try {
         await browser.tabs.remove(tab.id);
+        if (newTab && newTab.id) {
+          idMap.push([tab.id, newTab.id]);
+        }
       } catch (e) {
         console.error('Failed to remove tab', e);
         failed.push(tab.title || tab.url);
@@ -1448,6 +1558,14 @@ async function bulkAssignToContainer(containerId) {
     } catch (e) {
       console.error('Failed to move tab', e);
       failed.push(tab.title || tab.url);
+    }
+  }
+  for (const [oldId, newId] of idMap) {
+    selectedIds.delete(oldId);
+    selectedIds.add(newId);
+    if (searchOrder) {
+      const idx = searchOrder.indexOf(oldId);
+      if (idx !== -1) searchOrder[idx] = newId;
     }
   }
   scheduleUpdate();
@@ -1462,6 +1580,14 @@ async function bulkRemoveFromContainer() {
 
 function onContainerClick(e) {
   hideAllTooltips();
+  const sepEl = e.target.closest('.window-separator');
+  if (sepEl && container.contains(sepEl)) {
+    const winId = parseInt(sepEl.dataset.windowId, 10);
+    if (collapsedWins.has(winId)) collapsedWins.delete(winId);
+    else collapsedWins.add(winId);
+    scheduleUpdate();
+    return;
+  }
   const tabEl = e.target.closest('.tab');
   if (!tabEl || !container.contains(tabEl)) return;
   if (e.target.classList.contains('close-btn')) {
@@ -1558,6 +1684,21 @@ async function onContainerDrop(e) {
       toId,
       before
     }).catch(() => {});
+  }
+  if (currentQuery) {
+    if (!searchOrder) {
+      searchOrder = tabItems.filter(it => !it.separator).map(it => it.tab.id);
+    }
+    let pos = searchOrder.indexOf(toId);
+    if (!before) pos++;
+    for (const id of ids) {
+      const idx = searchOrder.indexOf(id);
+      if (idx >= 0) {
+        searchOrder.splice(idx, 1);
+        if (idx < pos) pos--;
+      }
+    }
+    searchOrder.splice(pos, 0, ...ids);
   }
   scheduleUpdate();
 }

@@ -2,15 +2,14 @@
 const MAX_RECENT = Infinity;
 const action = browser.browserAction || browser.action;
 
-// Generate a new token on each background script load to detect session restarts
-const SESSION_TOKEN = Date.now().toString();
-
 let recent = [];
 let visited = new Set();
 let recentTimer = null;
-let visitedTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
+
+// Cache of all tabs for the extension page
+let allTabCache = [];
 
 
 // Track duplicate tabs by URL
@@ -69,36 +68,57 @@ function sendVisitedUpdate() {
     .catch(() => {});
 }
 
+async function clearVisitHistory() {
+  recent = [];
+  visited = new Set();
+  await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  sendVisitedUpdate();
+}
+
+async function updateTabCache() {
+  try {
+    allTabCache = await browser.tabs.query({ windowType: 'normal' });
+  } catch (_) {
+    allTabCache = [];
+  }
+}
+
+function sendTabState() {
+  browser.runtime.sendMessage({
+    type: 'tabState',
+    tabs: allTabCache,
+    visited: Array.from(visited)
+  }).catch(() => {});
+}
+
+async function refreshTabState() {
+  await updateTabCache();
+  sendTabState();
+}
+
+setInterval(refreshTabState, 5000);
+
 // Restore persisted data
 browser.storage.local.get([
   'autoUnload',
   'autoUnloadMinutes',
   'recent',
-  'visited',
-  'sessionToken'
+  'visited'
 ]).then(async data => {
   if (typeof data.autoUnload === 'boolean') autoUnload = data.autoUnload;
   if (typeof data.autoUnloadMinutes === 'number') {
     autoUnloadMinutes = data.autoUnloadMinutes;
   }
-  const newSession = data.sessionToken !== SESSION_TOKEN;
-  await browser.storage.local.set({ sessionToken: SESSION_TOKEN }).catch(() => {});
-  if (!newSession) {
-    if (Array.isArray(data.recent)) recent = data.recent;
-    if (Array.isArray(data.visited)) visited = new Set(data.visited);
-  } else {
-    recent = [];
-    visited = new Set();
-    await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
-    sendVisitedUpdate();
-  }
+  if (Array.isArray(data.recent)) recent = data.recent;
+  if (Array.isArray(data.visited)) visited = new Set(data.visited);
+  refreshTabState();
 });
 
-// Clear visited state when the browser starts
-browser.runtime.onStartup.addListener(() => {
-  recent = [];
+// Clear visit history only when Firefox starts
+browser.runtime.onStartup.addListener(async () => {
+  await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
-  browser.storage.local.remove(['recent', 'visited']).catch(() => {});
+  recent = [];
   sendVisitedUpdate();
 });
 
@@ -115,6 +135,7 @@ browser.tabs.query({}).then(tabs => {
   for (const t of tabs) {
     addDuplicate(t.id, t.url);
   }
+  refreshTabState();
 });
 
 // Apply user-defined keyboard shortcuts if supported
@@ -133,7 +154,7 @@ browser.tabs.query({}).then(tabs => {
       try { await browser.commands.update({ name: 'unload-all-tabs', shortcut: keyUnloadAll }); } catch (_) {}
     }
     if (action && action.setTitle) {
-      action.setTitle({ title: `KepiTAB Manager (${keyOpenPopup})` });
+      action.setTitle({ title: `KepiTAB Manager (${keyOpenFull})` });
     }
   } catch (e) {
     console.error('Failed to apply shortcuts', e);
@@ -142,7 +163,7 @@ browser.tabs.query({}).then(tabs => {
 
 function unmarkVisited(tabId) {
   if (visited.delete(tabId)) {
-    scheduleVisitedSave();
+    browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
     sendVisitedUpdate();
   }
 }
@@ -175,19 +196,11 @@ function reorderRecent(ids, toId, before) {
   scheduleRecentSave();
 }
 
-function scheduleVisitedSave() {
-  if (!visitedTimer) {
-    visitedTimer = setTimeout(() => {
-      visitedTimer = null;
-      browser.storage.local.set({ visited: Array.from(visited) });
-    }, 500);
-  }
-}
 
 function markVisited(tabId) {
   if (!visited.has(tabId)) {
     visited.add(tabId);
-    scheduleVisitedSave();
+    browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
     sendVisitedUpdate();
   }
 }
@@ -195,10 +208,12 @@ function markVisited(tabId) {
 browser.tabs.onActivated.addListener(info => {
   pushRecent(info.tabId);
   markVisited(info.tabId);
+  refreshTabState();
 });
 
 browser.tabs.onCreated.addListener(tab => {
   addDuplicate(tab.id, tab.url);
+  refreshTabState();
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
@@ -208,10 +223,11 @@ browser.tabs.onRemoved.addListener((tabId) => {
     scheduleRecentSave();
   }
   if (visited.delete(tabId)) {
-    scheduleVisitedSave();
+    browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
     sendVisitedUpdate();
   }
   removeDuplicate(tabId);
+  refreshTabState();
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -222,6 +238,7 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     removeDuplicate(tabId);
     addDuplicate(tabId, changeInfo.url);
   }
+  refreshTabState();
 });
 
 browser.runtime.onMessage.addListener((msg) => {
@@ -231,10 +248,14 @@ browser.runtime.onMessage.addListener((msg) => {
     return Promise.resolve({ visited: Array.from(visited) });
   } else if (msg && msg.type === 'getDuplicates') {
     return Promise.resolve({ duplicates: Array.from(dupIds) });
+  } else if (msg && msg.type === 'getTabState') {
+    return Promise.resolve({ tabs: allTabCache, visited: Array.from(visited) });
   } else if (msg && msg.type === 'unmarkVisited') {
     unmarkVisited(msg.tabId);
   } else if (msg && msg.type === 'reorderRecent') {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
+  } else if (msg && msg.type === 'clearVisitHistory') {
+    clearVisitHistory();
   }
 });
 
@@ -279,6 +300,10 @@ async function unloadAllTabs() {
         await browser.tabs.discard(t.id);
       } catch (_) {}
     }));
+  await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
+  visited = new Set();
+  recent = [];
+  sendVisitedUpdate();
 }
 
 async function checkAutoUnload() {
@@ -290,6 +315,7 @@ async function checkAutoUnload() {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
         try {
           await browser.tabs.discard(t.id);
+          unmarkVisited(t.id);
         } catch (_) {}
       }
     }));
@@ -322,10 +348,7 @@ browser.commands.onCommand.addListener((command) => {
 });
 
 browser.runtime.onInstalled.addListener(async () => {
-  recent = [];
-  visited = new Set();
-  await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
-  sendVisitedUpdate();
+  await clearVisitHistory();
   await browser.contextMenus.create({
     id: 'show-version',
     title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
