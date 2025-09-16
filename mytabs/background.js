@@ -8,6 +8,15 @@ let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+async function applyAutoDiscardable() {
+  try {
+    const tabs = await browser.tabs.query({});
+    await Promise.all(tabs.map(t =>
+      browser.tabs.update(t.id, { autoDiscardable: !autoUnload }).catch(() => {})
+    ));
+  } catch (_) {}
+}
+
 // Cache of all tabs for the extension page
 let allTabCache = [];
 
@@ -111,6 +120,7 @@ browser.storage.local.get([
   }
   if (Array.isArray(data.recent)) recent = data.recent;
   if (Array.isArray(data.visited)) visited = new Set(data.visited);
+  await applyAutoDiscardable();
   refreshTabState();
 });
 
@@ -125,7 +135,10 @@ browser.runtime.onStartup.addListener(async () => {
 // Listen for settings changes
 browser.storage.onChanged.addListener((changes, area) => {
   if (area === 'local') {
-    if (changes.autoUnload) autoUnload = changes.autoUnload.newValue;
+    if (changes.autoUnload) {
+      autoUnload = changes.autoUnload.newValue;
+      applyAutoDiscardable();
+    }
     if (changes.autoUnloadMinutes) autoUnloadMinutes = changes.autoUnloadMinutes.newValue;
   }
 });
@@ -203,6 +216,9 @@ function markVisited(tabId) {
     browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
     sendVisitedUpdate();
   }
+  if (!autoUnload) {
+    browser.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
+  }
 }
 
 browser.tabs.onActivated.addListener(info => {
@@ -213,6 +229,9 @@ browser.tabs.onActivated.addListener(info => {
 
 browser.tabs.onCreated.addListener(tab => {
   addDuplicate(tab.id, tab.url);
+  if (!autoUnload) {
+    browser.tabs.update(tab.id, { autoDiscardable: false }).catch(() => {});
+  }
   refreshTabState();
 });
 
