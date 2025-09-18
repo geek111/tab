@@ -129,7 +129,17 @@ browser.runtime.onStartup.addListener(async () => {
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
+  try {
+    const activeTabs = await browser.tabs.query({ windowType: 'normal', active: true });
+    for (const tab of activeTabs) {
+      pushRecent(tab.id);
+      markVisited(tab.id);
+    }
+  } catch (e) {
+    console.error('Failed to seed active tabs after startup', e);
+  }
   sendVisitedUpdate();
+  refreshTabState();
 });
 
 // Listen for settings changes
