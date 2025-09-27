@@ -285,6 +285,8 @@ browser.runtime.onMessage.addListener((msg) => {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
   } else if (msg && msg.type === 'clearVisitHistory') {
     clearVisitHistory();
+  } else if (msg && msg.type === 'openFullView') {
+    return openFullView();
   }
 });
 

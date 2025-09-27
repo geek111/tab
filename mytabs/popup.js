@@ -1409,6 +1409,7 @@ function showContextMenu(e) {
   }
 
   addItem('Unload All Tabs', bulkUnloadAll);
+  addItem('Open Full View', () => browser.runtime.sendMessage({ type: 'openFullView' }));
   addItem('Options', () => browser.runtime.openOptionsPage());
 
   context.style.left = e.pageX + 'px';
