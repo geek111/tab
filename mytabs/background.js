@@ -384,6 +384,11 @@ browser.runtime.onInstalled.addListener(async () => {
     contexts: ['browser_action']
   });
   await browser.contextMenus.create({
+    id: 'open-full-view',
+    title: 'Open Full View',
+    contexts: ['browser_action']
+  });
+  await browser.contextMenus.create({
     id: 'open-options',
     title: 'Options',
     contexts: ['browser_action']
@@ -391,6 +396,10 @@ browser.runtime.onInstalled.addListener(async () => {
 });
 
 browser.contextMenus.onClicked.addListener((info) => {
+  if (info.menuItemId === 'open-full-view') {
+    openFullView();
+    return;
+  }
   if (info.menuItemId === 'open-options') {
     browser.runtime.openOptionsPage();
   }
