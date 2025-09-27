@@ -285,6 +285,8 @@ browser.runtime.onMessage.addListener((msg) => {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
   } else if (msg && msg.type === 'clearVisitHistory') {
     clearVisitHistory();
+  } else if (msg && msg.type === 'openFullView') {
+    return openFullView();
   }
 });
 
@@ -384,6 +386,11 @@ browser.runtime.onInstalled.addListener(async () => {
     contexts: ['browser_action']
   });
   await browser.contextMenus.create({
+    id: 'open-full-view',
+    title: 'Open Full View',
+    contexts: ['browser_action']
+  });
+  await browser.contextMenus.create({
     id: 'open-options',
     title: 'Options',
     contexts: ['browser_action']
@@ -391,7 +398,9 @@ browser.runtime.onInstalled.addListener(async () => {
 });
 
 browser.contextMenus.onClicked.addListener((info) => {
-  if (info.menuItemId === 'open-options') {
+  if (info.menuItemId === 'open-full-view') {
+    openFullView();
+  } else if (info.menuItemId === 'open-options') {
     browser.runtime.openOptionsPage();
   }
 });
