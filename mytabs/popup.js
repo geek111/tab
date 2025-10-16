@@ -45,6 +45,48 @@ const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
 
+const HAS_NATIVE_TAB_UNLOAD = typeof browser.tabs.unload === 'function';
+
+async function requestTabUnload(tabId) {
+  let shouldRestoreAutoDiscardable = false;
+  try {
+    let tab = null;
+    try {
+      tab = await browser.tabs.get(tabId);
+    } catch (_) {}
+
+    if (tab?.discarded) {
+      return true;
+    }
+
+    if (tab && tab.autoDiscardable === false) {
+      shouldRestoreAutoDiscardable = true;
+      await browser.tabs.update(tabId, { autoDiscardable: true });
+    }
+
+    if (HAS_NATIVE_TAB_UNLOAD) {
+      await browser.tabs.unload(tabId);
+    } else {
+      await browser.tabs.discard(tabId);
+    }
+
+    if (shouldRestoreAutoDiscardable) {
+      try {
+        await browser.tabs.update(tabId, { autoDiscardable: false });
+      } catch (_) {}
+    }
+
+    return true;
+  } catch (_) {
+    if (shouldRestoreAutoDiscardable) {
+      try {
+        await browser.tabs.update(tabId, { autoDiscardable: false });
+      } catch (_) {}
+    }
+    return false;
+  }
+}
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -1395,10 +1437,12 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
+      const unloaded = await requestTabUnload(id);
+      if (unloaded) {
+        try {
+          await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+        } catch (_) {}
+      }
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1468,21 +1512,19 @@ async function bulkActivate() {
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
-    try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-    } catch (_) {}
+    const unloaded = await requestTabUnload(id);
+    if (unloaded) {
+      try {
+        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      } catch (_) {}
+    }
   }));
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
+  await Promise.all(tabs.map(t => requestTabUnload(t.id)));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
   scheduleUpdate();
 }
