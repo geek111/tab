@@ -17,6 +17,14 @@ async function applyAutoDiscardable() {
   } catch (_) {}
 }
 
+async function unloadTab(tabId) {
+  if (browser.tabs.unload) {
+    await browser.tabs.unload(tabId);
+  } else if (browser.tabs.discard) {
+    await browser.tabs.discard(tabId);
+  }
+}
+
 // Cache of all tabs for the extension page
 let allTabCache = [];
 
@@ -328,7 +336,7 @@ async function unloadAllTabs() {
   await Promise.all(tabs.filter(t => !t.discarded)
     .map(async t => {
       try {
-        await browser.tabs.discard(t.id);
+        await unloadTab(t.id);
       } catch (_) {}
     }));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
@@ -345,7 +353,7 @@ async function checkAutoUnload() {
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
         try {
-          await browser.tabs.discard(t.id);
+          await unloadTab(t.id);
           unmarkVisited(t.id);
         } catch (_) {}
       }

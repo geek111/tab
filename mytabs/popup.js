@@ -38,6 +38,14 @@ let currentQuery = '';
 let searchOrder = null;
 // Scroll position to restore after certain operations
 let pendingScroll = null;
+
+async function unloadTab(tabId) {
+  if (browser.tabs.unload) {
+    await browser.tabs.unload(tabId);
+  } else if (browser.tabs.discard) {
+    await browser.tabs.discard(tabId);
+  }
+}
 // Remember horizontal scroll for each view in full window
 const fullScrollPos = { all: 0, recent: 0, dups: 0 };
 // Remember vertical scroll for each view in popup window
@@ -1069,7 +1077,7 @@ document.addEventListener('keydown', (e) => {
         if (e.shiftKey) {
           bulkUnloadAll();
         } else {
-          bulkDiscard();
+          bulkUnloadSelected();
         }
         break;
       case 'm':
@@ -1179,8 +1187,8 @@ async function init() {
   const bulkReloadBtn = document.getElementById('bulk-reload');
   if (bulkReloadBtn) bulkReloadBtn.addEventListener('click', bulkReload);
 
-  const bulkDiscardBtn = document.getElementById('bulk-discard');
-  if (bulkDiscardBtn) bulkDiscardBtn.addEventListener('click', bulkDiscard);
+  const bulkUnloadBtn = document.getElementById('bulk-discard');
+  if (bulkUnloadBtn) bulkUnloadBtn.addEventListener('click', bulkUnloadSelected);
 
   const bulkUnloadAllBtn = document.getElementById('bulk-unload-all');
   if (bulkUnloadAllBtn) bulkUnloadAllBtn.addEventListener('click', bulkUnloadAll);
@@ -1363,7 +1371,7 @@ function showContextMenu(e) {
     if (document.body.classList.contains('full')) {
       addItem('Activate Selected', bulkActivate);
     }
-    addItem('Unload Selected', bulkDiscard);
+    addItem('Unload Selected', bulkUnloadSelected);
     if (MOVE_ENABLED) {
       if (!movePending) addItem('Flag for Move', flagTabsForMove);
       else addItem('Clear Move Flag', clearMovePending);
@@ -1396,7 +1404,7 @@ function showContextMenu(e) {
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       try {
-        await browser.tabs.discard(id);
+        await unloadTab(id);
         await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
       } catch (_) {}
       scheduleUpdate();
@@ -1465,11 +1473,11 @@ async function bulkActivate() {
   }
 }
 
-async function bulkDiscard() {
+async function bulkUnloadSelected() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
     try {
-      await browser.tabs.discard(id);
+      await unloadTab(id);
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
     } catch (_) {}
   }));
@@ -1480,7 +1488,7 @@ async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.map(async t => {
     try {
-      await browser.tabs.discard(t.id);
+      await unloadTab(t.id);
     } catch (_) {}
   }));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
