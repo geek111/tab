@@ -1396,7 +1396,7 @@ function showContextMenu(e) {
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       try {
-        await browser.tabs.discard(id);
+        await unloadTabWithFallback(id);
         await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
       } catch (_) {}
       scheduleUpdate();
@@ -1469,7 +1469,7 @@ async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
     try {
-      await browser.tabs.discard(id);
+      await unloadTabWithFallback(id);
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
     } catch (_) {}
   }));
@@ -1480,7 +1480,7 @@ async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.map(async t => {
     try {
-      await browser.tabs.discard(t.id);
+      await unloadTabWithFallback(t.id);
     } catch (_) {}
   }));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });

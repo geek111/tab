@@ -328,7 +328,7 @@ async function unloadAllTabs() {
   await Promise.all(tabs.filter(t => !t.discarded)
     .map(async t => {
       try {
-        await browser.tabs.discard(t.id);
+        await unloadTabWithFallback(t.id);
       } catch (_) {}
     }));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
@@ -345,7 +345,7 @@ async function checkAutoUnload() {
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
         try {
-          await browser.tabs.discard(t.id);
+          await unloadTabWithFallback(t.id);
           unmarkVisited(t.id);
         } catch (_) {}
       }
