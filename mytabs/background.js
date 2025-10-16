@@ -8,6 +8,111 @@ let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+const HAS_NATIVE_TAB_UNLOAD = typeof browser.tabs.unload === 'function';
+
+async function waitForTabDiscard(tabId, initialTab) {
+  if (!tabId) return false;
+
+  if (!initialTab) {
+    try {
+      initialTab = await browser.tabs.get(tabId);
+    } catch (_) {
+      initialTab = null;
+    }
+  }
+
+  if (!initialTab) return false;
+  if (initialTab.discarded) return true;
+
+  return await new Promise(resolve => {
+    let timeoutId = null;
+
+    const cleanup = () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      browser.tabs.onUpdated.removeListener(onUpdated);
+      browser.tabs.onRemoved.removeListener(onRemoved);
+    };
+
+    const finish = result => {
+      cleanup();
+      resolve(result);
+    };
+
+    const onUpdated = (updatedId, changeInfo) => {
+      if (updatedId === tabId && 'discarded' in changeInfo) {
+        finish(!!changeInfo.discarded);
+      }
+    };
+
+    const onRemoved = removedId => {
+      if (removedId === tabId) {
+        finish(true);
+      }
+    };
+
+    browser.tabs.onUpdated.addListener(onUpdated);
+    browser.tabs.onRemoved.addListener(onRemoved);
+
+    timeoutId = setTimeout(() => {
+      cleanup();
+      browser.tabs.get(tabId)
+        .then(tab => resolve(!!tab?.discarded))
+        .catch(() => resolve(false));
+    }, 2000);
+  });
+}
+
+async function requestTabUnload(tabId) {
+  let shouldRestoreAutoDiscardable = false;
+  let tab = null;
+  try {
+    try {
+      tab = await browser.tabs.get(tabId);
+    } catch (_) {
+      tab = null;
+    }
+
+    if (!tab) {
+      return false;
+    }
+
+    if (tab.discarded) {
+      return true;
+    }
+
+    if (tab.autoDiscardable === false) {
+      shouldRestoreAutoDiscardable = true;
+      await browser.tabs.update(tabId, { autoDiscardable: true });
+    }
+
+    if (HAS_NATIVE_TAB_UNLOAD) {
+      await browser.tabs.unload(tabId);
+    } else {
+      await browser.tabs.discard(tabId);
+    }
+
+    const discarded = await waitForTabDiscard(tabId, tab);
+
+    if (shouldRestoreAutoDiscardable) {
+      try {
+        await browser.tabs.update(tabId, { autoDiscardable: false });
+      } catch (_) {}
+    }
+
+    return discarded;
+  } catch (_) {
+    if (shouldRestoreAutoDiscardable) {
+      try {
+        await browser.tabs.update(tabId, { autoDiscardable: false });
+      } catch (_) {}
+    }
+    return false;
+  }
+}
+
 async function applyAutoDiscardable() {
   try {
     const tabs = await browser.tabs.query({});
@@ -326,11 +431,7 @@ async function openFullView() {
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
-    }));
+    .map(t => requestTabUnload(t.id)));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
@@ -344,10 +445,10 @@ async function checkAutoUnload() {
     const tabs = await browser.tabs.query({});
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
-        try {
-          await browser.tabs.discard(t.id);
+        const unloaded = await requestTabUnload(t.id);
+        if (unloaded) {
           unmarkVisited(t.id);
-        } catch (_) {}
+        }
       }
     }));
   } catch (e) {

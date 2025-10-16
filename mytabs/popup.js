@@ -45,6 +45,111 @@ const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
 
+const HAS_NATIVE_TAB_UNLOAD = typeof browser.tabs.unload === 'function';
+
+async function waitForTabDiscard(tabId, initialTab) {
+  if (!tabId) return false;
+
+  if (!initialTab) {
+    try {
+      initialTab = await browser.tabs.get(tabId);
+    } catch (_) {
+      initialTab = null;
+    }
+  }
+
+  if (!initialTab) return false;
+  if (initialTab.discarded) return true;
+
+  return await new Promise(resolve => {
+    let timeoutId = null;
+
+    const cleanup = () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      browser.tabs.onUpdated.removeListener(onUpdated);
+      browser.tabs.onRemoved.removeListener(onRemoved);
+    };
+
+    const finish = result => {
+      cleanup();
+      resolve(result);
+    };
+
+    const onUpdated = (updatedId, changeInfo) => {
+      if (updatedId === tabId && 'discarded' in changeInfo) {
+        finish(!!changeInfo.discarded);
+      }
+    };
+
+    const onRemoved = removedId => {
+      if (removedId === tabId) {
+        finish(true);
+      }
+    };
+
+    browser.tabs.onUpdated.addListener(onUpdated);
+    browser.tabs.onRemoved.addListener(onRemoved);
+
+    timeoutId = setTimeout(() => {
+      cleanup();
+      browser.tabs.get(tabId)
+        .then(tab => resolve(!!tab?.discarded))
+        .catch(() => resolve(false));
+    }, 2000);
+  });
+}
+
+async function requestTabUnload(tabId) {
+  let shouldRestoreAutoDiscardable = false;
+  let tab = null;
+  try {
+    try {
+      tab = await browser.tabs.get(tabId);
+    } catch (_) {
+      tab = null;
+    }
+
+    if (!tab) {
+      return false;
+    }
+
+    if (tab.discarded) {
+      return true;
+    }
+
+    if (tab.autoDiscardable === false) {
+      shouldRestoreAutoDiscardable = true;
+      await browser.tabs.update(tabId, { autoDiscardable: true });
+    }
+
+    if (HAS_NATIVE_TAB_UNLOAD) {
+      await browser.tabs.unload(tabId);
+    } else {
+      await browser.tabs.discard(tabId);
+    }
+
+    const discarded = await waitForTabDiscard(tabId, tab);
+
+    if (shouldRestoreAutoDiscardable) {
+      try {
+        await browser.tabs.update(tabId, { autoDiscardable: false });
+      } catch (_) {}
+    }
+
+    return discarded;
+  } catch (_) {
+    if (shouldRestoreAutoDiscardable) {
+      try {
+        await browser.tabs.update(tabId, { autoDiscardable: false });
+      } catch (_) {}
+    }
+    return false;
+  }
+}
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -1395,10 +1500,12 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
+      const unloaded = await requestTabUnload(id);
+      if (unloaded) {
+        try {
+          await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+        } catch (_) {}
+      }
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1468,21 +1575,19 @@ async function bulkActivate() {
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
-    try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-    } catch (_) {}
+    const unloaded = await requestTabUnload(id);
+    if (unloaded) {
+      try {
+        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      } catch (_) {}
+    }
   }));
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
+  await Promise.all(tabs.map(t => requestTabUnload(t.id)));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
   scheduleUpdate();
 }
