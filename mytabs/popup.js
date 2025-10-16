@@ -45,6 +45,37 @@ const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
 
+async function unloadTabWithFallback(tabId) {
+  if (typeof tabId !== 'number') return false;
+
+  const unload = browser.tabs && browser.tabs.unload;
+  if (typeof unload === 'function') {
+    const attempts = [
+      () => unload.call(browser.tabs, tabId)
+    ];
+    attempts.push(() => unload.call(browser.tabs, { tabId }));
+
+    for (const attempt of attempts) {
+      try {
+        const result = attempt();
+        if (result && typeof result.then === 'function') {
+          await result;
+        }
+        return true;
+      } catch (_) {}
+    }
+  }
+
+  if (browser.tabs.discard) {
+    try {
+      await browser.tabs.discard(tabId);
+      return true;
+    } catch (_) {}
+  }
+
+  return false;
+}
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -1395,10 +1426,10 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      try {
-        await browser.tabs.discard(id);
+      const unloaded = await unloadTabWithFallback(id);
+      if (unloaded) {
         await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
+      }
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1468,21 +1499,17 @@ async function bulkActivate() {
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
-    try {
-      await browser.tabs.discard(id);
+    const unloaded = await unloadTabWithFallback(id);
+    if (unloaded) {
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-    } catch (_) {}
+    }
   }));
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
+  await Promise.all(tabs.map(t => unloadTabWithFallback(t.id)));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
   scheduleUpdate();
 }
