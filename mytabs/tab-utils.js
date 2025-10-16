@@ -7,41 +7,66 @@
       throw new Error('browser.tabs API is unavailable');
     }
 
-    if (typeof tabsApi.unload === 'function') {
+    const ensureTabInfo = async () => {
       try {
-        const result = await tabsApi.unload(tabId);
+        return await tabsApi.get(tabId);
+      } catch (_) {
+        return null;
+      }
+    };
 
-        // Firefox may resolve with a tab-like object. If it reports the tab as
-        // discarded we can stop early.
-        if (result && typeof result === 'object' && result.discarded) {
-          return result;
+    const tabLooksUnloaded = async (result) => {
+      if (Array.isArray(result)) {
+        if (result.includes(tabId)) {
+          return true;
         }
+      } else if (result && typeof result === 'object') {
+        if (result.discarded || result.status === 'unloaded') {
+          return true;
+        }
+      }
 
-        // Some Firefox versions resolve without discarding the tab (for
-        // example, when the feature is behind a pref). Double-check the tab
-        // state before falling back so we retain legacy behaviour.
-        const ensureTabInfo = async () => {
-          try {
-            return await tabsApi.get(tabId);
-          } catch (_) {
-            return null;
+      let tabInfo = await ensureTabInfo();
+      if (!tabInfo || tabInfo.discarded || tabInfo.status === 'unloaded') {
+        return true;
+      }
+
+      // Give Firefox time to update the tab state when unload succeeds lazily.
+      await new Promise(resolve => setTimeout(resolve, 100));
+      tabInfo = await ensureTabInfo();
+      return !tabInfo || tabInfo.discarded || tabInfo.status === 'unloaded';
+    };
+
+    if (typeof tabsApi.unload === 'function') {
+      const maybeArgumentError = (error) => {
+        if (!error) return false;
+        if (error.name === 'TypeError') return true;
+        const message = String(error.message || error);
+        return /tabIds|arguments|requires/i.test(message);
+      };
+
+      const callVariants = [
+        () => tabsApi.unload(tabId),
+        () => tabsApi.unload([tabId])
+      ];
+
+      for (let i = 0; i < callVariants.length; i++) {
+        try {
+          const result = await callVariants[i]();
+          if (await tabLooksUnloaded(result)) {
+            return result;
           }
-        };
-
-        let tabInfo = await ensureTabInfo();
-        if (!tabInfo || tabInfo.discarded) {
-          return result;
+          if (i < callVariants.length - 1) {
+            continue;
+          }
+          break;
+        } catch (error) {
+          if (i < callVariants.length - 1 && maybeArgumentError(error)) {
+            continue;
+          }
+          // Fall back to discard below if unload fails (e.g., unsupported tab state)
+          break;
         }
-
-        // Give the browser a moment to update the tab state before assuming
-        // the unload failed.
-        await new Promise(resolve => setTimeout(resolve, 50));
-        tabInfo = await ensureTabInfo();
-        if (!tabInfo || tabInfo.discarded) {
-          return result;
-        }
-      } catch (error) {
-        // Fall back to discard below if unload fails (e.g., unsupported tab state)
       }
     }
 
