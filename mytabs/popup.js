@@ -45,6 +45,96 @@ const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
 
+function waitForTabDiscard(tabId, timeoutMs = 4000) {
+  return new Promise(resolve => {
+    let finished = false;
+    let timer = null;
+
+    const finish = result => {
+      if (finished) return;
+      finished = true;
+      if (timer) clearTimeout(timer);
+      browser.tabs.onUpdated.removeListener(handleUpdated);
+      browser.tabs.onRemoved.removeListener(handleRemoved);
+      resolve(result);
+    };
+
+    const handleUpdated = (updatedId, changeInfo) => {
+      if (updatedId === tabId && changeInfo && changeInfo.discarded) {
+        finish(true);
+      }
+    };
+
+    const handleRemoved = removedId => {
+      if (removedId === tabId) {
+        finish(true);
+      }
+    };
+
+    timer = setTimeout(() => finish(false), timeoutMs);
+
+    browser.tabs.onUpdated.addListener(handleUpdated);
+    browser.tabs.onRemoved.addListener(handleRemoved);
+
+    browser.tabs.get(tabId).then(tab => {
+      if (!finished && tab?.discarded) {
+        finish(true);
+      }
+    }).catch(() => {
+      finish(true);
+    });
+  });
+}
+
+async function requestTabUnload(tabId) {
+  let shouldRestoreAutoDiscardable = false;
+  try {
+    let tab = null;
+    try {
+      tab = await browser.tabs.get(tabId);
+    } catch (_) {}
+
+    if (!tab) {
+      return false;
+    }
+
+    if (tab.discarded) {
+      return true;
+    }
+
+    if (tab.autoDiscardable === false) {
+      shouldRestoreAutoDiscardable = true;
+      await browser.tabs.update(tabId, { autoDiscardable: true });
+    }
+
+    let usedNativeUnload = false;
+    if (typeof browser.tabs.unload === 'function') {
+      try {
+        await browser.tabs.unload(tabId);
+        usedNativeUnload = true;
+      } catch (error) {
+        console.warn('Native tab unload failed, falling back to discard', error);
+      }
+    }
+
+    if (!usedNativeUnload) {
+      await browser.tabs.discard(tabId);
+    }
+
+    const unloaded = await waitForTabDiscard(tabId);
+    return unloaded;
+  } catch (error) {
+    console.error('Failed to unload tab from popup', error);
+    return false;
+  } finally {
+    if (shouldRestoreAutoDiscardable) {
+      try {
+        await browser.tabs.update(tabId, { autoDiscardable: false });
+      } catch (_) {}
+    }
+  }
+}
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -1395,10 +1485,12 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
+      const unloaded = await requestTabUnload(id);
+      if (unloaded) {
+        try {
+          await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+        } catch (_) {}
+      }
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1468,21 +1560,19 @@ async function bulkActivate() {
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
-    try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-    } catch (_) {}
+    const unloaded = await requestTabUnload(id);
+    if (unloaded) {
+      try {
+        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      } catch (_) {}
+    }
   }));
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
+  await Promise.all(tabs.map(t => requestTabUnload(t.id)));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
   scheduleUpdate();
 }
