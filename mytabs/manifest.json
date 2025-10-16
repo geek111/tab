@@ -18,7 +18,7 @@
     ],
   "background": {
 
-    "scripts": ["background.js"]
+    "scripts": ["tab-utils.js", "background.js"]
   },
   "action": {
     "default_title": "KepiTAB Manager",
