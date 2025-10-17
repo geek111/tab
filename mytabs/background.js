@@ -7,6 +7,8 @@ let visited = new Set();
 let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
+const AUTO_UNLOAD_ALARM = 'kepi-auto-unload-check';
+let alarmsInitialized = false;
 
 async function applyAutoDiscardable() {
   try {
@@ -105,7 +107,65 @@ async function refreshTabState() {
   sendTabState();
 }
 
-setInterval(refreshTabState, 5000);
+async function ensureAutoUnloadAlarm() {
+  if (alarmsInitialized) return;
+  alarmsInitialized = true;
+  try {
+    await browser.alarms.create(AUTO_UNLOAD_ALARM, { periodInMinutes: 1 });
+  } catch (e) {
+    console.error('Failed to schedule auto-unload alarm', e);
+  }
+}
+
+async function discardTabs(tabIds, { allowActive = false, unmarkVisitedTabs = false } = {}) {
+  const ids = Array.from(new Set((tabIds || []).filter(id => typeof id === 'number')));
+  if (!ids.length) {
+    return { discarded: [] };
+  }
+
+  const discarded = [];
+  const toUnmark = [];
+
+  for (const tabId of ids) {
+    try {
+      const tab = await browser.tabs.get(tabId);
+      if (!tab || tab.discarded || (tab.active && !allowActive)) {
+        if (tab && tab.discarded) {
+          discarded.push(tabId);
+          if (unmarkVisitedTabs) toUnmark.push(tabId);
+        }
+        continue;
+      }
+
+      if (tab.autoDiscardable === false) {
+        try {
+          await browser.tabs.update(tabId, { autoDiscardable: true });
+        } catch (_) {}
+      }
+
+      await browser.tabs.discard(tabId);
+      const updated = await browser.tabs.get(tabId).catch(() => null);
+      if (updated && updated.discarded) {
+        discarded.push(tabId);
+        if (unmarkVisitedTabs) toUnmark.push(tabId);
+      }
+    } catch (error) {
+      console.error('Failed to discard tab', tabId, error);
+    }
+  }
+
+  if (toUnmark.length) {
+    for (const id of toUnmark) {
+      unmarkVisited(id);
+    }
+  }
+
+  if (discarded.length) {
+    await refreshTabState();
+  }
+
+  return { discarded };
+}
 
 // Restore persisted data
 browser.storage.local.get([
@@ -120,12 +180,14 @@ browser.storage.local.get([
   }
   if (Array.isArray(data.recent)) recent = data.recent;
   if (Array.isArray(data.visited)) visited = new Set(data.visited);
+  await ensureAutoUnloadAlarm();
   await applyAutoDiscardable();
   refreshTabState();
 });
 
 // Clear visit history only when Firefox starts
 browser.runtime.onStartup.addListener(async () => {
+  await ensureAutoUnloadAlarm();
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
@@ -148,6 +210,7 @@ browser.storage.onChanged.addListener((changes, area) => {
     if (changes.autoUnload) {
       autoUnload = changes.autoUnload.newValue;
       applyAutoDiscardable();
+      if (autoUnload) ensureAutoUnloadAlarm();
     }
     if (changes.autoUnloadMinutes) autoUnloadMinutes = changes.autoUnloadMinutes.newValue;
   }
@@ -259,6 +322,34 @@ browser.tabs.onRemoved.addListener((tabId) => {
   refreshTabState();
 });
 
+browser.tabs.onAttached.addListener(() => {
+  refreshTabState();
+});
+
+browser.tabs.onDetached.addListener(() => {
+  refreshTabState();
+});
+
+browser.tabs.onMoved.addListener(() => {
+  refreshTabState();
+});
+
+browser.tabs.onHighlighted.addListener(() => {
+  refreshTabState();
+});
+
+browser.tabs.onReplaced.addListener((addedTabId, removedTabId) => {
+  removeDuplicate(removedTabId);
+  refreshTabState();
+  browser.tabs.get(addedTabId).then(tab => {
+    if (tab && tab.url) addDuplicate(tab.id, tab.url);
+  }).catch(() => {});
+});
+
+browser.windows.onFocusChanged.addListener(() => {
+  refreshTabState();
+});
+
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.discarded === false && tab && tab.active) {
     markVisited(tabId);
@@ -285,6 +376,11 @@ browser.runtime.onMessage.addListener((msg) => {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
   } else if (msg && msg.type === 'clearVisitHistory') {
     clearVisitHistory();
+  } else if (msg && msg.type === 'discardTabsNative') {
+    return discardTabs(msg.tabIds, {
+      allowActive: Boolean(msg.allowActive),
+      unmarkVisitedTabs: Boolean(msg.unmarkVisited)
+    });
   } else if (msg && msg.type === 'openFullView') {
     return openFullView();
   }
@@ -325,12 +421,10 @@ async function openFullView() {
 
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
-    }));
+  const ids = tabs.filter(t => !t.discarded).map(t => t.id);
+  if (ids.length) {
+    await discardTabs(ids, { unmarkVisitedTabs: true });
+  }
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
@@ -342,20 +436,24 @@ async function checkAutoUnload() {
   const threshold = Date.now() - autoUnloadMinutes * 60000;
   try {
     const tabs = await browser.tabs.query({});
-    await Promise.all(tabs.map(async t => {
-      if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
-        try {
-          await browser.tabs.discard(t.id);
-          unmarkVisited(t.id);
-        } catch (_) {}
-      }
-    }));
+    const toDiscard = tabs
+      .filter(t => !t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold)
+      .map(t => t.id);
+    if (toDiscard.length) {
+      await discardTabs(toDiscard, { unmarkVisitedTabs: true });
+    }
   } catch (e) {
     console.error('Auto unload failed', e);
   }
 }
 
-setInterval(checkAutoUnload, 60000);
+browser.alarms.onAlarm.addListener((alarm) => {
+  if (alarm && alarm.name === AUTO_UNLOAD_ALARM) {
+    checkAutoUnload();
+  }
+});
+
+ensureAutoUnloadAlarm();
 
 // Open the multi-column tab manager when the icon is middle-clicked.
 if (action && action.onClicked && action.onClicked.addListener) {

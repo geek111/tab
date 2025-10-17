@@ -14,11 +14,11 @@
       "storage",
       "contextMenus",
       "contextualIdentities",
-      "cookies"
+      "cookies",
+      "alarms"
     ],
   "background": {
-
-    "scripts": ["background.js"]
+    "service_worker": "background.js"
   },
   "action": {
     "default_title": "KepiTAB Manager",
