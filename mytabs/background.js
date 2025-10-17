@@ -323,12 +323,61 @@ async function openFullView() {
   await browser.windows.create(createData);
 }
 
+function waitForDiscard(tabId, timeout = 5000) {
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      browser.tabs.onUpdated.removeListener(listener);
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const timer = setTimeout(() => finish(false), timeout);
+    const listener = (id, changeInfo) => {
+      if (id === tabId && Object.prototype.hasOwnProperty.call(changeInfo, 'discarded')) {
+        finish(changeInfo.discarded === true);
+      }
+    };
+    browser.tabs.onUpdated.addListener(listener);
+    browser.tabs.get(tabId).then(tab => {
+      if (!tab || tab.discarded) {
+        finish(true);
+      }
+    }).catch(() => finish(true));
+  });
+}
+
+async function tryNativeUnload(tabId) {
+  if (!browser.tabs.unload || typeof browser.tabs.unload !== 'function') {
+    return false;
+  }
+  try {
+    await browser.tabs.unload(tabId);
+    return await waitForDiscard(tabId);
+  } catch (_) {
+    return false;
+  }
+}
+
+async function unloadTabById(tabId) {
+  if (await tryNativeUnload(tabId)) {
+    return true;
+  }
+  try {
+    await browser.tabs.discard(tabId);
+    return await waitForDiscard(tabId);
+  } catch (_) {
+    return false;
+  }
+}
+
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.filter(t => !t.discarded)
     .map(async t => {
       try {
-        await browser.tabs.discard(t.id);
+        await unloadTabById(t.id);
       } catch (_) {}
     }));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
@@ -345,8 +394,9 @@ async function checkAutoUnload() {
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
         try {
-          await browser.tabs.discard(t.id);
-          unmarkVisited(t.id);
+          if (await unloadTabById(t.id)) {
+            unmarkVisited(t.id);
+          }
         } catch (_) {}
       }
     }));

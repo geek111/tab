@@ -26,6 +26,46 @@ let selectedIds = new Set();
 // Cached tab list provided by the background script
 let cachedTabs = null;
 
+function waitForDiscard(tabId, timeout = 5000) {
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      browser.tabs.onUpdated.removeListener(listener);
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const timer = setTimeout(() => finish(false), timeout);
+    const listener = (id, changeInfo) => {
+      if (id === tabId && Object.prototype.hasOwnProperty.call(changeInfo, 'discarded')) {
+        finish(changeInfo.discarded === true);
+      }
+    };
+    browser.tabs.onUpdated.addListener(listener);
+    browser.tabs.get(tabId).then(tab => {
+      if (!tab || tab.discarded) {
+        finish(true);
+      }
+    }).catch(() => finish(true));
+  });
+}
+
+async function unloadTab(tabId) {
+  if (browser.tabs.unload && typeof browser.tabs.unload === 'function') {
+    try {
+      await browser.tabs.unload(tabId);
+      return await waitForDiscard(tabId);
+    } catch (_) {}
+  }
+  try {
+    await browser.tabs.discard(tabId);
+    return await waitForDiscard(tabId);
+  } catch (_) {
+    return false;
+  }
+}
+
 let virtualList = null;
 let tabItems = [];
 let idIndexMap = new Map();
@@ -1396,8 +1436,9 @@ function showContextMenu(e) {
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+        if (await unloadTab(id)) {
+          await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+        }
       } catch (_) {}
       scheduleUpdate();
     });
@@ -1469,8 +1510,9 @@ async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
     try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      if (await unloadTab(id)) {
+        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      }
     } catch (_) {}
   }));
   scheduleUpdate();
@@ -1480,7 +1522,7 @@ async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.map(async t => {
     try {
-      await browser.tabs.discard(t.id);
+      await unloadTab(t.id);
     } catch (_) {}
   }));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
