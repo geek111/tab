@@ -5,7 +5,8 @@
   "description": "A simple tab management tool",
   "browser_specific_settings": {
     "gecko": {
-      "id": "kepi@addon"
+      "id": "kepi@addon",
+      "strict_min_version": "140.0"
     }
   },
   "icons": {

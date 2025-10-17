@@ -90,6 +90,19 @@ async function ensureNotActive(tabId) {
   return { tab, placeholderId: placeholder.id };
 }
 
+async function removePlaceholderIfPresent(placeholderId) {
+  if (placeholderId === null) {
+    return;
+  }
+
+  placeholderTabs.delete(placeholderId);
+  try {
+    await browser.tabs.remove(placeholderId);
+  } catch (error) {
+    console.warn(`Failed to remove placeholder tab ${placeholderId}`, error);
+  }
+}
+
 async function verifyDiscard(tabId) {
   const updated = await browser.tabs.get(tabId);
   if (!updated.discarded) {
@@ -99,8 +112,11 @@ async function verifyDiscard(tabId) {
 }
 
 async function discardOne(tabId) {
+  let placeholderId = null;
   try {
-    const { tab } = await ensureNotActive(tabId);
+    const { tab, placeholderId: createdPlaceholderId } = await ensureNotActive(tabId);
+    placeholderId = createdPlaceholderId;
+
     if (tab.discarded) {
       return tab;
     }
@@ -108,11 +124,21 @@ async function discardOne(tabId) {
     if (tab.active) {
       await sleep(SWITCH_DELAY_MS);
     }
+
     await browser.tabs.discard(tabId);
     const updated = await verifyDiscard(tabId);
 
     return updated;
   } catch (error) {
+    if (placeholderId !== null) {
+      try {
+        await browser.tabs.update(tabId, { active: true });
+      } catch (updateError) {
+        console.warn(`Failed to reactivate tab ${tabId} after discard error`, updateError);
+      }
+      await removePlaceholderIfPresent(placeholderId);
+    }
+
     console.error(`Failed to discard tab ${tabId}`, error);
     throw error;
   }
