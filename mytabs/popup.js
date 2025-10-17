@@ -26,6 +26,61 @@ let selectedIds = new Set();
 // Cached tab list provided by the background script
 let cachedTabs = null;
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function confirmTabDiscarded(tabId, attempts = 10, waitMs = 150) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const tab = await browser.tabs.get(tabId);
+      if (!tab || tab.discarded) {
+        return true;
+      }
+    } catch (_) {
+      return true;
+    }
+    await delay(waitMs);
+  }
+  return false;
+}
+
+async function ensureTabCanBeDiscarded(tabId) {
+  try {
+    const tab = await browser.tabs.get(tabId);
+    if (tab && tab.autoDiscardable === false) {
+      try {
+        await browser.tabs.update(tabId, { autoDiscardable: true });
+        return true;
+      } catch (_) {}
+    }
+  } catch (_) {}
+  return false;
+}
+
+async function unloadTab(tabId) {
+  const autoDiscardableChanged = await ensureTabCanBeDiscarded(tabId);
+  if (browser.tabs.unload && typeof browser.tabs.unload === 'function') {
+    try {
+      await browser.tabs.unload(tabId);
+      if (await confirmTabDiscarded(tabId)) {
+        return true;
+      }
+    } catch (_) {}
+  }
+  try {
+    await browser.tabs.discard(tabId);
+    if (await confirmTabDiscarded(tabId)) {
+      return true;
+    }
+  } catch (_) {
+  }
+  if (autoDiscardableChanged) {
+    browser.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
+  }
+  return false;
+}
+
 let virtualList = null;
 let tabItems = [];
 let idIndexMap = new Map();
@@ -1396,8 +1451,9 @@ function showContextMenu(e) {
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+        if (await unloadTab(id)) {
+          await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+        }
       } catch (_) {}
       scheduleUpdate();
     });
@@ -1469,8 +1525,9 @@ async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
     try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      if (await unloadTab(id)) {
+        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      }
     } catch (_) {}
   }));
   scheduleUpdate();
@@ -1480,7 +1537,7 @@ async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.map(async t => {
     try {
-      await browser.tabs.discard(t.id);
+      await unloadTab(t.id);
     } catch (_) {}
   }));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
