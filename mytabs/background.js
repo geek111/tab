@@ -323,12 +323,24 @@ async function openFullView() {
   await browser.windows.create(createData);
 }
 
+async function unloadTabById(tabId) {
+  if (browser.tabs.unload && typeof browser.tabs.unload === 'function') {
+    try {
+      const result = await browser.tabs.unload(tabId);
+      if (result || typeof result === 'undefined') {
+        return result;
+      }
+    } catch (_) {}
+  }
+  return browser.tabs.discard(tabId);
+}
+
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.filter(t => !t.discarded)
     .map(async t => {
       try {
-        await browser.tabs.discard(t.id);
+        await unloadTabById(t.id);
       } catch (_) {}
     }));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
@@ -345,7 +357,7 @@ async function checkAutoUnload() {
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
         try {
-          await browser.tabs.discard(t.id);
+          await unloadTabById(t.id);
           unmarkVisited(t.id);
         } catch (_) {}
       }
