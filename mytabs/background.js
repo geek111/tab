@@ -323,12 +323,55 @@ async function openFullView() {
   await browser.windows.create(createData);
 }
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function confirmTabDiscarded(tabId, attempts = 3, waitMs = 100) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const tab = await browser.tabs.get(tabId);
+      if (!tab || tab.discarded) {
+        return true;
+      }
+    } catch (_) {
+      return true;
+    }
+    await delay(waitMs);
+  }
+  return false;
+}
+
+async function tryNativeUnload(tabId) {
+  if (browser.tabs.unload && typeof browser.tabs.unload === 'function') {
+    try {
+      await browser.tabs.unload(tabId);
+      if (await confirmTabDiscarded(tabId)) {
+        return true;
+      }
+    } catch (_) {}
+  }
+  return false;
+}
+
+async function unloadTabById(tabId) {
+  if (await tryNativeUnload(tabId)) {
+    return true;
+  }
+  try {
+    await browser.tabs.discard(tabId);
+    return await confirmTabDiscarded(tabId);
+  } catch (_) {
+    return false;
+  }
+}
+
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.filter(t => !t.discarded)
     .map(async t => {
       try {
-        await browser.tabs.discard(t.id);
+        await unloadTabById(t.id);
       } catch (_) {}
     }));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
@@ -345,8 +388,9 @@ async function checkAutoUnload() {
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
         try {
-          await browser.tabs.discard(t.id);
-          unmarkVisited(t.id);
+          if (await unloadTabById(t.id)) {
+            unmarkVisited(t.id);
+          }
         } catch (_) {}
       }
     }));
