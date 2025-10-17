@@ -11,6 +11,8 @@ This is an open source Firefox add-on for advanced tab management.
 - Perform bulk operations (close, reload, unload, move) on selected tabs, and a
   command to unload all tabs at once. The keyboard shortcut for this command can
   be configured on the Options page.
+- Integrates with Firefox's native **Unload Tab** capability when available so the
+  add-on mirrors the browser's built-in behavior.
 - In Full View, the context menu offers **Activate Selected** to load all
   highlighted tabs at once.
 - Each tab row includes a button to quickly close that tab.

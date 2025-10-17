@@ -1,6 +1,21 @@
 // No cap on stored tabs so the Recent panel lists every visited tab
 const MAX_RECENT = Infinity;
 const action = browser.browserAction || browser.action;
+const supportsNativeTabUnload = typeof browser?.tabs?.unload === 'function';
+
+async function unloadTab(tabId) {
+  if (supportsNativeTabUnload) {
+    try {
+      await browser.tabs.unload(tabId);
+      return true;
+    } catch (_) {}
+  }
+  try {
+    await browser.tabs.discard(tabId);
+    return true;
+  } catch (_) {}
+  return false;
+}
 
 let recent = [];
 let visited = new Set();
@@ -326,11 +341,7 @@ async function openFullView() {
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
-    }));
+    .map(t => unloadTab(t.id)));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
@@ -344,10 +355,9 @@ async function checkAutoUnload() {
     const tabs = await browser.tabs.query({});
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
-        try {
-          await browser.tabs.discard(t.id);
+        if (await unloadTab(t.id)) {
           unmarkVisited(t.id);
-        } catch (_) {}
+        }
       }
     }));
   } catch (e) {
