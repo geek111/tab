@@ -45,6 +45,21 @@ const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
 
+async function unloadTab(tabId) {
+  if (!browser.tabs) return;
+  if (typeof browser.tabs.unload === 'function') {
+    try {
+      await browser.tabs.unload(tabId);
+      return;
+    } catch (error) {
+      if (typeof browser.tabs.discard !== 'function') throw error;
+    }
+  }
+  if (typeof browser.tabs.discard === 'function') {
+    await browser.tabs.discard(tabId);
+  }
+}
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -1396,7 +1411,7 @@ function showContextMenu(e) {
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       try {
-        await browser.tabs.discard(id);
+        await unloadTab(id);
         await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
       } catch (_) {}
       scheduleUpdate();
@@ -1469,7 +1484,7 @@ async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
     try {
-      await browser.tabs.discard(id);
+      await unloadTab(id);
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
     } catch (_) {}
   }));
@@ -1480,7 +1495,7 @@ async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.map(async t => {
     try {
-      await browser.tabs.discard(t.id);
+      await unloadTab(t.id);
     } catch (_) {}
   }));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
