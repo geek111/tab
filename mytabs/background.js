@@ -279,8 +279,8 @@ browser.runtime.onMessage.addListener((msg) => {
     return Promise.resolve({ duplicates: Array.from(dupIds) });
   } else if (msg && msg.type === 'getTabState') {
     return Promise.resolve({ tabs: allTabCache, visited: Array.from(visited) });
-  } else if (msg && msg.type === 'unmarkVisited') {
-    unmarkVisited(msg.tabId);
+  } else if (msg && msg.type === 'nativeUnloadTabs') {
+    return nativeUnloadTabs(msg.tabIds, { skipActive: msg && msg.skipActive !== false });
   } else if (msg && msg.type === 'reorderRecent') {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
   } else if (msg && msg.type === 'clearVisitHistory') {
@@ -323,14 +323,56 @@ async function openFullView() {
   await browser.windows.create(createData);
 }
 
+async function nativeUnloadTabs(tabIds, { skipActive = true } = {}) {
+  const uniqueIds = Array.from(new Set((tabIds || [])
+    .map(id => Number(id))
+    .filter(id => Number.isInteger(id))));
+  const results = [];
+
+  for (const id of uniqueIds) {
+    try {
+      const tab = await browser.tabs.get(id);
+      if (!tab) {
+        results.push({ tabId: id, success: false, reason: 'not_found' });
+        continue;
+      }
+      if (tab.discarded) {
+        unmarkVisited(id);
+        results.push({ tabId: id, success: true, reason: 'already_discarded' });
+        continue;
+      }
+      if (skipActive && tab.active) {
+        results.push({ tabId: id, success: false, reason: 'active_tab' });
+        continue;
+      }
+
+      await browser.tabs.discard(id);
+      const updated = await browser.tabs.get(id).catch(() => null);
+      if (updated && updated.discarded) {
+        unmarkVisited(id);
+        results.push({ tabId: id, success: true });
+      } else {
+        results.push({ tabId: id, success: false, reason: 'not_discarded' });
+      }
+    } catch (error) {
+      results.push({ tabId: id, success: false, reason: error && error.message ? error.message : 'discard_failed' });
+    }
+  }
+
+  if (results.some(r => r.success)) {
+    await refreshTabState();
+  }
+
+  return {
+    results,
+    discarded: results.filter(r => r.success).map(r => r.tabId),
+    failed: results.filter(r => !r.success).map(r => r.tabId)
+  };
+}
+
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
-    }));
+  await nativeUnloadTabs(tabs.map(t => t.id));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
@@ -342,14 +384,12 @@ async function checkAutoUnload() {
   const threshold = Date.now() - autoUnloadMinutes * 60000;
   try {
     const tabs = await browser.tabs.query({});
-    await Promise.all(tabs.map(async t => {
-      if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
-        try {
-          await browser.tabs.discard(t.id);
-          unmarkVisited(t.id);
-        } catch (_) {}
-      }
-    }));
+    const candidates = tabs
+      .filter(t => !t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold)
+      .map(t => t.id);
+    if (candidates.length) {
+      await nativeUnloadTabs(candidates, { skipActive: false });
+    }
   } catch (e) {
     console.error('Auto unload failed', e);
   }

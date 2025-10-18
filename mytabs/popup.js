@@ -1395,10 +1395,7 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
+      await requestNativeUnload([id]);
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1445,6 +1442,22 @@ function getSelectedTabIds() {
   return tabItems.filter(it => !it.separator && it.selected).map(it => it.tab.id);
 }
 
+async function requestNativeUnload(tabIds, options = {}) {
+  if (!Array.isArray(tabIds) || tabIds.length === 0) {
+    return { discarded: [], failed: [] };
+  }
+  try {
+    const response = await browser.runtime.sendMessage({
+      type: 'nativeUnloadTabs',
+      tabIds,
+      skipActive: options.skipActive !== false
+    });
+    return response || { discarded: [], failed: tabIds };
+  } catch (_) {
+    return { discarded: [], failed: tabIds };
+  }
+}
+
 async function bulkClose() {
   const ids = getSelectedTabIds();
   if (ids.length) await browser.tabs.remove(ids);
@@ -1467,23 +1480,19 @@ async function bulkActivate() {
 
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
-  await Promise.all(ids.map(async id => {
-    try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-    } catch (_) {}
-  }));
+  if (ids.length) {
+    await requestNativeUnload(ids);
+  }
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
-  await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
+  const ids = tabs.map(t => t.id);
+  if (ids.length) {
+    await requestNativeUnload(ids, { skipActive: false });
+    await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
+  }
   scheduleUpdate();
 }
 
