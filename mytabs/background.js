@@ -323,6 +323,69 @@ async function openFullView() {
   await browser.windows.create(createData);
 }
 
+async function discardNativeTab(tabId, { skipActive = true } = {}) {
+  let tab;
+  try {
+    tab = await browser.tabs.get(tabId);
+  } catch (error) {
+    return { success: false, reason: 'not_found' };
+  }
+
+  if (!tab) {
+    return { success: false, reason: 'not_found' };
+  }
+
+  if (tab.discarded) {
+    unmarkVisited(tabId);
+    return { success: true, reason: 'already_discarded' };
+  }
+
+  if (skipActive && tab.active) {
+    return { success: false, reason: 'active_tab' };
+  }
+
+  const shouldRevert = tab.autoDiscardable === false;
+  if (shouldRevert) {
+    try {
+      await browser.tabs.update(tabId, { autoDiscardable: true });
+    } catch (_) {
+      return { success: false, reason: 'auto_discardable_update_failed' };
+    }
+  }
+
+  let discardResult;
+  try {
+    discardResult = await browser.tabs.discard(tabId);
+  } catch (discardError) {
+    if (shouldRevert) {
+      await browser.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
+    }
+    return {
+      success: false,
+      reason: discardError && discardError.message ? discardError.message : 'discard_failed'
+    };
+  }
+
+  const candidate = Array.isArray(discardResult)
+    ? discardResult.find(t => t && t.id === tabId)
+    : discardResult;
+  let updated = candidate;
+  if (!updated || !updated.discarded) {
+    updated = await browser.tabs.get(tabId).catch(() => null);
+  }
+
+  if (shouldRevert) {
+    await browser.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
+  }
+
+  if (updated && updated.discarded) {
+    unmarkVisited(tabId);
+    return { success: true };
+  }
+
+  return { success: false, reason: 'not_discarded' };
+}
+
 async function nativeUnloadTabs(tabIds, { skipActive = true } = {}) {
   const uniqueIds = Array.from(new Set((tabIds || [])
     .map(id => Number(id))
@@ -330,59 +393,8 @@ async function nativeUnloadTabs(tabIds, { skipActive = true } = {}) {
   const results = [];
 
   for (const id of uniqueIds) {
-    try {
-      const tab = await browser.tabs.get(id);
-      if (!tab) {
-        results.push({ tabId: id, success: false, reason: 'not_found' });
-        continue;
-      }
-      if (tab.discarded) {
-        unmarkVisited(id);
-        results.push({ tabId: id, success: true, reason: 'already_discarded' });
-        continue;
-      }
-      if (skipActive && tab.active) {
-        results.push({ tabId: id, success: false, reason: 'active_tab' });
-        continue;
-      }
-
-      let revertAutoDiscardable = false;
-      if (tab.autoDiscardable === false) {
-        try {
-          await browser.tabs.update(id, { autoDiscardable: true });
-          revertAutoDiscardable = true;
-        } catch (updateError) {
-          results.push({ tabId: id, success: false, reason: 'auto_discardable_update_failed' });
-          continue;
-        }
-      }
-
-      try {
-        await browser.tabs.discard(id);
-      } catch (discardError) {
-        if (revertAutoDiscardable) {
-          await browser.tabs.update(id, { autoDiscardable: false }).catch(() => {});
-        }
-        results.push({ tabId: id, success: false, reason: discardError && discardError.message ? discardError.message : 'discard_failed' });
-        continue;
-      }
-
-      const updated = await browser.tabs.get(id).catch(() => null);
-      if (updated && updated.discarded) {
-        unmarkVisited(id);
-        if (revertAutoDiscardable) {
-          await browser.tabs.update(id, { autoDiscardable: false }).catch(() => {});
-        }
-        results.push({ tabId: id, success: true });
-      } else {
-        if (revertAutoDiscardable) {
-          await browser.tabs.update(id, { autoDiscardable: false }).catch(() => {});
-        }
-        results.push({ tabId: id, success: false, reason: 'not_discarded' });
-      }
-    } catch (error) {
-      results.push({ tabId: id, success: false, reason: error && error.message ? error.message : 'discard_failed' });
-    }
+    const result = await discardNativeTab(id, { skipActive });
+    results.push({ tabId: id, ...result });
   }
 
   if (results.some(r => r.success)) {
