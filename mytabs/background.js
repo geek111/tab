@@ -346,12 +346,38 @@ async function nativeUnloadTabs(tabIds, { skipActive = true } = {}) {
         continue;
       }
 
-      await browser.tabs.discard(id);
+      let revertAutoDiscardable = false;
+      if (tab.autoDiscardable === false) {
+        try {
+          await browser.tabs.update(id, { autoDiscardable: true });
+          revertAutoDiscardable = true;
+        } catch (updateError) {
+          results.push({ tabId: id, success: false, reason: 'auto_discardable_update_failed' });
+          continue;
+        }
+      }
+
+      try {
+        await browser.tabs.discard(id);
+      } catch (discardError) {
+        if (revertAutoDiscardable) {
+          await browser.tabs.update(id, { autoDiscardable: false }).catch(() => {});
+        }
+        results.push({ tabId: id, success: false, reason: discardError && discardError.message ? discardError.message : 'discard_failed' });
+        continue;
+      }
+
       const updated = await browser.tabs.get(id).catch(() => null);
       if (updated && updated.discarded) {
         unmarkVisited(id);
+        if (revertAutoDiscardable) {
+          await browser.tabs.update(id, { autoDiscardable: false }).catch(() => {});
+        }
         results.push({ tabId: id, success: true });
       } else {
+        if (revertAutoDiscardable) {
+          await browser.tabs.update(id, { autoDiscardable: false }).catch(() => {});
+        }
         results.push({ tabId: id, success: false, reason: 'not_discarded' });
       }
     } catch (error) {
