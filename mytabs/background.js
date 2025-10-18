@@ -327,7 +327,7 @@ async function discardNativeTab(tabId, { skipActive = true } = {}) {
   let tab;
   try {
     tab = await browser.tabs.get(tabId);
-  } catch (error) {
+  } catch (_) {
     return { success: false, reason: 'not_found' };
   }
 
@@ -344,22 +344,10 @@ async function discardNativeTab(tabId, { skipActive = true } = {}) {
     return { success: false, reason: 'active_tab' };
   }
 
-  const shouldRevert = tab.autoDiscardable === false;
-  if (shouldRevert) {
-    try {
-      await browser.tabs.update(tabId, { autoDiscardable: true });
-    } catch (_) {
-      return { success: false, reason: 'auto_discardable_update_failed' };
-    }
-  }
-
   let discardResult;
   try {
     discardResult = await browser.tabs.discard(tabId);
   } catch (discardError) {
-    if (shouldRevert) {
-      await browser.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
-    }
     return {
       success: false,
       reason: discardError && discardError.message ? discardError.message : 'discard_failed'
@@ -372,10 +360,6 @@ async function discardNativeTab(tabId, { skipActive = true } = {}) {
   let updated = candidate;
   if (!updated || !updated.discarded) {
     updated = await browser.tabs.get(tabId).catch(() => null);
-  }
-
-  if (shouldRevert) {
-    await browser.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
   }
 
   if (updated && updated.discarded) {
