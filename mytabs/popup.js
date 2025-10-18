@@ -1395,10 +1395,7 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
+      await requestUnload([id], true);
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1451,6 +1448,24 @@ async function bulkClose() {
   scheduleUpdate();
 }
 
+async function requestUnload(tabIds, allowActive = false) {
+  if (!Array.isArray(tabIds) || !tabIds.length) {
+    return { results: [] };
+  }
+
+  try {
+    const response = await browser.runtime.sendMessage({
+      type: 'unloadTabs',
+      tabIds,
+      allowActive
+    });
+    return response || { results: [] };
+  } catch (error) {
+    console.error('Failed to request tab unload', error);
+    return { results: [] };
+  }
+}
+
 async function bulkReload() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(id => browser.tabs.reload(id)));
@@ -1467,22 +1482,13 @@ async function bulkActivate() {
 
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
-  await Promise.all(ids.map(async id => {
-    try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-    } catch (_) {}
-  }));
+  await requestUnload(ids, true);
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
+  await requestUnload(tabs.map(t => t.id), true);
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
   scheduleUpdate();
 }
