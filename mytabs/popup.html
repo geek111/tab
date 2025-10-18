@@ -21,6 +21,14 @@
     <input type="text" id="search" placeholder="Search tabs" />
     <button id="search-clear" class="clear-btn hidden" type="button">&times;</button>
   </div>
+  <section id="unload-panel" aria-label="Zarządzanie pamięcią">
+    <header class="unload-header">
+      <h2>Zwolnij karty</h2>
+      <button id="unload-selected" type="button" disabled>Zwolnij zaznaczone</button>
+    </header>
+    <div id="unload-messages" class="hidden" role="status" aria-live="polite"></div>
+    <ul id="unload-list" class="unload-list" aria-label="Lista kart do zwolnienia"></ul>
+  </section>
   <div id="error"></div>
   <div id="tabs-wrapper">
     <div id="tabs"></div>

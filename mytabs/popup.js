@@ -23,6 +23,12 @@ let movePending = null;
 // Persist selection across updates
 let selectedIds = new Set();
 
+const unloadSelection = new Set();
+let unloadListContainer = null;
+let unloadMessageBox = null;
+let unloadButton = null;
+let unloadMessageTimeout = null;
+
 // Cached tab list provided by the background script
 let cachedTabs = null;
 
@@ -211,6 +217,213 @@ function applyHighlights(span, indices) {
   }
   if (last < text.length) {
     span.appendChild(document.createTextNode(text.slice(last)));
+  }
+}
+
+function isTabSharingMedia(tab) {
+  const share = tab && tab.sharingState;
+  return !!(share && (share.camera || share.microphone || share.screen));
+}
+
+function isTabEligibleForUnload(tab) {
+  if (!tab) return false;
+  if (tab.discarded) return false;
+  if (tab.active) return false;
+  if (tab.audible) return false;
+  if (isTabSharingMedia(tab)) return false;
+  return true;
+}
+
+function updateUnloadButtonState() {
+  if (unloadButton) {
+    unloadButton.disabled = unloadSelection.size === 0;
+  }
+}
+
+function hideUnloadMessage() {
+  if (unloadMessageBox) {
+    unloadMessageBox.classList.add('hidden');
+    unloadMessageBox.textContent = '';
+    unloadMessageBox.classList.remove('error', 'success');
+  }
+  if (unloadMessageTimeout) {
+    clearTimeout(unloadMessageTimeout);
+    unloadMessageTimeout = null;
+  }
+}
+
+function showUnloadMessage(text, level = 'info') {
+  if (!unloadMessageBox) return;
+  unloadMessageBox.textContent = text;
+  unloadMessageBox.classList.remove('hidden');
+  unloadMessageBox.classList.toggle('error', level === 'error');
+  unloadMessageBox.classList.toggle('success', level === 'success');
+  if (unloadMessageTimeout) {
+    clearTimeout(unloadMessageTimeout);
+  }
+  unloadMessageTimeout = setTimeout(() => {
+    hideUnloadMessage();
+  }, 4000);
+}
+
+function formatUnloadError(result) {
+  const { reason, message } = result || {};
+  switch (reason) {
+    case 'not_found':
+      return 'Karta nie została znaleziona.';
+    case 'active_tab':
+      return 'Aktywna karta została pominięta.';
+    case 'audible_tab':
+      return 'Karta odtwarza dźwięk.';
+    case 'streaming_tab':
+      return 'Karta udostępnia ekran lub kamerę.';
+    case 'discard_failed':
+      return message || 'Przeglądarka odrzuciła polecenie.';
+    case 'not_discarded':
+      return message || 'Firefox nie potwierdził stanu discarded.';
+    case 'already_discarded':
+      return 'Karta była już zwolniona.';
+    default:
+      return message || 'Nieznany błąd.';
+  }
+}
+
+function ensureUnloadSelection(allTabs) {
+  const ids = new Set((Array.isArray(allTabs) ? allTabs : []).map(t => t.id));
+  for (const id of Array.from(unloadSelection)) {
+    if (!ids.has(id)) {
+      unloadSelection.delete(id);
+    }
+  }
+}
+
+function renderUnloadList(allTabs = []) {
+  if (!unloadListContainer) return;
+  const tabs = Array.isArray(allTabs) ? allTabs : [];
+  ensureUnloadSelection(tabs);
+  unloadListContainer.textContent = '';
+  const fragment = document.createDocumentFragment();
+  let rendered = 0;
+
+  for (const tab of tabs) {
+    if (tab.windowType && tab.windowType !== 'normal') continue;
+    const eligible = isTabEligibleForUnload(tab);
+    const entry = document.createElement('li');
+    entry.className = 'unload-entry';
+    entry.dataset.tabId = String(tab.id);
+    if (tab.discarded) entry.classList.add('faded');
+    if (!eligible) entry.classList.add('disabled');
+    entry.title = tab.url || tab.title || '';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = tab.id;
+    checkbox.checked = eligible && unloadSelection.has(tab.id);
+    checkbox.disabled = !eligible;
+    checkbox.addEventListener('change', () => {
+      const tabId = Number(checkbox.value);
+      if (checkbox.checked) {
+        unloadSelection.add(tabId);
+      } else {
+        unloadSelection.delete(tabId);
+      }
+      updateUnloadButtonState();
+    });
+    entry.appendChild(checkbox);
+
+    let iconEl;
+    if (tab.favIconUrl && !tab.favIconUrl.startsWith('chrome:')) {
+      iconEl = document.createElement('img');
+      iconEl.src = tab.favIconUrl;
+      iconEl.alt = '';
+      iconEl.addEventListener('error', () => {
+        iconEl.replaceWith(createFallbackIcon());
+      }, { once: true });
+    } else {
+      iconEl = createFallbackIcon();
+    }
+    entry.appendChild(iconEl);
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'unload-entry-title';
+    titleSpan.textContent = tab.title || tab.url || 'Bez tytułu';
+    entry.appendChild(titleSpan);
+
+    fragment.appendChild(entry);
+    rendered++;
+
+    if (!eligible) {
+      unloadSelection.delete(tab.id);
+    }
+  }
+
+  if (rendered === 0) {
+    const empty = document.createElement('li');
+    empty.className = 'unload-entry empty';
+    empty.textContent = 'Brak kart do zwolnienia.';
+    empty.setAttribute('aria-disabled', 'true');
+    fragment.appendChild(empty);
+  }
+
+  unloadListContainer.appendChild(fragment);
+  updateUnloadButtonState();
+}
+
+function createFallbackIcon() {
+  const span = document.createElement('span');
+  span.className = 'unload-entry-icon';
+  span.textContent = '🗂️';
+  return span;
+}
+
+async function handleUnloadSelected() {
+  if (!unloadSelection.size) return;
+  hideUnloadMessage();
+  const ids = Array.from(unloadSelection);
+  if (unloadButton) unloadButton.disabled = true;
+  try {
+    const response = await browser.runtime.sendMessage({
+      type: 'nativeUnloadTabs',
+      tabIds: ids,
+      skipActive: true
+    });
+    const results = Array.isArray(response?.results) ? response.results : [];
+    let successCount = 0;
+    const failures = [];
+    for (const result of results) {
+      if (result.success) {
+        successCount += 1;
+      } else {
+        failures.push(result);
+      }
+      if (typeof result.tabId === 'number') {
+        unloadSelection.delete(result.tabId);
+      }
+    }
+    if (failures.length) {
+      const tabMap = new Map((Array.isArray(cachedTabs) ? cachedTabs : []).map(t => [t.id, t]));
+      const parts = failures.map(res => {
+        const tab = tabMap.get(res.tabId);
+        const title = tab?.title || tab?.url || `Karta ${res.tabId}`;
+        return `Nie udało się zwolnić „${title}”: ${formatUnloadError(res)}`;
+      });
+      showUnloadMessage(parts.join(' '), 'error');
+    } else if (successCount > 0) {
+      const plural = (n) => {
+        const abs = Math.abs(n);
+        if (abs === 1) return 'kartę';
+        if (abs % 10 >= 2 && abs % 10 <= 4 && (abs % 100 < 10 || abs % 100 >= 20)) return 'karty';
+        return 'kart';
+      };
+      const text = `Zwolniono ${successCount} ${plural(successCount)}.`;
+      showUnloadMessage(text, 'success');
+    }
+  } catch (error) {
+    console.error('Unload request failed', error);
+    showUnloadMessage('Nie udało się wykonać polecenia zwolnienia kart.', 'error');
+  } finally {
+    updateUnloadButtonState();
+    scheduleUpdate();
   }
 }
 
@@ -874,6 +1087,7 @@ async function update() {
     const activeId = allTabs.find(t => t.active)?.id ?? -1;
     const searchInput = document.getElementById('search');
     const query = searchInput.value.trim();
+    renderUnloadList(allTabs);
     let list;
     if (query) {
       list = applySearchOrder(filterTabs(tabs, query));
@@ -1084,6 +1298,13 @@ async function init() {
               document.getElementById('tabs');
   scrollContainer = document.getElementById('tabs-wrapper') || container;
   easterEgg = document.getElementById('easter-egg');
+  unloadListContainer = document.getElementById('unload-list');
+  unloadMessageBox = document.getElementById('unload-messages');
+  unloadButton = document.getElementById('unload-selected');
+  if (unloadButton) {
+    unloadButton.addEventListener('click', handleUnloadSelected);
+  }
+  updateUnloadButtonState();
   const menuEl = document.getElementById('menu');
   menuEl?.addEventListener('dblclick', showEasterEgg);
   scrollContainer.addEventListener('scroll', saveScroll);
@@ -1227,6 +1448,7 @@ function registerTabEvents() {
   browser.tabs.onActivated.addListener(updateListener);
   browser.tabs.onDetached.addListener(updateListener);
   browser.tabs.onAttached.addListener(updateListener);
+  browser.windows.onFocusChanged.addListener(updateListener);
 }
 
 function unregisterTabEvents() {
@@ -1236,11 +1458,14 @@ function unregisterTabEvents() {
   browser.tabs.onActivated.removeListener(updateListener);
   browser.tabs.onDetached.removeListener(updateListener);
   browser.tabs.onAttached.removeListener(updateListener);
+  browser.windows.onFocusChanged.removeListener(updateListener);
 }
 
 function cleanup() {
   unregisterTabEvents();
   resetTabState();
+  unloadSelection.clear();
+  hideUnloadMessage();
 }
 
 document.addEventListener('DOMContentLoaded', init);

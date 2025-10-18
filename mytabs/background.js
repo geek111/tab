@@ -328,11 +328,11 @@ async function discardNativeTab(tabId, { skipActive = true } = {}) {
   try {
     tab = await browser.tabs.get(tabId);
   } catch (_) {
-    return { success: false, reason: 'not_found' };
+    return { success: false, reason: 'not_found', message: 'Tab not found' };
   }
 
   if (!tab) {
-    return { success: false, reason: 'not_found' };
+    return { success: false, reason: 'not_found', message: 'Tab not found' };
   }
 
   if (tab.discarded) {
@@ -341,7 +341,15 @@ async function discardNativeTab(tabId, { skipActive = true } = {}) {
   }
 
   if (skipActive && tab.active) {
-    return { success: false, reason: 'active_tab' };
+    return { success: false, reason: 'active_tab', message: 'Active tab skipped' };
+  }
+
+  if (tab.audible) {
+    return { success: false, reason: 'audible_tab', message: 'Tab is playing audio' };
+  }
+
+  if (tab.sharingState && (tab.sharingState.camera || tab.sharingState.microphone || tab.sharingState.screen)) {
+    return { success: false, reason: 'streaming_tab', message: 'Tab is sharing media' };
   }
 
   let discardResult;
@@ -350,7 +358,8 @@ async function discardNativeTab(tabId, { skipActive = true } = {}) {
   } catch (discardError) {
     return {
       success: false,
-      reason: discardError && discardError.message ? discardError.message : 'discard_failed'
+      reason: 'discard_failed',
+      message: discardError && discardError.message ? discardError.message : 'Discard failed'
     };
   }
 
@@ -359,7 +368,17 @@ async function discardNativeTab(tabId, { skipActive = true } = {}) {
     : discardResult;
   let updated = candidate;
   if (!updated || !updated.discarded) {
-    updated = await browser.tabs.get(tabId).catch(() => null);
+    try {
+      updated = await browser.tabs.get(tabId);
+    } catch (verifyError) {
+      return {
+        success: false,
+        reason: 'not_discarded',
+        message: verifyError && verifyError.message
+          ? verifyError.message
+          : 'Unable to verify discarded state'
+      };
+    }
   }
 
   if (updated && updated.discarded) {
@@ -367,7 +386,11 @@ async function discardNativeTab(tabId, { skipActive = true } = {}) {
     return { success: true };
   }
 
-  return { success: false, reason: 'not_discarded' };
+  return {
+    success: false,
+    reason: 'not_discarded',
+    message: 'Tab did not enter discarded state'
+  };
 }
 
 async function nativeUnloadTabs(tabIds, { skipActive = true } = {}) {
@@ -378,10 +401,13 @@ async function nativeUnloadTabs(tabIds, { skipActive = true } = {}) {
 
   for (const id of uniqueIds) {
     const result = await discardNativeTab(id, { skipActive });
+    if (!result.success) {
+      console.warn('Failed to discard tab', id, result.reason, result.message);
+    }
     results.push({ tabId: id, ...result });
   }
 
-  if (results.some(r => r.success)) {
+  if (results.length) {
     await refreshTabState();
   }
 
@@ -440,22 +466,41 @@ browser.commands.onCommand.addListener((command) => {
   }
 });
 
+function isDuplicateMenuError(error) {
+  return error && error.message && /Cannot create|already exists/i.test(error.message);
+}
+
+async function createContextMenuSafe(details) {
+  try {
+    await browser.contextMenus.create(details);
+  } catch (error) {
+    if (!isDuplicateMenuError(error)) {
+      console.error('Failed to create context menu', details?.id, error);
+    }
+  }
+}
+
 browser.runtime.onInstalled.addListener(async () => {
   await clearVisitHistory();
-  await browser.contextMenus.create({
+  await createContextMenuSafe({
     id: 'show-version',
     title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
     contexts: ['browser_action']
   });
-  await browser.contextMenus.create({
+  await createContextMenuSafe({
     id: 'open-full-view',
     title: 'Open Full View',
     contexts: ['browser_action']
   });
-  await browser.contextMenus.create({
+  await createContextMenuSafe({
     id: 'open-options',
     title: 'Options',
     contexts: ['browser_action']
+  });
+  await createContextMenuSafe({
+    id: 'unload-tab-native',
+    title: 'Zwolnij kartę (Unload)',
+    contexts: ['tab']
   });
 });
 
@@ -464,5 +509,19 @@ browser.contextMenus.onClicked.addListener((info) => {
     openFullView();
   } else if (info.menuItemId === 'open-options') {
     browser.runtime.openOptionsPage();
+  } else if (info.menuItemId === 'unload-tab-native' && typeof info.tabId === 'number') {
+    nativeUnloadTabs([info.tabId], { skipActive: true }).catch((err) => {
+      console.error('Context menu unload failed', err);
+    });
   }
+});
+
+createContextMenuSafe({
+  id: 'unload-tab-native',
+  title: 'Zwolnij kartę (Unload)',
+  contexts: ['tab']
+});
+
+browser.windows.onFocusChanged.addListener(() => {
+  refreshTabState();
 });
