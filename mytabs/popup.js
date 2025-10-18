@@ -1396,9 +1396,10 @@ function showContextMenu(e) {
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
+        await browser.runtime.sendMessage({ type: 'discardTabs', tabIds: [id] });
+      } catch (_) {
+        await browser.tabs.discard(id).catch(() => {});
+      }
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1467,23 +1468,23 @@ async function bulkActivate() {
 
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
-  await Promise.all(ids.map(async id => {
-    try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-    } catch (_) {}
-  }));
+  if (!ids.length) return;
+  try {
+    await browser.runtime.sendMessage({ type: 'discardTabs', tabIds: ids });
+  } catch (_) {
+    await Promise.all(ids.map(id => browser.tabs.discard(id).catch(() => {})));
+  }
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
-  const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
-  await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
+  try {
+    await browser.runtime.sendMessage({ type: 'unloadAllTabs' });
+  } catch (_) {
+    const tabs = await browser.tabs.query({});
+    await Promise.all(tabs.map(t => browser.tabs.discard(t.id).catch(() => {})));
+    await browser.runtime.sendMessage({ type: 'clearVisitHistory' }).catch(() => {});
+  }
   scheduleUpdate();
 }
 

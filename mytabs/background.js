@@ -8,6 +8,13 @@ let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+const MENU_IDS = {
+  showVersion: 'show-version',
+  openFullView: 'open-full-view',
+  openOptions: 'open-options',
+  unloadTab: 'native-unload-tab'
+};
+
 async function applyAutoDiscardable() {
   try {
     const tabs = await browser.tabs.query({});
@@ -140,6 +147,7 @@ browser.runtime.onStartup.addListener(async () => {
   }
   sendVisitedUpdate();
   refreshTabState();
+  await createContextMenus();
 });
 
 // Listen for settings changes
@@ -197,6 +205,48 @@ function scheduleRecentSave() {
       recentTimer = null;
       browser.storage.local.set({ recent });
     }, 500);
+  }
+}
+
+async function createContextMenus() {
+  if (!browser.contextMenus) return;
+
+  const versionTitle = `KepiTAB Manager v${browser.runtime.getManifest().version}`;
+  const definitions = [
+    {
+      id: MENU_IDS.showVersion,
+      title: versionTitle,
+      contexts: ['action', 'browser_action']
+    },
+    {
+      id: MENU_IDS.openFullView,
+      title: 'Open Full View',
+      contexts: ['action', 'browser_action']
+    },
+    {
+      id: MENU_IDS.openOptions,
+      title: 'Options',
+      contexts: ['action', 'browser_action']
+    },
+    {
+      id: MENU_IDS.unloadTab,
+      title: 'Unload Tab',
+      contexts: ['tab']
+    }
+  ];
+
+  await Promise.all(definitions.map(async (def) => {
+    try {
+      await browser.contextMenus.remove(def.id);
+    } catch (_) {}
+  }));
+
+  for (const def of definitions) {
+    try {
+      await browser.contextMenus.create(def);
+    } catch (e) {
+      console.error('Failed to create context menu', def.id, e);
+    }
   }
 }
 
@@ -287,8 +337,43 @@ browser.runtime.onMessage.addListener((msg) => {
     clearVisitHistory();
   } else if (msg && msg.type === 'openFullView') {
     return openFullView();
+  } else if (msg && msg.type === 'discardTabs') {
+    return discardTabs(msg.tabIds, { keepVisited: msg.keepVisited });
+  } else if (msg && msg.type === 'unloadAllTabs') {
+    return unloadAllTabs();
   }
 });
+
+async function discardTabs(tabIds, { keepVisited = false } = {}) {
+  const ids = Array.isArray(tabIds) ? tabIds : [tabIds];
+  const uniqueIds = Array.from(new Set(ids.filter(id => typeof id === 'number')));
+  if (!uniqueIds.length) return [];
+
+  const discardedIds = new Set();
+
+  for (const id of uniqueIds) {
+    try {
+      const result = await browser.tabs.discard(id);
+      if (Array.isArray(result)) {
+        for (const tab of result) {
+          if (tab && typeof tab.id === 'number') discardedIds.add(tab.id);
+        }
+      } else if (result && typeof result.id === 'number') {
+        discardedIds.add(result.id);
+      } else {
+        discardedIds.add(id);
+      }
+    } catch (_) {}
+  }
+
+  if (!keepVisited) {
+    for (const id of discardedIds) {
+      unmarkVisited(id);
+    }
+  }
+
+  return Array.from(discardedIds);
+}
 
 async function openFullView() {
   const fullUrl = browser.runtime.getURL('full.html');
@@ -325,12 +410,8 @@ async function openFullView() {
 
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
-    }));
+  const ids = tabs.filter(t => !t.discarded).map(t => t.id);
+  await discardTabs(ids);
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
@@ -344,10 +425,7 @@ async function checkAutoUnload() {
     const tabs = await browser.tabs.query({});
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
-        try {
-          await browser.tabs.discard(t.id);
-          unmarkVisited(t.id);
-        } catch (_) {}
+        await discardTabs(t.id);
       }
     }));
   } catch (e) {
@@ -380,27 +458,15 @@ browser.commands.onCommand.addListener((command) => {
 
 browser.runtime.onInstalled.addListener(async () => {
   await clearVisitHistory();
-  await browser.contextMenus.create({
-    id: 'show-version',
-    title: `KepiTAB Manager v${browser.runtime.getManifest().version}`,
-    contexts: ['browser_action']
-  });
-  await browser.contextMenus.create({
-    id: 'open-full-view',
-    title: 'Open Full View',
-    contexts: ['browser_action']
-  });
-  await browser.contextMenus.create({
-    id: 'open-options',
-    title: 'Options',
-    contexts: ['browser_action']
-  });
+  await createContextMenus();
 });
 
-browser.contextMenus.onClicked.addListener((info) => {
-  if (info.menuItemId === 'open-full-view') {
+browser.contextMenus.onClicked.addListener(async (info) => {
+  if (info.menuItemId === MENU_IDS.openFullView) {
     openFullView();
-  } else if (info.menuItemId === 'open-options') {
+  } else if (info.menuItemId === MENU_IDS.openOptions) {
     browser.runtime.openOptionsPage();
+  } else if (info.menuItemId === MENU_IDS.unloadTab && typeof info.tabId === 'number') {
+    await discardTabs(info.tabId);
   }
 });
