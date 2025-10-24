@@ -17,39 +17,176 @@ async function applyAutoDiscardable() {
   } catch (_) {}
 }
 
+async function activateSiblingTab(tabInfo) {
+  try {
+    const siblings = await browser.tabs.query({ windowId: tabInfo.windowId });
+    if (!Array.isArray(siblings) || siblings.length < 2) {
+      return false;
+    }
+
+    const sorted = siblings
+      .filter(t => t && t.id !== tabInfo.id)
+      .sort((a, b) => a.index - b.index);
+
+    if (!sorted.length) {
+      return false;
+    }
+
+    const reversed = [...sorted].reverse();
+    let candidate = sorted.find(t => t.index > tabInfo.index && !t.discarded);
+    if (!candidate) {
+      candidate = reversed.find(t => t.index < tabInfo.index && !t.discarded);
+    }
+    if (!candidate) {
+      candidate = sorted.find(t => !t.discarded);
+    }
+    if (!candidate) {
+      candidate = sorted.find(t => t.index > tabInfo.index) || reversed.find(t => t.index < tabInfo.index) || sorted[0];
+    }
+
+    await browser.tabs.update(candidate.id, { active: true });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function confirmDiscarded(tabId) {
+  try {
+    const refreshed = await browser.tabs.get(tabId);
+    return !!(refreshed && refreshed.discarded);
+  } catch (_) {
+    return false;
+  }
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function tryTabsUnload(tabId) {
+  if (!browser.tabs || typeof browser.tabs.unload !== 'function') {
+    return false;
+  }
+
+  try {
+    const result = await browser.tabs.unload(tabId);
+    let success = await confirmDiscarded(tabId);
+    if (!success && Array.isArray(result)) {
+      success = result.some(t => t && (t.id === tabId || t.tabId === tabId || t.discarded));
+    }
+    return success;
+  } catch (err) {
+    if (err && typeof browser.tabs.unload === 'function') {
+      try {
+        const secondTry = await browser.tabs.unload([tabId]);
+        let success = await confirmDiscarded(tabId);
+        if (!success && Array.isArray(secondTry)) {
+          success = secondTry.some(t => t && (t.id === tabId || t.tabId === tabId || t.discarded));
+        }
+        return success;
+      } catch (_) {}
+    }
+  }
+
+  return false;
+}
+
+async function tryTabsDiscard(tabId) {
+  if (!browser.tabs || typeof browser.tabs.discard !== 'function') {
+    return false;
+  }
+
+  try {
+    const result = await browser.tabs.discard(tabId);
+    let success = await confirmDiscarded(tabId);
+    if (!success && Array.isArray(result)) {
+      success = result.some(t => t && (t.id === tabId || t.tabId === tabId || t.discarded));
+    }
+    return success;
+  } catch (err) {
+    try {
+      const secondTry = await browser.tabs.discard([tabId]);
+      let success = await confirmDiscarded(tabId);
+      if (!success && Array.isArray(secondTry)) {
+        success = secondTry.some(t => t && (t.id === tabId || t.tabId === tabId || t.discarded));
+      }
+      return success;
+    } catch (_) {}
+  }
+
+  return false;
+}
+
 async function unloadTabWithFallback(tabId) {
-  let restoreAutoDiscardable = false;
+  if (!browser.tabs || typeof browser.tabs.get !== 'function') {
+    return false;
+  }
+
   let tabInfo;
-  if (browser.tabs && typeof browser.tabs.get === 'function') {
+  try {
+    tabInfo = await browser.tabs.get(tabId);
+  } catch (_) {
+    return false;
+  }
+
+  if (!tabInfo) {
+    return false;
+  }
+
+  let restoreAutoDiscardable = false;
+  if (tabInfo.autoDiscardable === false && !tabInfo.discarded) {
+    try {
+      await browser.tabs.update(tabId, { autoDiscardable: true });
+      restoreAutoDiscardable = true;
+      tabInfo = await browser.tabs.get(tabId);
+    } catch (_) {}
+  }
+
+  if (tabInfo && tabInfo.active && !tabInfo.discarded) {
+    const switched = await activateSiblingTab(tabInfo);
+    if (!switched) {
+      if (restoreAutoDiscardable) {
+        try {
+          await browser.tabs.update(tabId, { autoDiscardable: false });
+        } catch (_) {}
+      }
+      return false;
+    }
+
     try {
       tabInfo = await browser.tabs.get(tabId);
-      if (tabInfo && tabInfo.autoDiscardable === false && !tabInfo.discarded) {
-        await browser.tabs.update(tabId, { autoDiscardable: true });
-        restoreAutoDiscardable = true;
+    } catch (_) {
+      tabInfo = null;
+    }
+    let retries = 5;
+    while (tabInfo && tabInfo.active && retries-- > 0) {
+      await delay(50);
+      try {
+        tabInfo = await browser.tabs.get(tabId);
+      } catch (_) {
+        tabInfo = null;
       }
-    } catch (_) {}
+    }
+    if (tabInfo && tabInfo.active) {
+      if (restoreAutoDiscardable) {
+        try {
+          await browser.tabs.update(tabId, { autoDiscardable: false });
+        } catch (_) {}
+      }
+      return false;
+    }
   }
 
   let unloaded = !!(tabInfo && tabInfo.discarded);
-  if (unloaded) {
-    restoreAutoDiscardable = false;
+  if (!unloaded) {
+    unloaded = await tryTabsUnload(tabId);
   }
-  if (browser.tabs && typeof browser.tabs.unload === 'function') {
-    try {
-      if (!unloaded) {
-        await browser.tabs.unload(tabId);
-        unloaded = true;
-      }
-    } catch (_) {}
-  }
-  if (!unloaded && browser.tabs && typeof browser.tabs.discard === 'function') {
-    try {
-      await browser.tabs.discard(tabId);
-      unloaded = true;
-    } catch (_) {}
+  if (!unloaded) {
+    unloaded = await tryTabsDiscard(tabId);
   }
 
-  if (!unloaded && restoreAutoDiscardable) {
+  if (restoreAutoDiscardable) {
     try {
       await browser.tabs.update(tabId, { autoDiscardable: false });
     } catch (_) {}
