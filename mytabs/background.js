@@ -17,6 +17,97 @@ async function applyAutoDiscardable() {
   } catch (_) {}
 }
 
+const CONFIRM_DISCARD_ATTEMPTS = 6;
+const CONFIRM_DISCARD_DELAY = 120;
+
+function tabResultIndicatesDiscard(result, tabId) {
+  if (!result) return false;
+  const check = (tab) => {
+    if (!tab || !tab.discarded) return false;
+    if (tabId == null) return true;
+    return tab.id === tabId || tab.id === Number(tabId);
+  };
+  if (Array.isArray(result)) {
+    return result.some(check);
+  }
+  if (typeof result === 'object') {
+    return check(result);
+  }
+  return false;
+}
+
+async function confirmTabDiscarded(tabId) {
+  for (let i = 0; i < CONFIRM_DISCARD_ATTEMPTS; i += 1) {
+    try {
+      const tab = await browser.tabs.get(tabId);
+      if (!tab) return false;
+      if (tab.discarded) {
+        return true;
+      }
+    } catch (_) {
+      return false;
+    }
+    await new Promise(resolve => setTimeout(resolve, CONFIRM_DISCARD_DELAY));
+  }
+  return false;
+}
+
+async function unloadTabWithFallback(tabId, { updateVisited = false } = {}) {
+  if (!browser.tabs || typeof browser.tabs.get !== 'function') {
+    return false;
+  }
+
+  let tabInfo;
+  try {
+    tabInfo = await browser.tabs.get(tabId);
+  } catch (_) {
+    tabInfo = null;
+  }
+
+  if (!tabInfo) return false;
+  if (tabInfo.discarded) {
+    if (updateVisited) unmarkVisited(tabId);
+    return true;
+  }
+
+  let restoreAutoDiscardable = false;
+  if (tabInfo.autoDiscardable === false) {
+    try {
+      await browser.tabs.update(tabId, { autoDiscardable: true });
+      restoreAutoDiscardable = true;
+    } catch (_) {
+      restoreAutoDiscardable = false;
+    }
+  }
+
+  let unloaded = false;
+  if (typeof browser.tabs.unload === 'function') {
+    try {
+      const result = await browser.tabs.unload(tabId);
+      unloaded = tabResultIndicatesDiscard(result, tabId) || await confirmTabDiscarded(tabId);
+    } catch (_) {}
+  }
+
+  if (!unloaded && typeof browser.tabs.discard === 'function') {
+    try {
+      const result = await browser.tabs.discard(tabId);
+      unloaded = tabResultIndicatesDiscard(result, tabId) || await confirmTabDiscarded(tabId);
+    } catch (_) {}
+  }
+
+  if (!unloaded && restoreAutoDiscardable) {
+    try {
+      await browser.tabs.update(tabId, { autoDiscardable: false });
+    } catch (_) {}
+  }
+
+  if (unloaded && updateVisited) {
+    unmarkVisited(tabId);
+  }
+
+  return unloaded;
+}
+
 // Cache of all tabs for the extension page
 let allTabCache = [];
 
@@ -279,8 +370,13 @@ browser.runtime.onMessage.addListener((msg) => {
     return Promise.resolve({ duplicates: Array.from(dupIds) });
   } else if (msg && msg.type === 'getTabState') {
     return Promise.resolve({ tabs: allTabCache, visited: Array.from(visited) });
-  } else if (msg && msg.type === 'unmarkVisited') {
-    unmarkVisited(msg.tabId);
+  } else if (msg && msg.type === 'requestUnloadTabs') {
+    const tabIds = Array.isArray(msg.tabIds) ? msg.tabIds : [];
+    const notifyVisited = msg.notifyVisited !== false;
+    return Promise.all(tabIds.map((tabId) =>
+      unloadTabWithFallback(tabId, { updateVisited: notifyVisited })
+        .then(unloaded => ({ tabId, unloaded }))
+    )).then(results => ({ results }));
   } else if (msg && msg.type === 'reorderRecent') {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
   } else if (msg && msg.type === 'clearVisitHistory') {
@@ -326,11 +422,7 @@ async function openFullView() {
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
-    }));
+    .map(t => unloadTabWithFallback(t.id)));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
@@ -344,10 +436,7 @@ async function checkAutoUnload() {
     const tabs = await browser.tabs.query({});
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
-        try {
-          await browser.tabs.discard(t.id);
-          unmarkVisited(t.id);
-        } catch (_) {}
+        await unloadTabWithFallback(t.id, { updateVisited: true });
       }
     }));
   } catch (e) {
