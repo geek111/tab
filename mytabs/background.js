@@ -8,6 +8,25 @@ let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+async function unloadTab(tabId) {
+  if (typeof tabId !== 'number') return false;
+  if (browser.tabs.unload) {
+    try {
+      await browser.tabs.unload(tabId);
+      return true;
+    } catch (e) {
+      // Fallback handled below
+    }
+  }
+  if (browser.tabs.discard) {
+    try {
+      await browser.tabs.discard(tabId);
+      return true;
+    } catch (_) {}
+  }
+  return false;
+}
+
 async function applyAutoDiscardable() {
   try {
     const tabs = await browser.tabs.query({});
@@ -208,6 +227,14 @@ function pushRecent(tabId) {
   scheduleRecentSave();
 }
 
+function removeFromRecent(tabId) {
+  const idx = recent.indexOf(tabId);
+  if (idx !== -1) {
+    recent.splice(idx, 1);
+    scheduleRecentSave();
+  }
+}
+
 function reorderRecent(ids, toId, before) {
   ids = ids.filter(id => id !== toId);
   if (!ids.length) return;
@@ -287,6 +314,24 @@ browser.runtime.onMessage.addListener((msg) => {
     clearVisitHistory();
   } else if (msg && msg.type === 'openFullView') {
     return openFullView();
+  } else if (msg && msg.type === 'unloadTabs') {
+    const ids = Array.isArray(msg.tabIds) ? msg.tabIds : [];
+    const unmark = msg.unmarkVisited !== false;
+    const pruneRecent = Boolean(msg.removeRecent);
+    return (async () => {
+      const results = await Promise.all(ids.map(async id => {
+        const unloaded = await unloadTab(id);
+        if (unloaded) {
+          if (unmark) unmarkVisited(id);
+          if (pruneRecent) removeFromRecent(id);
+        }
+        return unloaded;
+      }));
+      await refreshTabState();
+      return { unloaded: results.filter(Boolean).length };
+    })();
+  } else if (msg && msg.type === 'unloadAllTabs') {
+    return unloadAllTabs().then(() => ({ success: true }));
   }
 });
 
@@ -327,14 +372,17 @@ async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.filter(t => !t.discarded)
     .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
+      const unloaded = await unloadTab(t.id);
+      if (unloaded) {
+        removeFromRecent(t.id);
+        unmarkVisited(t.id);
+      }
     }));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
   sendVisitedUpdate();
+  await refreshTabState();
 }
 
 async function checkAutoUnload() {
@@ -344,10 +392,11 @@ async function checkAutoUnload() {
     const tabs = await browser.tabs.query({});
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
-        try {
-          await browser.tabs.discard(t.id);
+        const unloaded = await unloadTab(t.id);
+        if (unloaded) {
           unmarkVisited(t.id);
-        } catch (_) {}
+          removeFromRecent(t.id);
+        }
       }
     }));
   } catch (e) {
