@@ -45,6 +45,19 @@ const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
 
+async function unloadTabById(tabId) {
+  try {
+    if (browser.tabs.unload) {
+      await browser.tabs.unload(tabId);
+    } else {
+      await browser.tabs.discard(tabId);
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -1396,8 +1409,9 @@ function showContextMenu(e) {
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+        if (await unloadTabById(id)) {
+          await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id }).catch(() => {});
+        }
       } catch (_) {}
       scheduleUpdate();
     });
@@ -1469,8 +1483,9 @@ async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
     try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      if (await unloadTabById(id)) {
+        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id }).catch(() => {});
+      }
     } catch (_) {}
   }));
   scheduleUpdate();
@@ -1480,7 +1495,7 @@ async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.map(async t => {
     try {
-      await browser.tabs.discard(t.id);
+      await unloadTabById(t.id);
     } catch (_) {}
   }));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });

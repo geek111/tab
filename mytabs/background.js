@@ -8,6 +8,19 @@ let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+async function unloadTab(tabId) {
+  try {
+    if (browser.tabs.unload) {
+      await browser.tabs.unload(tabId);
+    } else {
+      await browser.tabs.discard(tabId);
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 async function applyAutoDiscardable() {
   try {
     const tabs = await browser.tabs.query({});
@@ -327,9 +340,7 @@ async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.filter(t => !t.discarded)
     .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
+      await unloadTab(t.id);
     }));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
@@ -344,10 +355,9 @@ async function checkAutoUnload() {
     const tabs = await browser.tabs.query({});
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
-        try {
-          await browser.tabs.discard(t.id);
+        if (await unloadTab(t.id)) {
           unmarkVisited(t.id);
-        } catch (_) {}
+        }
       }
     }));
   } catch (e) {
