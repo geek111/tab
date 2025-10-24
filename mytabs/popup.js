@@ -1395,10 +1395,7 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
+      await unloadTabWithFallback(id);
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1456,6 +1453,28 @@ async function bulkReload() {
   await Promise.all(ids.map(id => browser.tabs.reload(id)));
 }
 
+async function unloadTabWithFallback(tabId, { notifyVisited = true } = {}) {
+  let unloaded = false;
+  if (browser.tabs && typeof browser.tabs.unload === 'function') {
+    try {
+      await browser.tabs.unload(tabId);
+      unloaded = true;
+    } catch (_) {}
+  }
+  if (!unloaded && browser.tabs && typeof browser.tabs.discard === 'function') {
+    try {
+      await browser.tabs.discard(tabId);
+      unloaded = true;
+    } catch (_) {}
+  }
+  if (unloaded && notifyVisited) {
+    try {
+      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId });
+    } catch (_) {}
+  }
+  return unloaded;
+}
+
 async function bulkActivate() {
   const tabs = await Promise.all(
     getSelectedTabIds().map(id => browser.tabs.get(id))
@@ -1467,22 +1486,13 @@ async function bulkActivate() {
 
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
-  await Promise.all(ids.map(async id => {
-    try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-    } catch (_) {}
-  }));
+  await Promise.all(ids.map(id => unloadTabWithFallback(id)));
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
+  await Promise.all(tabs.map(t => unloadTabWithFallback(t.id, { notifyVisited: false })));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
   scheduleUpdate();
 }
