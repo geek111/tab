@@ -18,19 +18,44 @@ async function applyAutoDiscardable() {
 }
 
 async function unloadTabWithFallback(tabId) {
+  let restoreAutoDiscardable = false;
+  let tabInfo;
+  if (browser.tabs && typeof browser.tabs.get === 'function') {
+    try {
+      tabInfo = await browser.tabs.get(tabId);
+      if (tabInfo && tabInfo.autoDiscardable === false && !tabInfo.discarded) {
+        await browser.tabs.update(tabId, { autoDiscardable: true });
+        restoreAutoDiscardable = true;
+      }
+    } catch (_) {}
+  }
+
+  let unloaded = !!(tabInfo && tabInfo.discarded);
+  if (unloaded) {
+    restoreAutoDiscardable = false;
+  }
   if (browser.tabs && typeof browser.tabs.unload === 'function') {
     try {
-      await browser.tabs.unload(tabId);
-      return true;
+      if (!unloaded) {
+        await browser.tabs.unload(tabId);
+        unloaded = true;
+      }
     } catch (_) {}
   }
-  if (browser.tabs && typeof browser.tabs.discard === 'function') {
+  if (!unloaded && browser.tabs && typeof browser.tabs.discard === 'function') {
     try {
       await browser.tabs.discard(tabId);
-      return true;
+      unloaded = true;
     } catch (_) {}
   }
-  return false;
+
+  if (!unloaded && restoreAutoDiscardable) {
+    try {
+      await browser.tabs.update(tabId, { autoDiscardable: false });
+    } catch (_) {}
+  }
+
+  return unloaded;
 }
 
 // Cache of all tabs for the extension page

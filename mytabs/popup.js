@@ -1454,11 +1454,28 @@ async function bulkReload() {
 }
 
 async function unloadTabWithFallback(tabId, { notifyVisited = true } = {}) {
-  let unloaded = false;
+  let tabInfo;
+  let restoreAutoDiscardable = false;
+  if (browser.tabs && typeof browser.tabs.get === 'function') {
+    try {
+      tabInfo = await browser.tabs.get(tabId);
+      if (tabInfo && tabInfo.autoDiscardable === false && !tabInfo.discarded) {
+        await browser.tabs.update(tabId, { autoDiscardable: true });
+        restoreAutoDiscardable = true;
+      }
+    } catch (_) {}
+  }
+
+  let unloaded = !!(tabInfo && tabInfo.discarded);
+  if (unloaded) {
+    restoreAutoDiscardable = false;
+  }
   if (browser.tabs && typeof browser.tabs.unload === 'function') {
     try {
-      await browser.tabs.unload(tabId);
-      unloaded = true;
+      if (!unloaded) {
+        await browser.tabs.unload(tabId);
+        unloaded = true;
+      }
     } catch (_) {}
   }
   if (!unloaded && browser.tabs && typeof browser.tabs.discard === 'function') {
@@ -1467,6 +1484,13 @@ async function unloadTabWithFallback(tabId, { notifyVisited = true } = {}) {
       unloaded = true;
     } catch (_) {}
   }
+
+  if (!unloaded && restoreAutoDiscardable) {
+    try {
+      await browser.tabs.update(tabId, { autoDiscardable: false });
+    } catch (_) {}
+  }
+
   if (unloaded && notifyVisited) {
     try {
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId });
