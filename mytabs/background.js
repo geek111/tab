@@ -17,6 +17,48 @@ async function applyAutoDiscardable() {
   } catch (_) {}
 }
 
+async function unloadTabWithFallback(tabId) {
+  if (!browser.tabs) return false;
+
+  let tab = null;
+  try {
+    tab = await browser.tabs.get(tabId);
+    if (tab?.discarded) {
+      return true;
+    }
+  } catch (_) {}
+
+  let restoreAutoDiscardable = false;
+  if (tab && tab.autoDiscardable === false) {
+    try {
+      await browser.tabs.update(tabId, { autoDiscardable: true });
+      restoreAutoDiscardable = true;
+    } catch (_) {}
+  }
+
+  let unloaded = false;
+  if (typeof browser.tabs.unload === 'function') {
+    try {
+      await browser.tabs.unload(tabId);
+      unloaded = true;
+    } catch (_) {}
+  }
+  if (!unloaded && typeof browser.tabs.discard === 'function') {
+    try {
+      await browser.tabs.discard(tabId);
+      unloaded = true;
+    } catch (_) {}
+  }
+
+  if (restoreAutoDiscardable) {
+    try {
+      await browser.tabs.update(tabId, { autoDiscardable: false });
+    } catch (_) {}
+  }
+
+  return unloaded;
+}
+
 // Cache of all tabs for the extension page
 let allTabCache = [];
 
@@ -326,11 +368,7 @@ async function openFullView() {
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
-    }));
+    .map(t => unloadTabWithFallback(t.id)));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
@@ -344,10 +382,10 @@ async function checkAutoUnload() {
     const tabs = await browser.tabs.query({});
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
-        try {
-          await browser.tabs.discard(t.id);
+        const unloaded = await unloadTabWithFallback(t.id);
+        if (unloaded) {
           unmarkVisited(t.id);
-        } catch (_) {}
+        }
       }
     }));
   } catch (e) {
