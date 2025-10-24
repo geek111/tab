@@ -8,6 +8,28 @@ let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+async function tryUnloadTab(tabId) {
+  if (typeof browser.tabs.unload === 'function') {
+    try {
+      await browser.tabs.unload(tabId);
+      return true;
+    } catch (_) {}
+  }
+  try {
+    await browser.tabs.discard(tabId);
+    return true;
+  } catch (_) {}
+  return false;
+}
+
+async function unloadTab(tabId, { unmark = false } = {}) {
+  const success = await tryUnloadTab(tabId);
+  if (success && unmark) {
+    unmarkVisited(tabId);
+  }
+  return success;
+}
+
 async function applyAutoDiscardable() {
   try {
     const tabs = await browser.tabs.query({});
@@ -325,12 +347,9 @@ async function openFullView() {
 
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
-    }));
+  await Promise.all(tabs
+    .filter(t => !t.discarded)
+    .map(t => unloadTab(t.id)));
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
@@ -344,10 +363,7 @@ async function checkAutoUnload() {
     const tabs = await browser.tabs.query({});
     await Promise.all(tabs.map(async t => {
       if (!t.discarded && !t.active && t.lastAccessed && t.lastAccessed < threshold) {
-        try {
-          await browser.tabs.discard(t.id);
-          unmarkVisited(t.id);
-        } catch (_) {}
+        await unloadTab(t.id, { unmark: true });
       }
     }));
   } catch (e) {

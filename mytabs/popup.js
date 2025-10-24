@@ -45,6 +45,30 @@ const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
 
+async function tryUnloadTab(tabId) {
+  if (typeof browser.tabs.unload === 'function') {
+    try {
+      await browser.tabs.unload(tabId);
+      return true;
+    } catch (_) {}
+  }
+  try {
+    await browser.tabs.discard(tabId);
+    return true;
+  } catch (_) {}
+  return false;
+}
+
+async function unloadTab(tabId, { notifyVisited = true } = {}) {
+  const success = await tryUnloadTab(tabId);
+  if (success && notifyVisited) {
+    try {
+      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId });
+    } catch (_) {}
+  }
+  return success;
+}
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -1395,10 +1419,7 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
+      await unloadTab(id);
       scheduleUpdate();
     });
     // Direct move option removed in favor of flagged move workflow
@@ -1467,22 +1488,13 @@ async function bulkActivate() {
 
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
-  await Promise.all(ids.map(async id => {
-    try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-    } catch (_) {}
-  }));
+  await Promise.all(ids.map(id => unloadTab(id)));
   scheduleUpdate();
 }
 
 async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
+  await Promise.all(tabs.map(t => unloadTab(t.id, { notifyVisited: false })));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
   scheduleUpdate();
 }
