@@ -118,8 +118,56 @@ body[data-theme="dark"] #easter-egg {
 .count-icon {
   font-size: 1.2em;
 }
-#menu button {
+#menu button { 
   margin-right: 0.2em;
+}
+#action-status.status-message {
+  display: none;
+}
+
+.status-message {
+  min-height: 1.4em;
+  margin: 0.4em 0 0.6em;
+  font-size: 0.9em;
+  color: var(--color-muted);
+  display: none;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.status-message.visible {
+  display: flex;
+}
+
+.status-message.loading::before {
+  content: '';
+  width: 0.9em;
+  height: 0.9em;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-text);
+  border-radius: 50%;
+  animation: status-spin 1s linear infinite;
+}
+
+.status-message[data-type="error"] {
+  color: #b00020;
+}
+
+.status-message[data-type="success"] {
+  color: #0b6b27;
+}
+
+body[data-theme="dark"] .status-message[data-type="error"] {
+  color: #ff7a7a;
+}
+
+body[data-theme="dark"] .status-message[data-type="success"] {
+  color: #66d48c;
+}
+
+@keyframes status-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 #menu button.active-view {
   background: linear-gradient(135deg, var(--color-selected), var(--color-active));

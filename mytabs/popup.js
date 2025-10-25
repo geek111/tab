@@ -23,6 +23,8 @@ let movePending = null;
 // Persist selection across updates
 let selectedIds = new Set();
 
+let actionStatusTimer = null;
+
 // Cached tab list provided by the background script
 let cachedTabs = null;
 
@@ -44,6 +46,93 @@ const fullScrollPos = { all: 0, recent: 0, dups: 0 };
 const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
+
+function getActionStatusEl() {
+  return document.getElementById('action-status');
+}
+
+function clearActionStatus() {
+  const el = getActionStatusEl();
+  if (!el) return;
+  el.textContent = '';
+  el.dataset.type = '';
+  el.classList.remove('loading', 'visible');
+  if (actionStatusTimer) {
+    clearTimeout(actionStatusTimer);
+    actionStatusTimer = null;
+  }
+}
+
+function setActionStatus(message, { type = 'info', loading = false, duration = 4000 } = {}) {
+  const el = getActionStatusEl();
+  if (!el) return;
+
+  if (actionStatusTimer) {
+    clearTimeout(actionStatusTimer);
+    actionStatusTimer = null;
+  }
+
+  if (!message) {
+    clearActionStatus();
+    return;
+  }
+
+  el.textContent = message;
+  el.dataset.type = type;
+  el.classList.toggle('loading', !!loading);
+  el.classList.add('visible');
+
+  if (duration > 0 && !loading) {
+    actionStatusTimer = setTimeout(() => {
+      const target = getActionStatusEl();
+      if (!target) return;
+      target.textContent = '';
+      target.dataset.type = '';
+      target.classList.remove('loading', 'visible');
+      actionStatusTimer = null;
+    }, duration);
+  }
+}
+
+function summarizeReasons(entries) {
+  if (!entries || !entries.length) return '';
+  const counts = new Map();
+  for (const entry of entries) {
+    const reason = entry && entry.reason ? entry.reason : 'other';
+    counts.set(reason, (counts.get(reason) || 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([reason, count]) => count > 1 ? `${reason} (${count})` : reason)
+    .join(', ');
+}
+
+function showUnloadSummary(result) {
+  if (!result || result.supported === false) {
+    setActionStatus('Native tab unload is not available in this version of Firefox.', {
+      type: 'error',
+      duration: 6000
+    });
+    return;
+  }
+
+  const unloadedCount = Array.isArray(result.unloaded) ? result.unloaded.length : 0;
+  const skippedCount = Array.isArray(result.skipped) ? result.skipped.length : 0;
+  const failedCount = Array.isArray(result.failed) ? result.failed.length : 0;
+  const alreadyCount = Array.isArray(result.already) ? result.already.length : 0;
+
+  const parts = [];
+  parts.push(`Unloaded: ${unloadedCount}`);
+  const skippedReasons = summarizeReasons(result.skipped);
+  parts.push(`Skipped: ${skippedCount}${skippedReasons ? ` (${skippedReasons})` : ''}`);
+  const failedReasons = summarizeReasons(result.failed);
+  parts.push(`Failed: ${failedCount}${failedReasons ? ` (${failedReasons})` : ''}`);
+  if (alreadyCount) {
+    parts.push(`Already: ${alreadyCount}`);
+  }
+
+  const type = failedCount ? 'error' : (unloadedCount ? 'success' : 'info');
+  setActionStatus(parts.join(' • '), { type, duration: 6000 });
+}
 
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
@@ -1395,11 +1484,27 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
+      if (!browser.tabs || typeof browser.tabs.discard !== 'function') {
+        setActionStatus('Native tab unload is not available in this version of Firefox.', {
+          type: 'error',
+          duration: 6000
+        });
+        return;
+      }
+      setActionStatus('Unloading tab…', { type: 'info', loading: true, duration: 0 });
       try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
-      scheduleUpdate();
+        const result = await browser.runtime.sendMessage({
+          type: 'unloadTabsNative',
+          tabIds: [id]
+        });
+        showUnloadSummary(result);
+      } catch (e) {
+        console.error('Failed to unload tab', e);
+        const message = e && e.message ? e.message : 'Failed to unload tab.';
+        setActionStatus(message, { type: 'error', duration: 6000 });
+      } finally {
+        scheduleUpdate();
+      }
     });
     // Direct move option removed in favor of flagged move workflow
   }
@@ -1466,25 +1571,74 @@ async function bulkActivate() {
 }
 
 async function bulkDiscard() {
-  const ids = getSelectedTabIds();
-  await Promise.all(ids.map(async id => {
+  if (!browser.tabs || typeof browser.tabs.discard !== 'function') {
+    setActionStatus('Native tab unload is not available in this version of Firefox.', {
+      type: 'error',
+      duration: 6000
+    });
+    return;
+  }
+
+  let ids = getSelectedTabIds();
+  if (!ids.length) {
     try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-    } catch (_) {}
-  }));
-  scheduleUpdate();
+      const activeTabs = await browser.tabs.query({ currentWindow: true, active: true });
+      if (activeTabs && activeTabs[0]) {
+        ids = [activeTabs[0].id];
+      }
+    } catch (e) {
+      console.error('Failed to resolve active tab for unload', e);
+    }
+  }
+
+  ids = Array.from(new Set(ids));
+  if (!ids.length) {
+    setActionStatus('No tabs available to unload.', { type: 'info', duration: 4000 });
+    return;
+  }
+
+  setActionStatus('Unloading selected tabs…', { type: 'info', loading: true, duration: 0 });
+
+  try {
+    const result = await browser.runtime.sendMessage({
+      type: 'unloadTabsNative',
+      tabIds: ids
+    });
+    showUnloadSummary(result);
+  } catch (e) {
+    console.error('Failed to unload selected tabs', e);
+    const message = e && e.message ? e.message : 'Failed to unload tabs.';
+    setActionStatus(message, { type: 'error', duration: 6000 });
+  } finally {
+    scheduleUpdate();
+  }
 }
 
 async function bulkUnloadAll() {
-  const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
-  await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
-  scheduleUpdate();
+  if (!browser.tabs || typeof browser.tabs.discard !== 'function') {
+    setActionStatus('Native tab unload is not available in this version of Firefox.', {
+      type: 'error',
+      duration: 6000
+    });
+    return;
+  }
+
+  setActionStatus('Unloading all tabs…', { type: 'info', loading: true, duration: 0 });
+
+  try {
+    const result = await browser.runtime.sendMessage({
+      type: 'unloadTabsNative',
+      scope: 'all',
+      options: { clearHistory: true }
+    });
+    showUnloadSummary(result);
+  } catch (e) {
+    console.error('Failed to unload all tabs', e);
+    const message = e && e.message ? e.message : 'Failed to unload tabs.';
+    setActionStatus(message, { type: 'error', duration: 6000 });
+  } finally {
+    scheduleUpdate();
+  }
 }
 
 async function bulkMove() {

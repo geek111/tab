@@ -8,6 +8,9 @@ let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+const SAFE_ABOUT_PAGES = new Set(['about:blank', 'about:newtab', 'about:home']);
+const SPECIAL_TAB_SCHEMES = /^(?:chrome:|resource:|moz-extension:|view-source:|javascript:|data:|jar:)/i;
+
 async function applyAutoDiscardable() {
   try {
     const tabs = await browser.tabs.query({});
@@ -82,6 +85,113 @@ async function clearVisitHistory() {
   visited = new Set();
   await browser.storage.local.remove(['recent', 'visited']).catch(() => {});
   sendVisitedUpdate();
+}
+
+function isSpecialTab(tab) {
+  if (!tab || typeof tab.url !== 'string') {
+    return false;
+  }
+  const url = tab.url.trim().toLowerCase();
+  if (!url) return false;
+  if (url.startsWith('about:')) {
+    return !SAFE_ABOUT_PAGES.has(url);
+  }
+  return SPECIAL_TAB_SCHEMES.test(url);
+}
+
+async function performNativeUnload({ tabs = [], tabIds = [], options = {} } = {}) {
+  if (!browser.tabs || typeof browser.tabs.discard !== 'function') {
+    return { supported: false };
+  }
+
+  const summary = {
+    supported: true,
+    unloaded: [],
+    already: [],
+    skipped: [],
+    failed: []
+  };
+
+  const seen = new Set();
+  const queue = [];
+
+  const enqueueTab = (tab) => {
+    if (!tab || typeof tab.id !== 'number') return;
+    if (seen.has(tab.id)) return;
+    seen.add(tab.id);
+    queue.push(tab);
+  };
+
+  if (Array.isArray(tabs)) {
+    for (const tab of tabs) enqueueTab(tab);
+  }
+
+  if (Array.isArray(tabIds)) {
+    for (const id of tabIds) {
+      if (seen.has(id)) continue;
+      try {
+        const tab = await browser.tabs.get(id);
+        enqueueTab(tab);
+      } catch (e) {
+        summary.failed.push({ id, title: '', reason: e && e.message ? e.message : 'tab not found' });
+      }
+    }
+  }
+
+  const { skipActive = true, clearHistory = false } = options || {};
+  const unmarkIndividually = !clearHistory;
+
+  for (let i = 0; i < queue.length; i++) {
+    const tab = queue[i];
+    if (!tab || typeof tab.id !== 'number') continue;
+
+    if (tab.discarded) {
+      summary.already.push({ id: tab.id, title: tab.title || '', reason: 'already unloaded' });
+      continue;
+    }
+
+    if (skipActive && tab.active) {
+      summary.skipped.push({ id: tab.id, title: tab.title || '', reason: 'active tab' });
+      continue;
+    }
+
+    if (isSpecialTab(tab)) {
+      summary.skipped.push({ id: tab.id, title: tab.title || '', reason: 'special page' });
+      continue;
+    }
+
+    try {
+      await browser.tabs.discard(tab.id);
+      if (unmarkIndividually) {
+        unmarkVisited(tab.id);
+      }
+      summary.unloaded.push({ id: tab.id, title: tab.title || '', reason: 'unloaded' });
+    } catch (e) {
+      const message = e && e.message ? e.message : 'unknown error';
+      const lower = message.toLowerCase();
+      if (tab.pinned && (lower.includes('pinned') || lower.includes('pin '))) {
+        summary.skipped.push({ id: tab.id, title: tab.title || '', reason: 'pinned tab' });
+      } else if (lower.includes('special')) {
+        summary.skipped.push({ id: tab.id, title: tab.title || '', reason: 'special page' });
+      } else {
+        summary.failed.push({ id: tab.id, title: tab.title || '', reason: message });
+      }
+    }
+
+    if (i % 10 === 9) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+
+  if (clearHistory) {
+    await clearVisitHistory();
+  }
+
+  if (queue.length) {
+    await refreshTabState();
+  }
+
+  return summary;
 }
 
 async function updateTabCache() {
@@ -285,6 +395,14 @@ browser.runtime.onMessage.addListener((msg) => {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
   } else if (msg && msg.type === 'clearVisitHistory') {
     clearVisitHistory();
+  } else if (msg && msg.type === 'unloadTabsNative') {
+    if (msg.scope === 'all') {
+      return browser.tabs.query({}).then(tabs =>
+        performNativeUnload({ tabs, options: msg.options || {} })
+      );
+    }
+    const tabIds = Array.isArray(msg.tabIds) ? msg.tabIds : [];
+    return performNativeUnload({ tabIds, options: msg.options || {} });
   } else if (msg && msg.type === 'openFullView') {
     return openFullView();
   }
@@ -325,16 +443,7 @@ async function openFullView() {
 
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
-    }));
-  await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
-  visited = new Set();
-  recent = [];
-  sendVisitedUpdate();
+  await performNativeUnload({ tabs, options: { clearHistory: true } });
 }
 
 async function checkAutoUnload() {
