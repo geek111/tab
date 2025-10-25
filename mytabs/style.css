@@ -378,6 +378,62 @@ button:hover {
 .hidden {
   display: none;
 }
+#operation-status {
+  margin-top: 0.5em;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.4em 0.6em;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--color-text);
+  font-size: 0.9em;
+  transition: opacity 0.2s ease;
+}
+#operation-status .status-text {
+  flex: 1;
+}
+#operation-status .spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid transparent;
+  border-top-color: var(--color-text);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: none;
+}
+#operation-status.is-busy .spinner {
+  display: inline-block;
+}
+#operation-status.is-success {
+  background: rgba(46, 204, 113, 0.2);
+  border-color: rgba(46, 204, 113, 0.4);
+}
+#operation-status.is-error {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: rgba(231, 76, 60, 0.4);
+}
+#operation-status.is-info {
+  background: rgba(52, 152, 219, 0.2);
+  border-color: rgba(52, 152, 219, 0.4);
+}
+body[data-theme="dark"] #operation-status {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+body[data-theme="dark"] #operation-status.is-success {
+  background: rgba(46, 204, 113, 0.25);
+  border-color: rgba(46, 204, 113, 0.45);
+}
+body[data-theme="dark"] #operation-status.is-error {
+  background: rgba(231, 76, 60, 0.3);
+  border-color: rgba(231, 76, 60, 0.5);
+}
+body[data-theme="dark"] #operation-status.is-info {
+  background: rgba(52, 152, 219, 0.25);
+  border-color: rgba(52, 152, 219, 0.45);
+}
 #easter-egg {
   position: fixed;
   top: 50%;
@@ -635,6 +691,12 @@ body.full #counts.scrolled {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 

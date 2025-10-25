@@ -44,6 +44,11 @@ const fullScrollPos = { all: 0, recent: 0, dups: 0 };
 const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
+const NON_DISCARDABLE_SCHEMES = /^(about:|moz-extension:|chrome:|resource:|view-source:|devtools:)/i;
+const MAX_NATIVE_UNLOAD_CONCURRENCY = 6;
+let operationStatusEl = null;
+let operationStatusTextEl = null;
+let operationStatusHideTimer = null;
 
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
@@ -180,6 +185,209 @@ function debounce(fn, delay) {
     clearTimeout(timer);
     timer = setTimeout(() => fn(...args), delay);
   };
+}
+
+function normalizeErrorMessage(err) {
+  if (!err) return 'Unknown error';
+  if (typeof err === 'string') {
+    return err.replace(/^Error:\s*/i, '').split('\n')[0].trim() || 'Unknown error';
+  }
+  if (err && typeof err.message === 'string') {
+    return err.message.replace(/^Error:\s*/i, '').split('\n')[0].trim() || 'Unknown error';
+  }
+  try {
+    return String(err).replace(/^Error:\s*/i, '').split('\n')[0].trim() || 'Unknown error';
+  } catch (_) {
+    return 'Unknown error';
+  }
+}
+
+function isSystemTab(tab) {
+  if (!tab || typeof tab.url !== 'string') return false;
+  return NON_DISCARDABLE_SCHEMES.test(tab.url);
+}
+
+function incrementReason(bucket, reason) {
+  if (!reason) return;
+  if (!bucket[reason]) bucket[reason] = 0;
+  bucket[reason]++;
+}
+
+function sumReasonCounts(bucket) {
+  return Object.values(bucket).reduce((acc, count) => acc + count, 0);
+}
+
+function formatReasonSummary(bucket) {
+  const entries = Object.entries(bucket);
+  if (!entries.length) return '';
+  return entries
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([reason, count]) => `${reason} ×${count}`)
+    .join(', ');
+}
+
+function showOperationStatus(state, message, { autoHide = true } = {}) {
+  if (!operationStatusEl) return;
+  if (operationStatusHideTimer) {
+    clearTimeout(operationStatusHideTimer);
+    operationStatusHideTimer = null;
+  }
+  operationStatusEl.classList.remove('hidden', 'is-busy', 'is-error', 'is-success', 'is-info');
+  operationStatusEl.classList.remove('hidden');
+  if (state === 'busy') operationStatusEl.classList.add('is-busy');
+  else if (state === 'error') operationStatusEl.classList.add('is-error');
+  else if (state === 'success') operationStatusEl.classList.add('is-success');
+  else operationStatusEl.classList.add('is-info');
+  if (operationStatusTextEl) operationStatusTextEl.textContent = message;
+  if (state === 'busy') return;
+  if (!autoHide) return;
+  const timeout = state === 'error' ? 7000 : 4500;
+  operationStatusHideTimer = setTimeout(() => {
+    clearOperationStatus();
+  }, timeout);
+}
+
+function clearOperationStatus() {
+  if (!operationStatusEl) return;
+  if (operationStatusHideTimer) {
+    clearTimeout(operationStatusHideTimer);
+    operationStatusHideTimer = null;
+  }
+  operationStatusEl.classList.add('hidden');
+  operationStatusEl.classList.remove('is-busy', 'is-error', 'is-success', 'is-info');
+  if (operationStatusTextEl) operationStatusTextEl.textContent = '';
+}
+
+function isNativeDiscardAvailable() {
+  return !!(browser?.tabs && typeof browser.tabs.discard === 'function');
+}
+
+async function performNativeUnload(rawTabs, { emptyMessage = 'No tabs available to unload.' } = {}) {
+  const summary = {
+    attempted: 0,
+    unloaded: 0,
+    already: 0,
+    skipped: {},
+    failed: {}
+  };
+  if (!isNativeDiscardAvailable()) {
+    showOperationStatus('error', 'Native tab unload requires a newer version of Firefox.', { autoHide: false });
+    return summary;
+  }
+
+  const uniqueTabs = [];
+  const seen = new Set();
+  for (const tab of rawTabs || []) {
+    if (!tab || typeof tab.id !== 'number') {
+      uniqueTabs.push(null);
+      continue;
+    }
+    if (seen.has(tab.id)) continue;
+    seen.add(tab.id);
+    uniqueTabs.push(tab);
+  }
+
+  if (!uniqueTabs.length) {
+    if (emptyMessage) showOperationStatus('info', emptyMessage);
+    return summary;
+  }
+
+  summary.attempted = uniqueTabs.length;
+  const busyLabel = uniqueTabs.length === 1
+    ? 'Unloading 1 tab…'
+    : `Unloading ${uniqueTabs.length} tabs…`;
+  showOperationStatus('busy', busyLabel, { autoHide: false });
+
+  let index = 0;
+  const concurrency = Math.min(MAX_NATIVE_UNLOAD_CONCURRENCY, uniqueTabs.length) || 1;
+
+  async function worker() {
+    while (index < uniqueTabs.length) {
+      const current = uniqueTabs[index++];
+      if (!current || typeof current.id !== 'number') {
+        incrementReason(summary.failed, 'tab not found');
+        continue;
+      }
+      if (current.discarded) {
+        summary.already++;
+        continue;
+      }
+      if (current.active) {
+        incrementReason(summary.skipped, 'active tab');
+        continue;
+      }
+      if (isSystemTab(current)) {
+        incrementReason(summary.skipped, 'system tab');
+        continue;
+      }
+      try {
+        await browser.tabs.discard(current.id);
+        summary.unloaded++;
+        try {
+          await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: current.id });
+        } catch (_) {}
+      } catch (err) {
+        const message = normalizeErrorMessage(err);
+        if (current.pinned && /pinned/i.test(message)) {
+          incrementReason(summary.skipped, 'pinned tab');
+        } else if (/active/i.test(message) && /discard/i.test(message)) {
+          incrementReason(summary.skipped, 'active tab');
+        } else if (/tab not found|no tab/i.test(message)) {
+          incrementReason(summary.failed, 'tab not found');
+        } else if (/permission|blocked|policy/i.test(message)) {
+          incrementReason(summary.failed, message);
+        } else if (/system|privileged/i.test(message)) {
+          incrementReason(summary.skipped, 'system tab');
+        } else {
+          incrementReason(summary.failed, message);
+        }
+      }
+    }
+  }
+
+  const workers = [];
+  for (let i = 0; i < concurrency; i++) {
+    workers.push(worker());
+  }
+  await Promise.all(workers);
+
+  const skippedCount = sumReasonCounts(summary.skipped);
+  const failedCount = sumReasonCounts(summary.failed);
+  const parts = [];
+  if (summary.unloaded) parts.push(`${summary.unloaded} unloaded`);
+  if (summary.already) parts.push(`${summary.already} already unloaded`);
+  if (skippedCount) {
+    const details = formatReasonSummary(summary.skipped);
+    parts.push(`${skippedCount} skipped${details ? ` (${details})` : ''}`);
+  }
+  if (failedCount) {
+    const details = formatReasonSummary(summary.failed);
+    parts.push(`${failedCount} failed${details ? ` (${details})` : ''}`);
+  }
+  if (!parts.length) parts.push('No tabs processed');
+
+  const resultMessage = `Unload result: ${parts.join(', ')}`;
+  const state = failedCount ? 'error' : summary.unloaded ? 'success' : 'info';
+  showOperationStatus(state, resultMessage, { autoHide: !failedCount });
+  if (summary.unloaded || summary.already || skippedCount || failedCount) {
+    scheduleUpdate();
+  }
+  return summary;
+}
+
+async function unloadTabsByIds(ids, options = {}) {
+  if (!Array.isArray(ids) || !ids.length) {
+    return performNativeUnload([], options);
+  }
+  const tabs = await Promise.all(ids.map(async id => {
+    try {
+      return await browser.tabs.get(id);
+    } catch (err) {
+      console.warn('Failed to resolve tab before unloading', err);
+      return null;
+    }
+  }));
+  return performNativeUnload(tabs, options);
 }
 
 function escapeHtml(str) {
@@ -1084,6 +1292,13 @@ async function init() {
               document.getElementById('tabs');
   scrollContainer = document.getElementById('tabs-wrapper') || container;
   easterEgg = document.getElementById('easter-egg');
+  operationStatusEl = document.getElementById('operation-status');
+  operationStatusTextEl = operationStatusEl?.querySelector('.status-text') || null;
+  if (operationStatusEl && !operationStatusTextEl) {
+    operationStatusTextEl = document.createElement('span');
+    operationStatusTextEl.className = 'status-text';
+    operationStatusEl.appendChild(operationStatusTextEl);
+  }
   const menuEl = document.getElementById('menu');
   menuEl?.addEventListener('dblclick', showEasterEgg);
   scrollContainer.addEventListener('scroll', saveScroll);
@@ -1241,6 +1456,7 @@ function unregisterTabEvents() {
 function cleanup() {
   unregisterTabEvents();
   resetTabState();
+  clearOperationStatus();
 }
 
 document.addEventListener('DOMContentLoaded', init);
@@ -1395,11 +1611,7 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
-      scheduleUpdate();
+      await unloadTabsByIds([id], { emptyMessage: 'No tabs available to unload.' });
     });
     // Direct move option removed in favor of flagged move workflow
   }
@@ -1467,13 +1679,27 @@ async function bulkActivate() {
 
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
-  await Promise.all(ids.map(async id => {
+  if (ids.length) {
+    await unloadTabsByIds(ids, { emptyMessage: 'No selected tabs available to unload.' });
+    return;
+  }
+  let activeTab = null;
+  if (currentActiveId !== -1) {
     try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      activeTab = await browser.tabs.get(currentActiveId);
     } catch (_) {}
-  }));
-  scheduleUpdate();
+  }
+  if (!activeTab) {
+    try {
+      const [active] = await browser.tabs.query({ active: true, currentWindow: true, windowType: 'normal' });
+      if (active) activeTab = active;
+    } catch (_) {}
+  }
+  if (activeTab) {
+    await performNativeUnload([activeTab], { emptyMessage: 'Active tab cannot be unloaded.' });
+  } else {
+    showOperationStatus('info', 'No tabs available to unload.');
+  }
 }
 
 async function bulkUnloadAll() {
