@@ -45,6 +45,11 @@ const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
 
+let statusEl = null;
+let statusSpinnerEl = null;
+let statusTextEl = null;
+let statusHideTimer = null;
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -122,6 +127,154 @@ function triggerViewAnimation() {
   el.classList.remove('view-transition');
   void el.offsetWidth;
   el.classList.add('view-transition');
+}
+
+function initStatusElements() {
+  statusEl = document.getElementById('operation-status');
+  statusSpinnerEl = statusEl?.querySelector('.spinner') || null;
+  statusTextEl = statusEl?.querySelector('.status-text') || null;
+  if (statusEl) {
+    statusEl.setAttribute('title', 'Click to dismiss');
+    statusEl.addEventListener('click', hideOperationStatus);
+  }
+}
+
+function resetStatusClasses() {
+  if (!statusEl) return;
+  statusEl.classList.remove('status-success', 'status-warning', 'status-error', 'status-info', 'status-loading');
+}
+
+function hideOperationStatus() {
+  if (!statusEl) return;
+  clearTimeout(statusHideTimer);
+  statusHideTimer = null;
+  statusEl.classList.add('hidden');
+}
+
+function showOperationLoading(message) {
+  if (!statusEl) return;
+  clearTimeout(statusHideTimer);
+  resetStatusClasses();
+  statusEl.classList.remove('hidden');
+  statusEl.classList.add('status-loading');
+  if (statusSpinnerEl) statusSpinnerEl.classList.remove('hidden');
+  if (statusTextEl) statusTextEl.textContent = message;
+}
+
+function showOperationMessage(message, type = 'info', options = {}) {
+  if (!statusEl) return;
+  clearTimeout(statusHideTimer);
+  resetStatusClasses();
+  statusEl.classList.remove('hidden');
+  statusEl.classList.add(`status-${type}`);
+  if (statusSpinnerEl) statusSpinnerEl.classList.add('hidden');
+  if (statusTextEl) statusTextEl.textContent = message;
+  if (!options.persist) {
+    statusHideTimer = setTimeout(() => {
+      statusEl?.classList.add('hidden');
+      statusHideTimer = null;
+    }, options.timeout || 5000);
+  }
+}
+
+function summarizeReasons(items = []) {
+  if (!Array.isArray(items) || !items.length) return '';
+  const counts = new Map();
+  for (const item of items) {
+    const reason = (item?.reason || 'unknown').toString();
+    counts.set(reason, (counts.get(reason) || 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([reason, count]) => {
+      const label = reason.charAt(0).toUpperCase() + reason.slice(1);
+      return count > 1 ? `${label} ×${count}` : label;
+    })
+    .join(', ');
+}
+
+function determineStatusType(counts = {}) {
+  if (!counts) return 'info';
+  if (counts.failed > 0) return 'error';
+  if (counts.unloaded > 0 || counts.already > 0) {
+    return counts.skipped > 0 ? 'warning' : 'success';
+  }
+  return counts.skipped > 0 ? 'info' : 'info';
+}
+
+function formatUnloadSummary(counts = {}, details = {}) {
+  const parts = [];
+  parts.push(`Unloaded: ${counts.unloaded || 0}`);
+  if (counts.already) {
+    parts.push(`Already unloaded: ${counts.already}`);
+  }
+  if (counts.skipped) {
+    const reasons = summarizeReasons(details.skipped);
+    parts.push(`Skipped: ${counts.skipped}${reasons ? ` (${reasons})` : ''}`);
+  }
+  if (counts.failed) {
+    const reasons = summarizeReasons(details.failed);
+    parts.push(`Failed: ${counts.failed}${reasons ? ` (${reasons})` : ''}`);
+  }
+  if (!parts.length) return 'No tabs processed.';
+  return parts.join(' • ');
+}
+
+async function requestNativeUnload(options = {}) {
+  const payload = { type: 'unloadTabs' };
+  if (Array.isArray(options.tabIds) && options.tabIds.length) {
+    payload.tabIds = Array.from(new Set(options.tabIds.filter(id => typeof id === 'number')));
+  } else if (options.scope) {
+    payload.scope = options.scope;
+  } else if (options.defaultToActive) {
+    payload.target = 'active';
+  } else {
+    showOperationMessage('No tabs selected to unload.', 'info');
+    return null;
+  }
+
+  if (options.switchActive) payload.switchActive = true;
+  if (typeof options.windowId === 'number') payload.windowId = options.windowId;
+
+  if (payload.target === 'active' && typeof payload.windowId !== 'number') {
+    try {
+      const currentWin = await browser.windows.getCurrent();
+      if (currentWin && typeof currentWin.id === 'number') payload.windowId = currentWin.id;
+    } catch (_) {}
+  }
+
+  showOperationLoading(options.loadingMessage || 'Unloading tabs…');
+
+  let response;
+  try {
+    response = await browser.runtime.sendMessage(payload);
+  } catch (error) {
+    showOperationMessage(`Failed to request tab unload: ${error?.message || error}`, 'error', { persist: true });
+    return null;
+  }
+
+  if (!response) {
+    showOperationMessage('No response from background script.', 'error', { persist: true });
+    return null;
+  }
+  if (response.unsupported) {
+    showOperationMessage('Native tab unload requires a newer version of Firefox.', 'error', { persist: true });
+    return response;
+  }
+
+  const counts = response.counts || {};
+  const details = response.details || {};
+  const summary = formatUnloadSummary(counts, details);
+  const type = determineStatusType(counts);
+  const persist = type === 'error';
+  showOperationMessage(summary, type, { persist });
+
+  const handledIds = new Set();
+  (details.unloaded || []).forEach(it => handledIds.add(it.id));
+  (details.already || []).forEach(it => handledIds.add(it.id));
+  handledIds.forEach(id => selectedIds.delete(id));
+
+  scheduleUpdate();
+  return response;
 }
 
 function updateViewButtons() {
@@ -1084,6 +1237,7 @@ async function init() {
               document.getElementById('tabs');
   scrollContainer = document.getElementById('tabs-wrapper') || container;
   easterEgg = document.getElementById('easter-egg');
+  initStatusElements();
   const menuEl = document.getElementById('menu');
   menuEl?.addEventListener('dblclick', showEasterEgg);
   scrollContainer.addEventListener('scroll', saveScroll);
@@ -1241,6 +1395,7 @@ function unregisterTabEvents() {
 function cleanup() {
   unregisterTabEvents();
   resetTabState();
+  hideOperationStatus();
 }
 
 document.addEventListener('DOMContentLoaded', init);
@@ -1395,11 +1550,12 @@ function showContextMenu(e) {
     });
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
-      try {
-        await browser.tabs.discard(id);
-        await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
-      } catch (_) {}
-      scheduleUpdate();
+      await requestNativeUnload({
+        tabIds: [id],
+        windowId: Number.isFinite(win) ? win : undefined,
+        switchActive: tabEl?.classList?.contains('active'),
+        loadingMessage: 'Unloading tab…'
+      });
     });
     // Direct move option removed in favor of flagged move workflow
   }
@@ -1467,24 +1623,45 @@ async function bulkActivate() {
 
 async function bulkDiscard() {
   const ids = getSelectedTabIds();
-  await Promise.all(ids.map(async id => {
+  if (ids.length) {
+    let windowId;
+    let switchActive = false;
+    if (ids.length === 1) {
+      const entry = tabItems.find(it => it.tab && it.tab.id === ids[0]);
+      if (entry && entry.tab) {
+        windowId = entry.tab.windowId;
+        switchActive = !!entry.tab.active;
+      }
+    }
+    await requestNativeUnload({
+      tabIds: ids,
+      windowId,
+      switchActive,
+      loadingMessage: ids.length > 1 ? 'Unloading selected tabs…' : 'Unloading tab…'
+    });
+  } else {
+    let currentWinId;
     try {
-      await browser.tabs.discard(id);
-      await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
+      const win = await browser.windows.getCurrent();
+      if (win && typeof win.id === 'number') currentWinId = win.id;
     } catch (_) {}
-  }));
-  scheduleUpdate();
+    await requestNativeUnload({
+      defaultToActive: true,
+      windowId: currentWinId,
+      switchActive: true,
+      loadingMessage: 'Unloading current tab…'
+    });
+  }
 }
 
 async function bulkUnloadAll() {
-  const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
-  await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
-  scheduleUpdate();
+  const response = await requestNativeUnload({
+    scope: 'all',
+    loadingMessage: 'Unloading all tabs…'
+  });
+  if (response && !response.unsupported) {
+    await browser.runtime.sendMessage({ type: 'clearVisitHistory' }).catch(() => {});
+  }
 }
 
 async function bulkMove() {

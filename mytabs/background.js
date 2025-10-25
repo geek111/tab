@@ -8,6 +8,17 @@ let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+const NON_DISCARDABLE_SCHEMES = new Set([
+  'about',
+  'moz-extension',
+  'chrome',
+  'resource',
+  'file',
+  'view-source',
+  'data',
+  'blob'
+]);
+
 async function applyAutoDiscardable() {
   try {
     const tabs = await browser.tabs.query({});
@@ -191,6 +202,176 @@ function unmarkVisited(tabId) {
   }
 }
 
+function isDiscardSupported() {
+  return typeof browser?.tabs?.discard === 'function';
+}
+
+function isDiscardableUrl(url = '') {
+  try {
+    const schemeMatch = /^([a-z0-9+.-]+):/i.exec(url);
+    if (!schemeMatch) return true;
+    const scheme = schemeMatch[1].toLowerCase();
+    return !NON_DISCARDABLE_SCHEMES.has(scheme);
+  } catch (_) {
+    return true;
+  }
+}
+
+async function findReplacementTab(windowId, activeId, idsToDiscard) {
+  try {
+    const tabs = await browser.tabs.query({ windowId });
+    let candidate = null;
+    for (const tab of tabs) {
+      if (tab.id === activeId) continue;
+      if (idsToDiscard.has(tab.id)) continue;
+      if (tab.discarded) continue;
+      candidate = tab;
+      break;
+    }
+    if (!candidate) {
+      for (const tab of tabs) {
+        if (tab.id === activeId) continue;
+        if (tab.discarded) continue;
+        candidate = tab;
+        break;
+      }
+    }
+    if (!candidate) {
+      candidate = tabs.find(t => t.id !== activeId) || null;
+    }
+    return candidate || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function buildTabInfo(tab) {
+  return {
+    id: tab.id,
+    windowId: tab.windowId,
+    title: tab.title || '',
+    url: tab.url || ''
+  };
+}
+
+function normalizeSummary(summary) {
+  const base = summary || {};
+  base.counts = base.counts || { unloaded: 0, already: 0, skipped: 0, failed: 0 };
+  base.details = base.details || { unloaded: [], already: [], skipped: [], failed: [] };
+  return base;
+}
+
+async function processNativeUnload(options = {}) {
+  if (!isDiscardSupported()) {
+    return { unsupported: true };
+  }
+
+  let tabs = [];
+  const scope = options.scope;
+  if (Array.isArray(options.tabIds) && options.tabIds.length) {
+    const ids = Array.from(new Set(options.tabIds)).filter(id => typeof id === 'number');
+    const resolved = await Promise.all(ids.map(id => browser.tabs.get(id).catch(() => null)));
+    tabs = resolved.filter(Boolean);
+  } else if (scope === 'all') {
+    try {
+      tabs = await browser.tabs.query({});
+    } catch (_) {
+      tabs = [];
+    }
+  } else if (options.target === 'active') {
+    try {
+      const query = typeof options.windowId === 'number'
+        ? { windowId: options.windowId, active: true }
+        : { currentWindow: true, active: true };
+      const activeTabs = await browser.tabs.query(query);
+      tabs = activeTabs.slice(0, 1);
+    } catch (_) {
+      tabs = [];
+    }
+  }
+
+  const uniqueTabs = [];
+  const seen = new Set();
+  for (const tab of tabs) {
+    if (!tab || seen.has(tab.id)) continue;
+    seen.add(tab.id);
+    uniqueTabs.push(tab);
+  }
+
+  const summary = normalizeSummary({});
+  if (!uniqueTabs.length) {
+    return summary;
+  }
+
+  const idsToDiscard = new Set(uniqueTabs.map(t => t.id));
+
+  if (options.switchActive) {
+    const handledWindows = new Set();
+    for (const tab of uniqueTabs) {
+      if (!tab.active || handledWindows.has(tab.windowId)) continue;
+      handledWindows.add(tab.windowId);
+      const replacement = await findReplacementTab(tab.windowId, tab.id, idsToDiscard);
+      if (replacement) {
+        try {
+          await browser.tabs.update(replacement.id, { active: true });
+          tab.active = false;
+        } catch (e) {
+          console.warn('Failed to activate replacement tab', e);
+        }
+      }
+    }
+  }
+
+  for (const tab of uniqueTabs) {
+    const info = buildTabInfo(tab);
+    if (tab.discarded) {
+      summary.counts.already += 1;
+      summary.details.already.push({ ...info, reason: 'already unloaded' });
+      continue;
+    }
+    if (tab.active) {
+      summary.counts.skipped += 1;
+      summary.details.skipped.push({ ...info, reason: 'active tab' });
+      continue;
+    }
+    if (tab.pinned) {
+      summary.counts.skipped += 1;
+      summary.details.skipped.push({ ...info, reason: 'pinned' });
+      continue;
+    }
+    if (!isDiscardableUrl(tab.url)) {
+      summary.counts.skipped += 1;
+      summary.details.skipped.push({ ...info, reason: 'unsupported scheme' });
+      continue;
+    }
+    try {
+      await browser.tabs.discard(tab.id);
+      summary.counts.unloaded += 1;
+      summary.details.unloaded.push({ ...info });
+      unmarkVisited(tab.id);
+    } catch (error) {
+      const message = error?.message || 'unknown error';
+      const msgLower = message.toLowerCase();
+      if (msgLower.includes('active')) {
+        summary.counts.skipped += 1;
+        summary.details.skipped.push({ ...info, reason: 'active tab' });
+      } else if (msgLower.includes('pinned')) {
+        summary.counts.skipped += 1;
+        summary.details.skipped.push({ ...info, reason: 'pinned' });
+      } else if (msgLower.includes('permission') || msgLower.includes('not allowed')) {
+        summary.counts.failed += 1;
+        summary.details.failed.push({ ...info, reason: 'permission denied' });
+      } else {
+        summary.counts.failed += 1;
+        summary.details.failed.push({ ...info, reason: message });
+      }
+    }
+  }
+
+  await refreshTabState();
+  return summary;
+}
+
 function scheduleRecentSave() {
   if (!recentTimer) {
     recentTimer = setTimeout(() => {
@@ -279,6 +460,14 @@ browser.runtime.onMessage.addListener((msg) => {
     return Promise.resolve({ duplicates: Array.from(dupIds) });
   } else if (msg && msg.type === 'getTabState') {
     return Promise.resolve({ tabs: allTabCache, visited: Array.from(visited) });
+  } else if (msg && msg.type === 'unloadTabs') {
+    return processNativeUnload({
+      tabIds: msg.tabIds,
+      scope: msg.scope,
+      target: msg.target,
+      switchActive: !!msg.switchActive,
+      windowId: typeof msg.windowId === 'number' ? msg.windowId : undefined
+    });
   } else if (msg && msg.type === 'unmarkVisited') {
     unmarkVisited(msg.tabId);
   } else if (msg && msg.type === 'reorderRecent') {
@@ -324,17 +513,13 @@ async function openFullView() {
 }
 
 async function unloadAllTabs() {
-  const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
-      try {
-        await browser.tabs.discard(t.id);
-      } catch (_) {}
-    }));
-  await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
-  visited = new Set();
-  recent = [];
-  sendVisitedUpdate();
+  const summary = await processNativeUnload({ scope: 'all' });
+  if (summary && !summary.unsupported) {
+    await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
+    visited = new Set();
+    recent = [];
+    sendVisitedUpdate();
+  }
 }
 
 async function checkAutoUnload() {
