@@ -7,6 +7,7 @@
   --color-selected: #dceaff;
   --color-muted: #888;
   --color-visited: #f0fff0;
+  --color-discarded: #f2f2f2;
   --tile-width: 255px;
   --tile-height: 32px;
   --tile-scale: 0.9;
@@ -53,6 +54,7 @@ body[data-theme="dark"] {
   --color-selected: #224466;
   --color-muted: #aaa;
   --color-visited: #304030;
+  --color-discarded: #2a2a2a;
   --color-close: #ccc;
   --color-close-hover: #f66;
   background: var(--color-bg);
@@ -497,6 +499,20 @@ body[data-theme="dark"] .tab-tooltip.left::after {
 .visited {
   background: var(--color-visited);
   font-weight: bold;
+}
+
+.tab.discarded:not(.selected):not(.active) {
+  background: var(--color-discarded);
+}
+
+.tab.discarded:not(.selected):not(.active) .tab-title {
+  font-style: italic;
+  color: var(--color-muted);
+}
+
+.tab.discarded:not(.selected):not(.active) .tab-icon {
+  filter: grayscale(80%);
+  opacity: 0.6;
 }
 
 .unvisited {

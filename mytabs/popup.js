@@ -471,7 +471,10 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   }
   if (isVisited) {
     row.classList.add('visited');
-  } else if (!isVisited && !tab.discarded) {
+  }
+  if (tab.discarded) {
+    row.classList.add('discarded');
+  } else if (!isVisited) {
     row.classList.add('unvisited');
   }
 
