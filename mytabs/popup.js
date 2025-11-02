@@ -38,6 +38,10 @@ let currentQuery = '';
 let searchOrder = null;
 // Scroll position to restore after certain operations
 let pendingScroll = null;
+
+function unloadTab(tabId) {
+  return browser.tabs.unload(tabId);
+}
 // Remember horizontal scroll for each view in full window
 const fullScrollPos = { all: 0, recent: 0, dups: 0 };
 // Remember vertical scroll for each view in popup window
@@ -1396,7 +1400,7 @@ function showContextMenu(e) {
     addItem('Activate', () => activateTab(id, win));
     addItem('Unload', async () => {
       try {
-        await browser.tabs.discard(id);
+        await unloadTab(id);
         await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
       } catch (_) {}
       scheduleUpdate();
@@ -1469,7 +1473,7 @@ async function bulkDiscard() {
   const ids = getSelectedTabIds();
   await Promise.all(ids.map(async id => {
     try {
-      await browser.tabs.discard(id);
+      await unloadTab(id);
       await browser.runtime.sendMessage({ type: 'unmarkVisited', tabId: id });
     } catch (_) {}
   }));
@@ -1480,7 +1484,7 @@ async function bulkUnloadAll() {
   const tabs = await browser.tabs.query({});
   await Promise.all(tabs.map(async t => {
     try {
-      await browser.tabs.discard(t.id);
+      await unloadTab(t.id);
     } catch (_) {}
   }));
   await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
