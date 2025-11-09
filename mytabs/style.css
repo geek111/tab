@@ -332,17 +332,62 @@ body.popup .tab > div {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  padding-inline: 0.6em;
+  /* Reserve space on the right for the badge showing loaded/total */
+  padding-inline-end: 3.4em;
+  /* Compact internal padding; visual gap handled by next .tab margin */
+  padding-top: 0.05em;
+  padding-bottom: 0.1em;
+  gap: 0.5em;
   font-weight: bold;
   font-size: 0.9em;
   background: var(--color-selected);
   color: var(--color-text);
   border: 2px solid var(--color-border);
   border-radius: 6px;
-  height: calc(var(--tile-height) * 0.9);
+  /* Match grid track height to avoid visual overlap with next row */
+  min-height: calc(var(--tile-height));
   margin: 0.5em 0;
   box-sizing: border-box;
   cursor: pointer;
 }
+
+/* Keep header text compact so the extra padding becomes a visible spacer */
+.window-separator > span:first-child {
+  line-height: 1;
+}
+
+/* Visual separation under the window header only; no gaps between tabs */
+.window-separator + .tab {
+  margin-top: 0;          /* do not affect grid spacing */
+  padding-top: 0.25em;    /* create internal breathing room */
+  border-top: 1px solid var(--color-border);
+}
+
+.window-separator .count-badge {
+  position: absolute;
+  right: 0.6em;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-block;
+  padding: 0.05em 0.5em;
+  text-align: center;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.85em;
+  font-weight: normal;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+body[data-theme="dark"] .window-separator .count-badge {
+  background: var(--color-hover);
+}
+
+/* (removed) duplicate older rule for window header spacing */
 
 .window-separator.collapsed {
   opacity: 0.7;
@@ -521,6 +566,8 @@ body.full {
   display: flex;
   flex-direction: column;
   max-width: none;
+  /* Add subtle vertical gap between grid rows in full view */
+  --row-gap: 0em;
 }
 body.full #tabs-wrapper,
 .tab-grid-wrapper {
@@ -584,7 +631,10 @@ body.full #tabs,
   text-overflow: ellipsis;
 }
 body.full .tab-title {
-  padding: 2px 0;
+  padding: 0 0;
+}
+body.full .tab > div {
+  padding: 0 0.1em;
 }
 body.full #counts,
 body.full #menu {
@@ -647,4 +697,8 @@ body.full #counts.scrolled {
   margin-top: 0.5em;
   color: var(--color-muted);
   font-size: 0.9em;
+}
+.window-separator + .tab {
+  /* Extra space below the window header; tabs themselves remain tight */
+  margin-top: 0.35em;
 }
