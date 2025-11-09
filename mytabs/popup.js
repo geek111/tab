@@ -611,7 +611,23 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       if (!groups.has(tab.windowId)) groups.set(tab.windowId, []);
       groups.get(tab.windowId).push(entry);
     }
-    const orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
+    // In Recent view, order windows by the first occurrence
+    // of their tabs in the recent list (most recently viewed first).
+    // For other views (e.g. query), keep window order by window index.
+    let orderedIds;
+    if (view === 'recent') {
+      const seen = new Set();
+      orderedIds = [];
+      for (const entry of list) {
+        const tab = entry.tab ?? entry;
+        if (!seen.has(tab.windowId)) {
+          seen.add(tab.windowId);
+          orderedIds.push(tab.windowId);
+        }
+      }
+    } else {
+      orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
+    }
     for (const winId of orderedIds) {
       tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, windowId: winId, el: null });
       if (collapsedWins.has(winId)) continue;
