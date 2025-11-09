@@ -604,7 +604,8 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   const validIds = new Set(
     list
       .map(entry => entry.tab ?? entry)
-      .filter(t => !collapsedWins.has(t.windowId))
+      // In Recent view don't hide items for collapsed windows
+      .filter(t => view === 'recent' || !collapsedWins.has(t.windowId))
       .map(t => t.id)
   );
   for (const id of Array.from(selectedIds)) {
@@ -613,30 +614,14 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   const full = document.body.classList.contains('full') && winMap;
   tabItems = [];
   idIndexMap = new Map();
-  if (full && (view === 'recent' || query)) {
+  if (full && query) {
     const groups = new Map();
     for (const entry of list) {
       const tab = entry.tab ?? entry;
       if (!groups.has(tab.windowId)) groups.set(tab.windowId, []);
       groups.get(tab.windowId).push(entry);
     }
-    // In Recent view, order windows by the first occurrence
-    // of their tabs in the recent list (most recently viewed first).
-    // For other views (e.g. query), keep window order by window index.
-    let orderedIds;
-    if (view === 'recent') {
-      const seen = new Set();
-      orderedIds = [];
-      for (const entry of list) {
-        const tab = entry.tab ?? entry;
-        if (!seen.has(tab.windowId)) {
-          seen.add(tab.windowId);
-          orderedIds.push(tab.windowId);
-        }
-      }
-    } else {
-      orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
-    }
+    const orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
     for (const winId of orderedIds) {
       const entries = groups.get(winId) || [];
       const total = entries.length;
@@ -649,6 +634,14 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
         tabItems.push(item);
         idIndexMap.set(tab.id, tabItems.length - 1);
       }
+    }
+  } else if (full && view === 'recent') {
+    // In Recent view, do not show window headers at all; list tabs flat
+    for (const entry of list) {
+      const tab = entry.tab ?? entry;
+      const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
+      tabItems.push(item);
+      idIndexMap.set(tab.id, tabItems.length - 1);
     }
   } else {
     let lastWin = -1;
@@ -869,20 +862,9 @@ async function update() {
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? { windowType: 'normal' } : { currentWindow: true, windowType: 'normal' };
-    let allTabs;
-    // In Full View, always fetch a fresh snapshot so per-window counts
-    // (loaded/total) update immediately without reopening the window.
-    if (allWins) {
-      allTabs = await browser.tabs.query(queryOpts);
-    } else if (Array.isArray(cachedTabs)) {
-      allTabs = cachedTabs.slice();
-      try {
-        const win = await browser.windows.getLastFocused({ windowTypes: ['normal'] });
-        allTabs = allTabs.filter(t => t.windowId === win.id);
-      } catch (_) {}
-    } else {
-      allTabs = await browser.tabs.query(queryOpts);
-    }
+    // Always query live tabs so counts and state update instantly
+    // in both popup and full views.
+    let allTabs = await browser.tabs.query(queryOpts);
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
