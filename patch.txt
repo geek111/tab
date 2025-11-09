@@ -1,0 +1,131 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/mytabs/style.css b/mytabs/style.css
+index dd29d4b17ef24d501a89d0d53d40c1b48445bb90..b6404582fa70d7a5f34e65562f7db855b10afa89 100644
+--- a/mytabs/style.css
++++ b/mytabs/style.css
+@@ -78,50 +78,68 @@ body[data-theme="dark"] #context div:hover {
+ }
+ 
+ #menu {
+   margin-bottom: 0;
+ }
+ #counts {
+   margin-bottom: 0;
+ }
+ #menu button {
+   margin-right: 0.2em;
+ }
+ #container-filter {
+   margin-left: 0.2em;
+ }
+ 
+ #search {
+   width: 100%;
+   padding: 0.2em;
+   box-sizing: border-box;
+ }
+ 
+ #tabs {
+   margin-top: 0;
+   max-height: 400px;
+   overflow-y: hidden;
++  overflow-x: hidden;
++  width: 100%;
++  box-sizing: border-box;
++}
++body.popup {
++  overflow-x: hidden;
++}
++body.popup #tabs {
++  overflow-y: auto;
++  overflow-x: hidden;
++  scrollbar-gutter: stable;
++}
++body.popup .tab {
++  width: 100%;
++  padding-right: 0.5em;
++}
++body.popup .tab > div:last-child {
++  margin-left: auto;
+ }
+ body.full #tabs {
+   max-height: none;
+ }
+ 
+ .tab {
+   display: flex;
+   align-items: center;
+   padding: 0;
+   border-bottom: none;
+   break-inside: avoid;
+   box-sizing: border-box;
+   min-width: 0;
+ }
+ .tab-icon {
+   width: calc(16px * var(--font-scale));
+   height: calc(16px * var(--font-scale));
+ }
+ .container-indicator {
+   width: calc(10px * var(--font-scale));
+   height: calc(10px * var(--font-scale));
+   border-radius: 50%;
+ }
+ .tab:hover {
+   background: var(--color-hover);
+@@ -183,50 +201,53 @@ body.popup .tab > div {
+   color: var(--color-text);
+   border: 2px solid var(--color-border);
+   border-radius: 6px;
+   height: calc(var(--tile-height) * 0.9);
+   margin: 0.5em 0;
+   box-sizing: border-box;
+ }
+ button {
+   padding: 0.3em 0.6em;
+   margin-left: 0;
+   border: 1px solid var(--color-border);
+   border-radius: 4px;
+   background: var(--color-bg);
+   color: var(--color-text);
+   cursor: pointer;
+   transition: background 0.2s;
+ }
+ button:hover {
+   background: var(--color-hover);
+ }
+ .close-btn {
+   font-size: calc(1em * var(--close-scale));
+   padding: 0;
+   line-height: 1;
+ }
++body.popup .close-btn {
++  margin-right: 0.5em;
++}
+ .hidden {
+   display: none;
+ }
+ #context {
+   position: absolute;
+   background: var(--color-bg);
+   border: 1px solid var(--color-border);
+   padding: 0.2em;
+   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+   z-index: 1000;
+ }
+ 
+ #context div {
+   padding: 0.2em 0.5em;
+   cursor: pointer;
+ }
+ 
+ #context div:hover {
+   background: var(--color-hover);
+ }
+ 
+ .tab-tooltip {
+   position: absolute;
+   background: var(--color-bg);
+   color: var(--color-text);
+ 
+EOF
+)

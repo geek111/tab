@@ -260,7 +260,12 @@ browser.tabs.onRemoved.addListener((tabId) => {
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.discarded === false && tab && tab.active) {
+  // When a tab is discarded via Firefox's built-in Unload Tab,
+  // reflect that by clearing its visited state in the add-on.
+  if (changeInfo.discarded === true) {
+    unmarkVisited(tabId);
+  } else if (changeInfo.discarded === false && tab && tab.active) {
+    // A previously discarded tab became active (reloaded): mark as visited again.
     markVisited(tabId);
   }
   if (changeInfo.url) {
