@@ -8,6 +8,7 @@ All notable changes to this project are documented here.
 - Full View: Window headers now display a styled badge with the number of visible tabs in that window.
 - Full View: The badge now shows "loaded/total" (e.g., 8/12), where "loaded" means not discarded.
 - UI: Moved the window tab-count badge to the right edge of the header and reserved padding so the label stays centered without the badge overlapping the border.
+- Full View: Per-window "loaded/total" badge updates live on tab open/close and discard/restore events — no need to reopen the window.
 
 ## 1.1.10 - 2025-10-26
 - Internal: UI/UX refinements in popup and full view.
