@@ -336,9 +336,9 @@ body.popup .tab > div {
   padding-inline: 0.6em;
   /* Reserve space on the right for the badge showing loaded/total */
   padding-inline-end: 3.4em;
-  /* Create visual gap below the header without adding row-gap between tabs */
+  /* Compact internal padding; visual gap handled by next .tab margin */
   padding-top: 0.05em;
-  padding-bottom: 0.4em;
+  padding-bottom: 0.1em;
   gap: 0.5em;
   font-weight: bold;
   font-size: 0.9em;
@@ -351,13 +351,18 @@ body.popup .tab > div {
   margin: 0.5em 0;
   box-sizing: border-box;
   cursor: pointer;
-  /* Visual bottom gap without affecting grid row spacing */
-  box-shadow: inset 0 -3px 0 var(--color-bg);
 }
 
 /* Keep header text compact so the extra padding becomes a visible spacer */
 .window-separator > span:first-child {
   line-height: 1;
+}
+
+/* Visual separation under the window header only; no gaps between tabs */
+.window-separator + .tab {
+  margin-top: 0;          /* do not affect grid spacing */
+  padding-top: 0.25em;    /* create internal breathing room */
+  border-top: 1px solid var(--color-border);
 }
 
 .window-separator .count-badge {
@@ -382,10 +387,7 @@ body[data-theme="dark"] .window-separator .count-badge {
   background: var(--color-hover);
 }
 
-.window-separator + .tab {
-  /* Extra gap so the window frame doesn't visually collide with the first tab */
-  margin-top: 0.25em;
-}
+/* (removed) duplicate older rule for window header spacing */
 
 .window-separator.collapsed {
   opacity: 0.7;
@@ -695,4 +697,8 @@ body.full #counts.scrolled {
   margin-top: 0.5em;
   color: var(--color-muted);
   font-size: 0.9em;
+}
+.window-separator + .tab {
+  /* Extra space below the window header; tabs themselves remain tight */
+  margin-top: 0.35em;
 }
