@@ -45,6 +45,12 @@ const popupScrollPos = { all: 0, recent: 0, dups: 0 };
 let easterEgg;
 const collapsedWins = new Set();
 
+// Internal pages of this extension (moz-extension://...)
+const EXT_BASE = browser.runtime.getURL('');
+function isInternalTab(tab) {
+  return !!(tab && typeof tab.url === 'string' && tab.url.startsWith(EXT_BASE));
+}
+
 function showEasterEgg() {
   if (!easterEgg || easterEgg.classList.contains('visible')) return;
   const hide = () => {
@@ -368,6 +374,7 @@ async function getTabs(allTabs) {
     for (const id of recent) {
       try {
         const t = await browser.tabs.get(id);
+        if (isInternalTab(t)) continue;
         if (!currentWin || t.windowId === currentWin.id) {
           result.push(t);
         }
@@ -378,9 +385,9 @@ async function getTabs(allTabs) {
     return result;
   }
   if (view === 'dups') {
-    return allTabs.filter(t => currentDupIds.has(t.id));
+    return allTabs.filter(t => currentDupIds.has(t.id) && !isInternalTab(t));
   }
-  return allTabs;
+  return allTabs.filter(t => !isInternalTab(t));
 }
 
 function closeUI() {
@@ -604,7 +611,8 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
   const validIds = new Set(
     list
       .map(entry => entry.tab ?? entry)
-      .filter(t => !collapsedWins.has(t.windowId))
+      // In Recent view don't hide items for collapsed windows
+      .filter(t => view === 'recent' || !collapsedWins.has(t.windowId))
       .map(t => t.id)
   );
   for (const id of Array.from(selectedIds)) {
@@ -620,19 +628,14 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       if (!groups.has(tab.windowId)) groups.set(tab.windowId, []);
       groups.get(tab.windowId).push(entry);
     }
-    // In Recent view, order windows by the first occurrence
-    // of their tabs in the recent list (most recently viewed first).
-    // For other views (e.g. query), keep window order by window index.
+    // Order windows: in Recent by first occurrence in recent list; otherwise by window index
     let orderedIds;
     if (view === 'recent') {
       const seen = new Set();
       orderedIds = [];
       for (const entry of list) {
         const tab = entry.tab ?? entry;
-        if (!seen.has(tab.windowId)) {
-          seen.add(tab.windowId);
-          orderedIds.push(tab.windowId);
-        }
+        if (!seen.has(tab.windowId)) { seen.add(tab.windowId); orderedIds.push(tab.windowId); }
       }
     } else {
       orderedIds = Array.from(groups.keys()).sort((a, b) => (winMap.get(a) ?? 0) - (winMap.get(b) ?? 0));
@@ -641,9 +644,15 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       const entries = groups.get(winId) || [];
       const total = entries.length;
       const loaded = entries.reduce((acc, e) => acc + ((e.tab ?? e).discarded ? 0 : 1), 0);
-      tabItems.push({ separator: true, label: `Window ${winMap.get(winId)}`, windowId: winId, total, loaded, el: null });
-      if (collapsedWins.has(winId)) continue;
-      for (const entry of groups.get(winId)) {
+      const idx = winMap ? winMap.get(winId) : null;
+      const showHeader = view !== 'recent' || (typeof idx === 'number' && !Number.isNaN(idx));
+      if (showHeader) {
+        const label = `Window ${idx}`;
+        tabItems.push({ separator: true, label, windowId: winId, total, loaded, el: null });
+      }
+      const collapsed = showHeader && collapsedWins.has(winId);
+      if (collapsed) continue;
+      for (const entry of entries) {
         const tab = entry.tab ?? entry;
         const item = { tab, match: entry.match, selected: selectedIds.has(tab.id), el: null };
         tabItems.push(item);
@@ -869,20 +878,9 @@ async function update() {
   try {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? { windowType: 'normal' } : { currentWindow: true, windowType: 'normal' };
-    let allTabs;
-    // In Full View, always fetch a fresh snapshot so per-window counts
-    // (loaded/total) update immediately without reopening the window.
-    if (allWins) {
-      allTabs = await browser.tabs.query(queryOpts);
-    } else if (Array.isArray(cachedTabs)) {
-      allTabs = cachedTabs.slice();
-      try {
-        const win = await browser.windows.getLastFocused({ windowTypes: ['normal'] });
-        allTabs = allTabs.filter(t => t.windowId === win.id);
-      } catch (_) {}
-    } else {
-      allTabs = await browser.tabs.query(queryOpts);
-    }
+    // Always query live tabs so counts and state update instantly
+    // in both popup and full views.
+    let allTabs = await browser.tabs.query(queryOpts);
     if (filterContainerId) {
       allTabs = allTabs.filter(t => t.cookieStoreId === filterContainerId);
     }
@@ -897,13 +895,14 @@ async function update() {
     } else {
       allTabs.sort((a, b) => a.index - b.index);
     }
-    document.getElementById('total-count').textContent = allTabs.length;
+    const visibleAllTabs = allTabs.filter(t => !isInternalTab(t));
+    document.getElementById('total-count').textContent = visibleAllTabs.length;
     let tabs = await getTabs(allTabs);
     let activeCount;
     if (view === 'recent') {
       activeCount = tabs.length;
     } else {
-      activeCount = allTabs.filter(t => !t.discarded).length;
+      activeCount = visibleAllTabs.filter(t => !t.discarded).length;
     }
     document.getElementById('active-count').textContent = activeCount;
     const winMap = allWins ? new Map((await browser.windows.getAll({populate: false, windowTypes: ['normal']})).map((w, i) => [w.id, i + 1])) : null;
