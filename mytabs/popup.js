@@ -870,14 +870,16 @@ async function update() {
     const allWins = document.body.classList.contains('full');
     const queryOpts = allWins ? { windowType: 'normal' } : { currentWindow: true, windowType: 'normal' };
     let allTabs;
-    if (Array.isArray(cachedTabs)) {
+    // In Full View, always fetch a fresh snapshot so per-window counts
+    // (loaded/total) update immediately without reopening the window.
+    if (allWins) {
+      allTabs = await browser.tabs.query(queryOpts);
+    } else if (Array.isArray(cachedTabs)) {
       allTabs = cachedTabs.slice();
-      if (!allWins) {
-        try {
-          const win = await browser.windows.getLastFocused({ windowTypes: ['normal'] });
-          allTabs = allTabs.filter(t => t.windowId === win.id);
-        } catch (_) {}
-      }
+      try {
+        const win = await browser.windows.getLastFocused({ windowTypes: ['normal'] });
+        allTabs = allTabs.filter(t => t.windowId === win.id);
+      } catch (_) {}
     } else {
       allTabs = await browser.tabs.query(queryOpts);
     }
