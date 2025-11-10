@@ -900,9 +900,11 @@ async function update() {
     let tabs = await getTabs(allTabs);
     let activeCount;
     if (view === 'recent') {
+      // In Recent, Active reflects the number of visited tabs shown in this scope
       activeCount = tabs.length;
     } else {
-      activeCount = visibleAllTabs.filter(t => !t.discarded).length;
+      // In All/Duplicates, Active reflects visited tabs in the current scope
+      activeCount = visibleAllTabs.filter(t => visitedIds.has(t.id)).length;
     }
     document.getElementById('active-count').textContent = activeCount;
     const winMap = allWins ? new Map((await browser.windows.getAll({populate: false, windowTypes: ['normal']})).map((w, i) => [w.id, i + 1])) : null;
