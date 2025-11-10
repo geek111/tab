@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here.
 
+## 1.1.12 - 2025-11-10
+- Fix: Popup "All" view Active counter now matches "Recent" by counting visited tabs in the current scope; stays in sync on unload/restore events.
+- Internal: Kept "Recent" semantics unchanged (Active reflects the number of items in Recent), ensuring consistent values across views.
+
 ## 1.1.11 - 2025-11-09
 - Fix: When using Firefox’s built-in “Unload Tab”, the add-on now immediately reflects the change by clearing the tab’s visited state and refreshing the UI. This ensures counters and highlighting stay accurate. (Handled via `tabs.onUpdated` and `changeInfo.discarded`.)
 - Recent: In Full View, window groups are now ordered by the first occurrence of their tabs in the Recent list (i.e., the window you viewed a tab in most recently appears first).
