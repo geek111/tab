@@ -95,6 +95,120 @@ function adjustGridWidth() {
   grid.style.width = width + 'px';
 }
 
+// ----- Popup resizing helpers -----
+function applyPopupMaxHeight() {
+  if (document.body.classList.contains('full')) return;
+  const wrapper = document.getElementById('tabs-wrapper');
+  if (!wrapper) return;
+  const styles = getComputedStyle(document.body);
+  const padTop = parseFloat(styles.paddingTop) || 0;
+  const padBottom = parseFloat(styles.paddingBottom) || 0;
+  const usedTop = (document.getElementById('counts')?.offsetHeight || 0)
+    + (document.getElementById('menu')?.offsetHeight || 0)
+    + (document.querySelector('.search-wrapper')?.offsetHeight || 0)
+    + (document.getElementById('error')?.offsetHeight || 0);
+  const usedBottom = (document.getElementById('bulk-actions')?.offsetHeight || 0);
+  const avail = Math.max(120, window.innerHeight - usedTop - usedBottom - padTop - padBottom);
+  document.documentElement.style.setProperty('--popup-max-height', avail + 'px');
+}
+
+async function initPopupResizing() {
+  if (document.body.classList.contains('full')) return;
+  try {
+    const { popupSize } = await browser.storage.local.get('popupSize');
+    if (popupSize && typeof popupSize.width === 'number' && typeof popupSize.height === 'number') {
+      const w = Math.max(280, popupSize.width);
+      const h = Math.max(260, popupSize.height);
+      document.body.style.width = w + 'px';
+      document.body.style.height = h + 'px';
+    }
+  } catch (_) {}
+  applyPopupMaxHeight();
+
+  const minW = 280, minH = 260, maxW = 1000, maxH = 1000;
+  let startX = 0, startY = 0, startSX = 0, startSY = 0, startW = 0, startH = 0, mode = 'se';
+  let resizingActive = false;
+  let activeEl = null;
+  let activePointerId = null;
+  function onMove(e) {
+    if (!resizingActive) return;
+    // If the primary button is no longer pressed, end resizing.
+    if ((typeof e.buttons === 'number' && e.buttons === 0) ||
+        (typeof e.pressure === 'number' && e.type.startsWith('pointer') && e.pressure === 0)) {
+      onUp();
+      return;
+    }
+    // Use screen coordinates to avoid jitter when the popup repositions
+    // while resizing from the left or top edges.
+    const dx = (e.screenX ?? e.clientX) - startSX;
+    const dy = (e.screenY ?? e.clientY) - startSY;
+    if (mode.includes('e')) {
+      const w = Math.max(minW, Math.min(maxW, startW + dx));
+      document.body.style.width = w + 'px';
+    }
+    if (mode.includes('w')) {
+      const w = Math.max(minW, Math.min(maxW, startW - dx));
+      document.body.style.width = w + 'px';
+    }
+    if (mode.includes('s')) {
+      const h = Math.max(minH, Math.min(maxH, startH + dy));
+      document.body.style.height = h + 'px';
+    }
+    if (mode.includes('n')) {
+      const h = Math.max(minH, Math.min(maxH, startH - dy));
+      document.body.style.height = h + 'px';
+    }
+    applyPopupMaxHeight();
+  }
+  function onUp() {
+    if (!resizingActive) return;
+    resizingActive = false;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('blur', onUp);
+    document.body.classList.remove('resizing', 'resizing-se', 'resizing-ew', 'resizing-ns');
+    try { activeEl && activePointerId != null && activeEl.releasePointerCapture(activePointerId); } catch (_) {}
+    const w = Math.round(window.innerWidth);
+    const h = Math.round(window.innerHeight);
+    browser.storage.local.set({ popupSize: { width: w, height: h } }).catch(() => {});
+  }
+  function startResize(e, m, el) {
+    e.preventDefault();
+    startX = e.clientX; startY = e.clientY;
+    startSX = e.screenX ?? startX; startSY = e.screenY ?? startY;
+    startW = window.innerWidth; startH = window.innerHeight;
+    mode = m; // 'se' | 'e' | 's' | 'w' | 'n'
+    activeEl = el;
+    activePointerId = e.pointerId ?? null;
+    resizingActive = true;
+    document.body.classList.add('resizing');
+    const c = (m === 'e' || m === 'w') ? 'ew' : (m === 's' || m === 'n') ? 'ns' : 'se';
+    document.body.classList.add('resizing-' + c);
+    try { el.setPointerCapture && e.pointerId != null && el.setPointerCapture(e.pointerId); } catch (_) {}
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp, { passive: false });
+    window.addEventListener('pointercancel', onUp, { passive: false });
+    window.addEventListener('mousemove', onMove, { passive: false });
+    window.addEventListener('mouseup', onUp, { passive: false });
+    window.addEventListener('blur', onUp);
+  }
+  function attach(el, m) {
+    if (!el) return;
+    el.addEventListener('pointerdown', (e) => startResize(e, m, el));
+    el.addEventListener('mousedown', (e) => startResize(e, m, el));
+  }
+  attach(document.getElementById('popup-resizer'), 'se');
+  attach(document.getElementById('popup-resizer-e'), 'e');
+  attach(document.getElementById('popup-resizer-s'), 's');
+  attach(document.getElementById('popup-resizer-w'), 'w');
+  attach(document.getElementById('popup-resizer-n'), 'n');
+
+  window.addEventListener('resize', applyPopupMaxHeight);
+}
+
 function resetTabState() {
   if (virtualList) {
     virtualList.destroy();
@@ -1128,6 +1242,8 @@ async function init() {
   scrollContainer.addEventListener('scroll', hideAllTooltips);
   scrollContainer.addEventListener('scroll', updateMenuShadow);
   scrollContainer.addEventListener('scroll', updateFadeOverlay);
+  // Enable resizing only in popup mode (not in full window)
+  await initPopupResizing();
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);

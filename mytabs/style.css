@@ -136,6 +136,25 @@ body[data-theme="dark"] #easter-egg {
   margin-left: 0.2em;
 }
 
+/* Popup: make the top menu responsive and buttons auto-fit */
+body.popup #menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3em;
+}
+body.popup #menu button {
+  margin-right: 0;
+  flex: 1 1 0;
+  min-width: 90px;
+}
+body.popup #container-filter {
+  margin-left: 0;
+  flex: 1 1 160px;
+  min-width: 140px;
+  max-width: 100%;
+}
+
 .search-wrapper {
   position: relative;
 }
@@ -176,6 +195,9 @@ body.popup {
   overflow-x: hidden;
   /* Add spacing between the tab counts and menu buttons in popup mode */
   /* Provide visual separation for a cleaner layout */
+  position: relative;
+  /* Allow overriding the default body limit when user resizes */
+  max-width: none;
 }
 body.popup #counts {
   margin-bottom: 0.5em;
@@ -193,13 +215,85 @@ body.popup #tabs {
   overflow: visible;
 }
 body.popup #tabs-wrapper {
-  max-height: 400px;
+  /* Max height is controlled dynamically by JS via this CSS variable */
+  max-height: var(--popup-max-height, 400px);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
   box-sizing: border-box;
   position: relative;
 }
+
+/* Resizer handles */
+.resizer {
+  position: fixed;
+  z-index: 10000;
+}
+
+/* Corner (SE) handle – visible triangle */
+#popup-resizer.resizer,
+.resizer-se {
+  right: 4px;
+  bottom: 4px;
+  width: 12px;
+  height: 12px;
+  cursor: se-resize;
+  opacity: 0.35;
+  border-right: 2px solid var(--color-border);
+  border-bottom: 2px solid var(--color-border);
+  background: linear-gradient(135deg, transparent 50%, var(--color-border) 50%);
+}
+
+/* Right edge (E) handle */
+.resizer-e {
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+  background: transparent;
+}
+
+/* Bottom edge (S) handle */
+.resizer-s {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 6px;
+  cursor: ns-resize;
+  background: transparent;
+}
+
+/* Left edge (W) handle */
+.resizer-w {
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+  background: transparent;
+}
+
+/* Top edge (N) handle */
+.resizer-n {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  cursor: ns-resize;
+  background: transparent;
+}
+
+body[data-theme="dark"] #popup-resizer.resizer,
+body[data-theme="dark"] .resizer-se {
+  opacity: 0.5;
+}
+
+/* Prevent text selection while dragging */
+body.popup.resizing { user-select: none; }
+body.popup.resizing-se { cursor: se-resize; }
+body.popup.resizing-ew { cursor: ew-resize; }
+body.popup.resizing-ns { cursor: ns-resize; }
 body.popup #tabs-wrapper::before,
 body.popup #tabs-wrapper::after {
   content: '';
