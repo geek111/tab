@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## 1.1.12 - 2025-11-10
+## 1.1.13 - 2025-11-10
 - Popup: Added full drag-resize support.
   - New resizer handles on right, bottom, top, left edges and bottom-right corner.
   - Width and height can be adjusted independently; size persists across sessions (`storage.local.popupSize`).
@@ -16,7 +16,7 @@ All notable changes to this project are documented here.
 - Fix: Popup "All" view Active counter now matches "Recent" by counting visited tabs in the current scope; stays in sync on unload/restore events.
 - Internal: Kept "Recent" semantics unchanged (Active reflects the number of items in Recent), ensuring consistent values across views.
 
-<!-- merged into the 1.1.12 section above -->
+<!-- merged into the 1.1.13 section above -->
 
 ## 1.1.11 - 2025-11-09
 - Fix: When using Firefox’s built-in “Unload Tab”, the add-on now immediately reflects the change by clearing the tab’s visited state and refreshing the UI. This ensures counters and highlighting stay accurate. (Handled via `tabs.onUpdated` and `changeInfo.discarded`.)

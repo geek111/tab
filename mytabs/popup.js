@@ -101,15 +101,14 @@ function applyPopupMaxHeight() {
   const wrapper = document.getElementById('tabs-wrapper');
   if (!wrapper) return;
   const styles = getComputedStyle(document.body);
-  const padTop = parseFloat(styles.paddingTop) || 0;
   const padBottom = parseFloat(styles.paddingBottom) || 0;
-  const usedTop = (document.getElementById('counts')?.offsetHeight || 0)
-    + (document.getElementById('menu')?.offsetHeight || 0)
-    + (document.querySelector('.search-wrapper')?.offsetHeight || 0)
-    + (document.getElementById('error')?.offsetHeight || 0);
-  const usedBottom = (document.getElementById('bulk-actions')?.offsetHeight || 0);
-  const avail = Math.max(120, window.innerHeight - usedTop - usedBottom - padTop - padBottom);
+  const bulk = document.getElementById('bulk-actions');
+  const bulkH = bulk ? bulk.offsetHeight : 0;
+  const topY = wrapper.getBoundingClientRect().top;
+  const reserve = padBottom + bulkH + 6; // include resizer
+  const avail = Math.max(120, Math.floor(window.innerHeight - topY - reserve));
   document.documentElement.style.setProperty('--popup-max-height', avail + 'px');
+  document.documentElement.style.setProperty('--bulk-actions-h', (bulkH + 6) + 'px');
 }
 
 async function initPopupResizing() {
@@ -125,7 +124,8 @@ async function initPopupResizing() {
   } catch (_) {}
   applyPopupMaxHeight();
 
-  const minW = 280, minH = 260, maxW = 1000, maxH = 1000;
+  // Only enforce minimums; allow Firefox to impose its own maximums.
+  const minW = 280, minH = 260, maxW = Number.POSITIVE_INFINITY, maxH = Number.POSITIVE_INFINITY;
   let startX = 0, startY = 0, startSX = 0, startSY = 0, startW = 0, startH = 0, mode = 'se';
   let resizingActive = false;
   let activeEl = null;
@@ -1244,6 +1244,8 @@ async function init() {
   scrollContainer.addEventListener('scroll', updateFadeOverlay);
   // Enable resizing only in popup mode (not in full window)
   await initPopupResizing();
+  // Ensure bottom actions are always visible by accounting for their height
+  applyPopupMaxHeight();
   container.addEventListener('click', onContainerClick);
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);
@@ -1430,6 +1432,10 @@ browser.storage.onChanged.addListener((changes, area) => {
 window.addEventListener('resize', () => {
   if (document.body.classList.contains('full')) {
     requestAnimationFrame(adjustGridWidth);
+  } else {
+    // Recalculate available space and refresh virtual list height
+    applyPopupMaxHeight();
+    scheduleUpdate();
   }
 });
 

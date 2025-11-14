@@ -104,6 +104,18 @@ body[data-theme="dark"] #easter-egg {
   gap: 0.5em;
   font-weight: bold;
 }
+/* Popup: keep counters stable and centered regardless of width */
+body.popup #counts {
+  display: inline-flex;         /* shrink to content width */
+  flex-wrap: nowrap;            /* avoid unexpected stretching */
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  max-width: 100%;
+  white-space: nowrap;
+  margin: 0 auto;               /* center within the popup width */
+}
+body.popup .count-label { flex: 0 0 auto; white-space: nowrap; }
 
 .count-label {
   padding: 0.1em 0.6em;
@@ -145,13 +157,15 @@ body.popup #menu {
 }
 body.popup #menu button {
   margin-right: 0;
-  flex: 1 1 0;
-  min-width: 90px;
+  /* Keep natural size; don't stretch to fill row */
+  flex: 0 0 auto;
+  min-width: auto;
+  white-space: nowrap;
 }
 body.popup #container-filter {
   margin-left: 0;
-  flex: 1 1 160px;
-  min-width: 140px;
+  flex: 1 0 220px; /* grow a bit, but not force other buttons to stretch */
+  min-width: 160px;
   max-width: 100%;
 }
 
@@ -193,11 +207,16 @@ body.popup #container-filter {
 }
 body.popup {
   overflow-x: hidden;
+  overflow-y: hidden; /* vertical scrolling handled by tabs wrapper */
   /* Add spacing between the tab counts and menu buttons in popup mode */
   /* Provide visual separation for a cleaner layout */
   position: relative;
   /* Allow overriding the default body limit when user resizes */
   max-width: none;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0; /* allow flex children to shrink */
 }
 body.popup #counts {
   margin-bottom: 0.5em;
@@ -215,8 +234,11 @@ body.popup #tabs {
   overflow: visible;
 }
 body.popup #tabs-wrapper {
-  /* Max height is controlled dynamically by JS via this CSS variable */
-  max-height: var(--popup-max-height, 400px);
+  /* Explicit height computed in JS so bottom actions always remain visible */
+  height: var(--popup-max-height, 400px);
+  flex: 0 1 auto;
+  min-height: 0;
+  padding-bottom: var(--bulk-actions-h, 0.75em);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
@@ -259,7 +281,7 @@ body.popup #tabs-wrapper {
   left: 0;
   bottom: 0;
   width: 100%;
-  height: 6px;
+  height: 4px;
   cursor: ns-resize;
   background: transparent;
 }
@@ -621,12 +643,26 @@ body[data-theme="dark"] .tab-tooltip.left::after {
   border-color: transparent transparent transparent rgba(40, 40, 40, 0.95);
 }
 
+/* Base layout for actions */
 #bulk-actions {
   margin-top: 0.5em;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5em;
   justify-content: flex-end;
+}
+#bulk-actions { flex: 0 0 auto; }
+
+/* In popup, pin actions to the bottom of the viewport so they never disappear */
+body.popup #bulk-actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.5em;
+  background: var(--color-bg);
+  z-index: 10;
+  box-shadow: 0 -2px 4px rgba(0,0,0,0.15);
 }
 #bulk-actions button {
   margin-left: 0;
