@@ -712,6 +712,11 @@ body.full #tabs-wrapper,
   padding: 0 !important;
   position: relative;
 }
+/* In full-window view, reserve space for the horizontal
+   scrollbar so it does not overlap the last row of tabs. */
+body.full #tabs-wrapper {
+  padding-bottom: 1.1em !important;
+}
 body.full #tabs-wrapper::before,
 body.full #tabs-wrapper::after {
   content: '';

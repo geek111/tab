@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here.
 
+## 1.1.14 - 2025-11-15
+- Full View: Fixed a visual issue where the horizontal scrollbar in full-window mode could overlap the bottom row of tabs by reserving space in `#tabs-wrapper` (CSS padding), ensuring tabs remain fully visible.
+  Files touched: `style.css`.
+
 ## 1.1.13 - 2025-11-10
 - Popup: Added full drag-resize support.
   - New resizer handles on right, bottom, top, left edges and bottom-right corner.
