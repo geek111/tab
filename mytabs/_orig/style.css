@@ -238,10 +238,7 @@ body.popup #tabs-wrapper {
   height: var(--popup-max-height, 400px);
   flex: 0 1 auto;
   min-height: 0;
-  /* Minimal dolny margines, bez podwójnego odejmowania
-     wysokości paska akcji (jego wysokość jest już uwzględniona
-     w obliczaniu --popup-max-height w JS). */
-  padding-bottom: 0.25em;
+  padding-bottom: var(--bulk-actions-h, 0.75em);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
@@ -394,7 +391,6 @@ body.popup .tab {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
 }
-
 .tab.active {
   background: var(--color-active);
   font-weight: bold;
@@ -836,4 +832,3 @@ body.full #counts.scrolled {
   /* Extra space below the window header; tabs themselves remain tight */
   margin-top: 0.35em;
 }
-

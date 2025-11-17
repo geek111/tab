@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Options</h1>
+  <label>Theme: <select id="theme"><option value="light">Light</option><option value="dark">Dark</option></select></label> <button type="button" class="default-btn" data-for="theme">Default</button>
+  <br>
+  <label>Tile Width (px): <input type="number" id="tileWidth" min="50" max="600" value="255"></label> <button type="button" class="default-btn" data-for="tileWidth">Default</button>
+  <br>
+  <label>Tile Scale: <input type="number" id="tileScale" min="0.5" max="2" step="0.1" value="0.9"></label> <button type="button" class="default-btn" data-for="tileScale">Default</button>
+  <br>
+  <label>Font Scale: <input type="number" id="fontScale" min="0.25" max="2" step="0.1" value="0.8125"></label> <button type="button" class="default-btn" data-for="fontScale">Default</button>
+  <br>
+  <label>Close Button Scale: <input type="number" id="closeScale" min="0.25" max="2" step="0.1" value="1.55"></label> <button type="button" class="default-btn" data-for="closeScale">Default</button>
+  <br>
+  <label>UI Scale: <input type="number" id="uiScale" min="0.5" max="2" step="0.1" value="1"></label> <button type="button" class="default-btn" data-for="uiScale">Default</button>
+  <br>
+  <label>Row Gap (em): <input type="number" id="rowGap" min="0" max="5" step="0.1" value="0"></label> <button type="button" class="default-btn" data-for="rowGap">Default</button>
+  <br>
+  <label>Scroll Speed: <input type="range" id="scrollSpeed" min="0.5" max="3" step="0.1" value="1"><span id="scrollSpeedValue">1</span></label> <button type="button" class="default-btn" data-for="scrollSpeed">Default</button>
+  <br>
+  <label><input type="checkbox" id="opt-show-recent" checked> Show Recent panel</label> <button type="button" class="default-btn" data-for="opt-show-recent">Default</button>
+  <br>
+  <label><input type="checkbox" id="opt-show-dups" checked> Show Duplicates panel</label> <button type="button" class="default-btn" data-for="opt-show-dups">Default</button>
+  <br>
+  <label><input type="checkbox" id="opt-enable-move" checked> Enable Move commands</label> <button type="button" class="default-btn" data-for="opt-enable-move">Default</button>
+  <br>
+  <label><input type="checkbox" id="opt-auto-unload"> Auto Unload Inactive Tabs</label> <button type="button" class="default-btn" data-for="opt-auto-unload">Default</button>
+  <br>
+  <label>Unload After (minutes): <input type="number" id="opt-auto-unload-mins" min="1" max="1440" value="60"></label> <button type="button" class="default-btn" data-for="opt-auto-unload-mins">Default</button>
+  <br>
+  <label><input type="checkbox" id="opt-disable-effects"> Disable Animations</label> <button type="button" class="default-btn" data-for="opt-disable-effects">Default</button>
+  <br>
+  <label>Popup Shortcut: <input type="text" id="key-open-popup" placeholder="Alt+Shift+H"></label> <button type="button" class="default-btn" data-for="key-open-popup">Default</button>
+  <br>
+  <label>Full View Shortcut: <input type="text" id="key-open-full" placeholder="Alt+Shift+F"></label> <button type="button" class="default-btn" data-for="key-open-full">Default</button>
+  <br>
+  <label>Unload All Shortcut: <input type="text" id="key-unload-all" placeholder="Alt+Shift+U"></label> <button type="button" class="default-btn" data-for="key-unload-all">Default</button>
+  <br>
+  <label>All View Shortcut: <input type="text" id="key-view-all" placeholder="Shift+A"></label> <button type="button" class="default-btn" data-for="key-view-all">Default</button>
+  <br>
+  <label>Recent View Shortcut: <input type="text" id="key-view-recent" placeholder="Shift+R"></label> <button type="button" class="default-btn" data-for="key-view-recent">Default</button>
+  <br>
+  <label>Duplicates View Shortcut: <input type="text" id="key-view-dups" placeholder="Shift+D"></label> <button type="button" class="default-btn" data-for="key-view-dups">Default</button>
+  <br>
+  <button id="save">Save</button>
+  <div id="addon-version" class="version-info"></div>
+  <script src="theme.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
