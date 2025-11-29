@@ -2,9 +2,12 @@
 
 All notable changes to this project are documented here.
 
-## 1.1.14 - 2025-11-15
-- Full View: Fixed a visual issue where the horizontal scrollbar in full-window mode could overlap the bottom row of tabs by reserving space in `#tabs-wrapper` (CSS padding), ensuring tabs remain fully visible.
-  Files touched: `style.css`.
+## 1.1.14 - 2025-11-17
+- Popup: Reworked tab reordering in popup mode to use a mouse-based drag-and-drop handler, so dragging no longer behaves like text selection and works consistently across platforms.
+- Popup: Stabilized hover behavior by avoiding background-triggered list rebuilds while the cursor is over the tab list, reducing flicker when tabs update.
+- Popup: Removed the excessive bottom padding reserved for bulk actions in `#tabs-wrapper`, eliminating the large empty gap at the bottom when scrolling to the end of the list.
+
+  Files touched: `popup.js`, `style.css`.
 
 ## 1.1.13 - 2025-11-10
 - Popup: Added full drag-resize support.
