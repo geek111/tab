@@ -8,6 +8,15 @@ let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
 
+async function applyAutoDiscardable() {
+  try {
+    const tabs = await browser.tabs.query({});
+    await Promise.all(tabs.map(t =>
+      browser.tabs.update(t.id, { autoDiscardable: !autoUnload }).catch(() => {})
+    ));
+  } catch (_) {}
+}
+
 // Cache of all tabs for the extension page
 let allTabCache = [];
 
@@ -111,6 +120,7 @@ browser.storage.local.get([
   }
   if (Array.isArray(data.recent)) recent = data.recent;
   if (Array.isArray(data.visited)) visited = new Set(data.visited);
+  await applyAutoDiscardable();
   refreshTabState();
 });
 
@@ -119,13 +129,26 @@ browser.runtime.onStartup.addListener(async () => {
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
+  try {
+    const activeTabs = await browser.tabs.query({ windowType: 'normal', active: true });
+    for (const tab of activeTabs) {
+      pushRecent(tab.id);
+      markVisited(tab.id);
+    }
+  } catch (e) {
+    console.error('Failed to seed active tabs after startup', e);
+  }
   sendVisitedUpdate();
+  refreshTabState();
 });
 
 // Listen for settings changes
 browser.storage.onChanged.addListener((changes, area) => {
   if (area === 'local') {
-    if (changes.autoUnload) autoUnload = changes.autoUnload.newValue;
+    if (changes.autoUnload) {
+      autoUnload = changes.autoUnload.newValue;
+      applyAutoDiscardable();
+    }
     if (changes.autoUnloadMinutes) autoUnloadMinutes = changes.autoUnloadMinutes.newValue;
   }
 });
@@ -203,6 +226,9 @@ function markVisited(tabId) {
     browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
     sendVisitedUpdate();
   }
+  if (!autoUnload) {
+    browser.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
+  }
 }
 
 browser.tabs.onActivated.addListener(info => {
@@ -213,6 +239,9 @@ browser.tabs.onActivated.addListener(info => {
 
 browser.tabs.onCreated.addListener(tab => {
   addDuplicate(tab.id, tab.url);
+  if (!autoUnload) {
+    browser.tabs.update(tab.id, { autoDiscardable: false }).catch(() => {});
+  }
   refreshTabState();
 });
 
@@ -231,7 +260,12 @@ browser.tabs.onRemoved.addListener((tabId) => {
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.discarded === false && tab && tab.active) {
+  // When a tab is discarded via Firefox's built-in Unload Tab,
+  // reflect that by clearing its visited state in the add-on.
+  if (changeInfo.discarded === true) {
+    unmarkVisited(tabId);
+  } else if (changeInfo.discarded === false && tab && tab.active) {
+    // A previously discarded tab became active (reloaded): mark as visited again.
     markVisited(tabId);
   }
   if (changeInfo.url) {
@@ -256,6 +290,8 @@ browser.runtime.onMessage.addListener((msg) => {
     reorderRecent(msg.ids || [], msg.toId, msg.before);
   } else if (msg && msg.type === 'clearVisitHistory') {
     clearVisitHistory();
+  } else if (msg && msg.type === 'openFullView') {
+    return openFullView();
   }
 });
 
@@ -355,6 +391,11 @@ browser.runtime.onInstalled.addListener(async () => {
     contexts: ['browser_action']
   });
   await browser.contextMenus.create({
+    id: 'open-full-view',
+    title: 'Open Full View',
+    contexts: ['browser_action']
+  });
+  await browser.contextMenus.create({
     id: 'open-options',
     title: 'Options',
     contexts: ['browser_action']
@@ -362,7 +403,9 @@ browser.runtime.onInstalled.addListener(async () => {
 });
 
 browser.contextMenus.onClicked.addListener((info) => {
-  if (info.menuItemId === 'open-options') {
+  if (info.menuItemId === 'open-full-view') {
+    openFullView();
+  } else if (info.menuItemId === 'open-options') {
     browser.runtime.openOptionsPage();
   }
 });
