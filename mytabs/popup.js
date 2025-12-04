@@ -1707,13 +1707,7 @@ async function bulkDiscard() {
 }
 
 async function bulkUnloadAll() {
-  const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.map(async t => {
-    try {
-      await browser.tabs.discard(t.id);
-    } catch (_) {}
-  }));
-  await browser.runtime.sendMessage({ type: 'clearVisitHistory' });
+  await browser.runtime.sendMessage({ type: 'unloadAllTabs' });
   scheduleUpdate();
 }
 
