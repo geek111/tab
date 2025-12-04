@@ -1,8 +1,12 @@
 (async function(){
-  let { theme = 'light', tileWidth = 255, tileScale = 0.9, fontScale = 0.8125, closeScale = 1.55, rowGap = 0, disableEffects = false } =
+  const BASE_TILE_SCALE = 0.9;
+  const BASE_FONT_SCALE = 0.8125;
+  const BASE_CLOSE_SCALE = 1.55;
+
+  let { theme = 'light', tileWidth = 255, tileScale = BASE_TILE_SCALE, fontScale = BASE_FONT_SCALE, closeScale = BASE_CLOSE_SCALE, rowGap = 0, disableEffects = false } =
     await browser.storage.local.get(['theme','tileWidth','tileScale','fontScale','closeScale','rowGap','disableEffects']);
   if (closeScale === undefined) {
-    closeScale = 1.55;
+    closeScale = BASE_CLOSE_SCALE;
     browser.storage.local.set({ closeScale });
   }
 
@@ -60,4 +64,21 @@
   }
 
   document.addEventListener('wheel', onZoomWheel, { passive: false });
+
+  function onZoomResetKey(e){
+    if (!e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.key !== '0') return;
+    const sameTile = tileScale === BASE_TILE_SCALE;
+    const sameFont = fontScale === BASE_FONT_SCALE;
+    const sameClose = closeScale === BASE_CLOSE_SCALE;
+    if (sameTile && sameFont && sameClose) return;
+    e.preventDefault();
+    tileScale = BASE_TILE_SCALE;
+    fontScale = BASE_FONT_SCALE;
+    closeScale = BASE_CLOSE_SCALE;
+    browser.storage.local.set({ tileScale, fontScale, closeScale });
+    apply();
+  }
+
+  document.addEventListener('keydown', onZoomResetKey);
 })();
