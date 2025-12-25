@@ -754,6 +754,9 @@ body.full #tabs,
   padding: 0 !important;
   box-sizing: border-box;
 }
+body.full #tabs {
+  padding-bottom: 0.9em !important;
+}
 .tab-card,
 .tab {
   margin: 0;

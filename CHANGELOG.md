@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## 1.1.15 - 2025-12-04
+- Recent: Improved interaction with bulk unloading so that tabs currently visible (active) in Firefox are no longer removed from the Recent list when using **Unload All Tabs**; only successfully discarded background tabs are removed.
+- Unload: Single-tab and bulk unload actions now consistently clear discarded tabs from Recent/visited, keeping counters and highlighting in sync with the actual discarded state.
+- UI: Pressing `Ctrl+0` now resets only the zoom/scale settings for the tab UI (tile scale, font scale and close button scale) back to their built‑in defaults, mirroring Firefox's zoom reset behavior without changing theme, tile width or other options.
+
+  Files touched: `background.js`, `theme.js`.
+
 ## 1.1.14 - 2025-11-17
 - Popup: Reworked tab reordering in popup mode to use a mouse-based drag-and-drop handler, so dragging no longer behaves like text selection and works consistently across platforms.
 - Popup: Stabilized hover behavior by avoiding background-triggered list rebuilds while the cursor is over the tab list, reducing flicker when tabs update.

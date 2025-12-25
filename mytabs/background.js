@@ -7,6 +7,8 @@ let visited = new Set();
 let recentTimer = null;
 let autoUnload = false;
 let autoUnloadMinutes = 60;
+// Tabs that existed when Firefox started (current session)
+const startupTabs = new Set();
 
 async function applyAutoDiscardable() {
   try {
@@ -122,6 +124,18 @@ browser.storage.local.get([
   if (Array.isArray(data.visited)) visited = new Set(data.visited);
   await applyAutoDiscardable();
   refreshTabState();
+
+  // When the extension is (re)loaded inside an existing session,
+  // treat current tabs as "startup" for the purpose of Unload All.
+  try {
+    const tabs = await browser.tabs.query({ windowType: 'normal' });
+    startupTabs.clear();
+    for (const tab of tabs) {
+      if (!tab.discarded) {
+        startupTabs.add(tab.id);
+      }
+    }
+  } catch (_) {}
 });
 
 // Clear visit history only when Firefox starts
@@ -129,14 +143,22 @@ browser.runtime.onStartup.addListener(async () => {
   await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
   visited = new Set();
   recent = [];
+  startupTabs.clear();
   try {
-    const activeTabs = await browser.tabs.query({ windowType: 'normal', active: true });
-    for (const tab of activeTabs) {
-      pushRecent(tab.id);
-      markVisited(tab.id);
+    const tabs = await browser.tabs.query({ windowType: 'normal' });
+    for (const tab of tabs) {
+      if (!tab.discarded) {
+        startupTabs.add(tab.id);
+        // All startup tabs appear in Recent
+        pushRecent(tab.id);
+        // Only active startup tabs count as visited at the beginning
+        if (tab.active) {
+          markVisited(tab.id);
+        }
+      }
     }
   } catch (e) {
-    console.error('Failed to seed active tabs after startup', e);
+    console.error('Failed to seed tabs after startup', e);
   }
   sendVisitedUpdate();
   refreshTabState();
@@ -184,19 +206,29 @@ browser.tabs.query({}).then(tabs => {
   }
 })();
 
-function unmarkVisited(tabId) {
-  if (visited.delete(tabId)) {
-    browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
-    sendVisitedUpdate();
-  }
-}
-
 function scheduleRecentSave() {
   if (!recentTimer) {
     recentTimer = setTimeout(() => {
       recentTimer = null;
       browser.storage.local.set({ recent });
     }, 500);
+  }
+}
+
+function removeFromRecent(tabId) {
+  const idx = recent.indexOf(tabId);
+  if (idx !== -1) {
+    recent.splice(idx, 1);
+    scheduleRecentSave();
+  }
+}
+
+function unmarkVisited(tabId) {
+  const wasVisited = visited.delete(tabId);
+  removeFromRecent(tabId);
+  if (wasVisited) {
+    browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
+    sendVisitedUpdate();
   }
 }
 
@@ -246,26 +278,19 @@ browser.tabs.onCreated.addListener(tab => {
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
-  const ridx = recent.indexOf(tabId);
-  if (ridx !== -1) {
-    recent.splice(ridx, 1);
-    scheduleRecentSave();
-  }
+  removeFromRecent(tabId);
   if (visited.delete(tabId)) {
     browser.storage.local.set({ visited: Array.from(visited) }).catch(() => {});
     sendVisitedUpdate();
   }
   removeDuplicate(tabId);
+  startupTabs.delete(tabId);
   refreshTabState();
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // When a tab is discarded via Firefox's built-in Unload Tab,
-  // reflect that by clearing its visited state in the add-on.
-  if (changeInfo.discarded === true) {
-    unmarkVisited(tabId);
-  } else if (changeInfo.discarded === false && tab && tab.active) {
-    // A previously discarded tab became active (reloaded): mark as visited again.
+  // When a previously discarded tab becomes active again, mark it visited.
+  if (changeInfo.discarded === false && tab && tab.active) {
     markVisited(tabId);
   }
   if (changeInfo.url) {
@@ -292,6 +317,8 @@ browser.runtime.onMessage.addListener((msg) => {
     clearVisitHistory();
   } else if (msg && msg.type === 'openFullView') {
     return openFullView();
+  } else if (msg && msg.type === 'unloadAllTabs') {
+    return unloadAllTabs();
   }
 });
 
@@ -330,16 +357,20 @@ async function openFullView() {
 
 async function unloadAllTabs() {
   const tabs = await browser.tabs.query({});
-  await Promise.all(tabs.filter(t => !t.discarded)
-    .map(async t => {
+
+  // Tabs that are currently visible (active) cannot be discarded by Firefox.
+  // We keep them in Recent and only unload + remove from Recent the others.
+  const discardable = tabs.filter(t => !t.discarded && !t.active);
+
+  await Promise.all(
+    discardable.map(async t => {
       try {
         await browser.tabs.discard(t.id);
+        // Mirror manual Unload behaviour: once discarded, drop from Recent/visited.
+        unmarkVisited(t.id);
       } catch (_) {}
-    }));
-  await browser.storage.local.remove(['visited', 'recent']).catch(() => {});
-  visited = new Set();
-  recent = [];
-  sendVisitedUpdate();
+    })
+  );
 }
 
 async function checkAutoUnload() {
