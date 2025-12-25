@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented here.
 
+## 1.1.14 - 2025-11-17
+- Popup: Reworked tab reordering in popup mode to use a mouse-based drag-and-drop handler, so dragging no longer behaves like text selection and works consistently across platforms.
+- Popup: Stabilized hover behavior by avoiding background-triggered list rebuilds while the cursor is over the tab list, reducing flicker when tabs update.
+- Popup: Removed the excessive bottom padding reserved for bulk actions in `#tabs-wrapper`, eliminating the large empty gap at the bottom when scrolling to the end of the list.
+
+  Files touched: `popup.js`, `style.css`.
+
+## 1.1.13 - 2025-11-10
+- Popup: Added full drag-resize support.
+  - New resizer handles on right, bottom, top, left edges and bottom-right corner.
+  - Width and height can be adjusted independently; size persists across sessions (`storage.local.popupSize`).
+  - Popup layout adapts on-the-fly (menu wraps, list height recalculated via `--popup-max-height`).
+  - Smoother resizing from left/top edges (uses screen coordinates to avoid jitter).
+  - Reliable finish of resizing even if the mouse is released outside the popup (pointer capture + safety checks).
+  - Removed hard width cap for popup; respects Firefox’s inherent popup limits.
+  
+  Files touched: `popup.html`, `popup.js`, `style.css`.
+
+- Fix: Popup "All" view Active counter now matches "Recent" by counting visited tabs in the current scope; stays in sync on unload/restore events.
+- Internal: Kept "Recent" semantics unchanged (Active reflects the number of items in Recent), ensuring consistent values across views.
+
+<!-- merged into the 1.1.13 section above -->
+
 ## 1.1.11 - 2025-11-09
 - Fix: When using Firefox’s built-in “Unload Tab”, the add-on now immediately reflects the change by clearing the tab’s visited state and refreshing the UI. This ensures counters and highlighting stay accurate. (Handled via `tabs.onUpdated` and `changeInfo.discarded`.)
 - Recent: In Full View, window groups are now ordered by the first occurrence of their tabs in the Recent list (i.e., the window you viewed a tab in most recently appears first).

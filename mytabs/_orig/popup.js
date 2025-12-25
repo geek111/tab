@@ -577,17 +577,12 @@ function refreshContainerDropdowns(identities) {
 function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   const row = document.createElement('div');
   const isFull = document.body.classList.contains('full');
-  const isPopup = document.body.classList.contains('popup');
   row.className = 'tab';
   row.dataset.tab = tab.id;
   row.dataset.windowId = tab.windowId;
   row.tabIndex = 0;
-  // W popupie używamy własnego DnD (mousedown/mousemove),
-  // więc nie włączamy HTML5 drag&drop, żeby nie przeciągać samego tekstu.
-  if (!isPopup) {
-    row.draggable = true;
-    row.setAttribute('draggable', 'true');
-  }
+  row.draggable = true;
+  row.setAttribute('draggable', 'true');
   if (item) row._item = item;
   if (tab.id === activeId || tab.active) {
     row.classList.add('active');
@@ -690,13 +685,11 @@ function createTabRow(tab, isDuplicate, activeId, isVisited, item) {
   closeCell.appendChild(closeBtn);
   row.appendChild(closeCell);
 
-  // ensure dragging works from any cell in full/side modes
-  if (!isPopup) {
-    row.querySelectorAll('*').forEach(el => {
-      el.draggable = true;
-      el.setAttribute('draggable', 'true');
-    });
-  }
+  // ensure dragging works from any cell in popup mode
+  row.querySelectorAll('*').forEach(el => {
+    el.draggable = true;
+    el.setAttribute('draggable', 'true');
+  });
 
   // click and drag events handled via delegation
 
@@ -818,11 +811,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
     return;
   }
 
-  const isFull = document.body.classList.contains('full');
-  const isPopup = document.body.classList.contains('popup');
-
-  if (isFull) {
-    // Widok pełnoekranowy: oryginalne zachowanie z HyperList i gridem.
+  if (document.body.classList.contains('full')) {
     if (!rowHeight) {
       const sampleItem = tabItems.find(it => !it.separator);
       if (sampleItem) {
@@ -864,41 +853,7 @@ function renderTabs(list, activeId, dupIds, visitedIds, winMap, query = '') {
       item.el = el;
       container.appendChild(el);
     }
-  } else if (isPopup) {
-    // Popup: prosta statyczna lista zamiast HyperList,
-    // żeby elementy pod kursorem były stabilne (bez migotania hover).
-    for (const item of tabItems) {
-      let el;
-      if (item.separator) {
-        el = createWindowSeparator(item.label, item.windowId, item.total, item.loaded);
-      } else {
-        el = createTabRow(
-          item.tab,
-          dupIds.has(item.tab.id),
-          activeId,
-          visitedIds.has(item.tab.id),
-          item
-        );
-        if (currentQuery && item.match && item.tab.title) {
-          const span = el.querySelector('.tab-title');
-          if (span) {
-            applyHighlights(span, item.match);
-          }
-        }
-        if (item.selected) el.classList.add('selected');
-      }
-      item.el = el;
-      container.appendChild(el);
-    }
-    if (!rowHeight && tabItems.length) {
-      const sample = container.firstElementChild;
-      if (sample) {
-        rowHeight = sample.getBoundingClientRect().height || 32;
-        document.documentElement.style.setProperty('--tile-height', rowHeight + 'px');
-      }
-    }
   } else {
-    // Sidebar i inne konteksty: nadal używamy HyperList dla wydajności.
     if (!virtualList) {
       const sample = createTabRow(
         tabItems[0].tab,
@@ -1093,28 +1048,18 @@ async function update() {
 }
 
 const scheduleUpdate = debounce(update, 200);
-let popupHoverLocked = false;
-
-function scheduleUpdateFromBackground() {
-  if (document.body.classList.contains('popup') && popupHoverLocked) {
-    // Nie odświeżaj listy, gdy kursor jest nad kartami w popupie –
-    // inaczej element pod kursorem jest podmieniany, a hover „miga”.
-    return;
-  }
-  scheduleUpdate();
-}
 
 browser.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'visitedUpdated') {
     visitedIds = new Set(msg.visited || []);
-    scheduleUpdateFromBackground();
+    scheduleUpdate();
   } else if (msg && msg.type === 'duplicatesUpdated') {
     currentDupIds = new Set(msg.duplicates || []);
-    scheduleUpdateFromBackground();
+    scheduleUpdate();
   } else if (msg && msg.type === 'tabState') {
     cachedTabs = Array.isArray(msg.tabs) ? msg.tabs : null;
     visitedIds = new Set(msg.visited || []);
-    scheduleUpdateFromBackground();
+    scheduleUpdate();
   }
 });
 
@@ -1291,7 +1236,6 @@ async function init() {
               document.getElementById('tabs');
   scrollContainer = document.getElementById('tabs-wrapper') || container;
   easterEgg = document.getElementById('easter-egg');
-  const isPopup = document.body.classList.contains('popup');
   const menuEl = document.getElementById('menu');
   menuEl?.addEventListener('dblclick', showEasterEgg);
   scrollContainer.addEventListener('scroll', saveScroll);
@@ -1306,18 +1250,6 @@ async function init() {
   container.addEventListener('dragstart', onContainerDragStart);
   container.addEventListener('dragover', onContainerDragOver);
   container.addEventListener('drop', onContainerDrop);
-  if (isPopup) {
-    // Śledzimy, czy kursor jest nad listą kart w popupie,
-    // żeby w tym czasie nie robić automatycznych odświeżeń z tła.
-    container.addEventListener('mouseenter', () => { popupHoverLocked = true; });
-    container.addEventListener('mouseleave', () => {
-      popupHoverLocked = false;
-      scheduleUpdate();
-    });
-  }
-  if (document.body.classList.contains('popup')) {
-    container.addEventListener('mousedown', onPopupMouseDown);
-  }
   if (document.body.classList.contains('full')) {
     scrollContainer.addEventListener('wheel', (e) => {
       if (scrollContainer.scrollWidth > scrollContainer.clientWidth) {
@@ -1345,7 +1277,7 @@ async function init() {
       const { tabs, visited: v } = await browser.runtime.sendMessage({ type: 'getTabState' });
       if (Array.isArray(tabs)) cachedTabs = tabs;
       if (Array.isArray(v)) visitedIds = new Set(v);
-      scheduleUpdateFromBackground();
+      scheduleUpdate();
     } catch (_) {}
   }, 5000);
   registerTabEvents();
@@ -1443,7 +1375,7 @@ async function init() {
 }
 
 // keep the tab list current while the popup is open
-const updateListener = () => scheduleUpdateFromBackground();
+const updateListener = () => scheduleUpdate();
 function registerTabEvents() {
   browser.tabs.onCreated.addListener(updateListener);
   browser.tabs.onRemoved.addListener(updateListener);
@@ -1476,7 +1408,7 @@ window.addEventListener('unload', cleanup);
 // recompute item height when theme or scaling changes
 window.addEventListener('theme-applied', () => {
   rowHeight = 0;
-  scheduleUpdateFromBackground();
+  scheduleUpdate();
 });
 
 browser.storage.onChanged.addListener((changes, area) => {
@@ -1495,17 +1427,15 @@ browser.storage.onChanged.addListener((changes, area) => {
     const btn = document.getElementById('btn-dups');
     if (btn) btn.title = KEY_VIEW_DUPS ? `Shortcut: ${KEY_VIEW_DUPS}` : '';
   }
-  scheduleUpdateFromBackground();
 });
 
 window.addEventListener('resize', () => {
-  const isFull = document.body.classList.contains('full');
-  if (isFull) {
+  if (document.body.classList.contains('full')) {
     requestAnimationFrame(adjustGridWidth);
   } else {
     // Recalculate available space and refresh virtual list height
     applyPopupMaxHeight();
-    scheduleUpdateFromBackground();
+    scheduleUpdate();
   }
 });
 
@@ -1856,104 +1786,6 @@ function onContainerClick(e) {
     parseInt(tabEl.dataset.tab, 10),
     parseInt(tabEl.dataset.windowId, 10)
   );
-}
-
-// --- Custom DnD for popup (mouse-based, bez HTML5 drag) ---
-let popupDrag = null;
-
-function startPopupDrag(e, tabEl) {
-  const ids = getSelectedTabIds();
-  let dragIds;
-  if (ids.length > 1 && tabEl.classList.contains('selected')) {
-    dragIds = ids.slice();
-  } else {
-    const id = parseInt(tabEl.dataset.tab, 10);
-    if (Number.isNaN(id)) return;
-    dragIds = [id];
-  }
-  popupDrag = { ids: dragIds, originEl: tabEl };
-  window.addEventListener('mousemove', onPopupMouseMove);
-  window.addEventListener('mouseup', onPopupMouseUp, { once: true });
-}
-
-function onPopupMouseDown(e) {
-  if (!document.body.classList.contains('popup')) return;
-  if (e.button !== 0) return; // tylko lewy przycisk
-  const tabEl = e.target.closest('.tab');
-  if (!tabEl || !container.contains(tabEl)) return;
-  if (e.target.classList.contains('close-btn')) return;
-  e.preventDefault();
-  startPopupDrag(e, tabEl);
-}
-
-function onPopupMouseMove(e) {
-  if (!popupDrag) return;
-  e.preventDefault();
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  const tabEl = el && el.closest('.tab');
-  if (!tabEl || !container.contains(tabEl)) {
-    clearPlaceholder();
-    popupDrag.target = null;
-    return;
-  }
-  const rect = tabEl.getBoundingClientRect();
-  const before = e.clientY < rect.top + rect.height / 2;
-  showPlaceholder(tabEl, before);
-  popupDrag.target = { tabEl, before };
-}
-
-async function onPopupMouseUp(e) {
-  window.removeEventListener('mousemove', onPopupMouseMove);
-  if (!popupDrag) return;
-  const drag = popupDrag;
-  popupDrag = null;
-  clearPlaceholder();
-  if (!drag.target) return;
-  // użyj tej samej logiki co onContainerDrop
-  const ids = drag.ids;
-  const tabEl = drag.target.tabEl;
-  const before = drag.target.before;
-  const toId = parseInt(tabEl.dataset.tab, 10);
-  if (!ids.length || !toId) return;
-  const toTab = await browser.tabs.get(toId);
-  let index = before ? toTab.index : toTab.index + 1;
-  for (const id of ids) {
-    if (id === toId) continue;
-    const fromTab = await browser.tabs.get(id);
-    let idx = index;
-    if (fromTab.windowId === toTab.windowId && fromTab.index < index) {
-      idx--;
-    }
-    if (idx < 0) idx = 0;
-    await browser.tabs.move(id, { windowId: toTab.windowId, index: idx });
-    if (fromTab.windowId !== toTab.windowId || fromTab.index >= index) {
-      index++;
-    }
-  }
-  if (view === 'recent') {
-    await browser.runtime.sendMessage({
-      type: 'reorderRecent',
-      ids,
-      toId,
-      before
-    }).catch(() => {});
-  }
-  if (currentQuery) {
-    if (!searchOrder) {
-      searchOrder = tabItems.filter(it => !it.separator).map(it => it.tab.id);
-    }
-    let pos = searchOrder.indexOf(toId);
-    if (!before) pos++;
-    for (const id of ids) {
-      const idx = searchOrder.indexOf(id);
-      if (idx >= 0) {
-        searchOrder.splice(idx, 1);
-        if (idx < pos) pos--;
-      }
-    }
-    searchOrder.splice(pos, 0, ...ids);
-  }
-  scheduleUpdate();
 }
 
 function onContainerDragStart(e) {
